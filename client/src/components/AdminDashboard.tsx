@@ -60,6 +60,52 @@ const mockClients = [
   { id: "3", name: "Industrial Works", workOrders: 7 },
 ];
 
+// Mock work orders organized by client
+const mockWorkOrdersByClient = {
+  "1": [ // Acme Corporation
+    {
+      id: "ACM-2024-001",
+      number: "ACM-2024-001",
+      description: "Realizzazione cancello automatico",
+      status: "In Corso",
+      totalOperations: 8,
+      totalHours: 45.5,
+      lastActivity: "2024-03-15"
+    },
+    {
+      id: "ACM-2024-002",
+      number: "ACM-2024-002",
+      description: "Riparazione ringhiera balcone",
+      status: "Completato",
+      totalOperations: 4,
+      totalHours: 12.0,
+      lastActivity: "2024-03-14"
+    }
+  ],
+  "2": [ // TechFlow Solutions
+    {
+      id: "TFS-2024-012",
+      number: "TFS-2024-012",
+      description: "Manutenzione ordinaria impianto",
+      status: "In Corso",
+      totalOperations: 6,
+      totalHours: 28.0,
+      lastActivity: "2024-03-15"
+    }
+  ],
+  "3": [ // Industrial Works
+    {
+      id: "IW-2024-045",
+      number: "IW-2024-045",
+      description: "Prototipo struttura metallica",
+      status: "In Corso",
+      totalOperations: 12,
+      totalHours: 76.0,
+      lastActivity: "2024-03-14"
+    }
+  ]
+};
+
 // Mock data for work orders with multiple work types
 const mockOperations = [
   {
@@ -125,6 +171,10 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedTab, setSelectedTab] = useState("reports");
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedClient, setSelectedClient] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<{
     id: string;
     number: string;
@@ -220,6 +270,25 @@ export default function AdminDashboard() {
 
   const handleBackToWorkOrders = () => {
     setSelectedWorkOrder(null);
+  };
+
+  const handleSelectClient = (client: { id: string; name: string }) => {
+    setSelectedClient(client);
+    setSelectedWorkOrder(null); // Reset work order when selecting new client
+  };
+
+  const handleBackToClients = () => {
+    setSelectedClient(null);
+    setSelectedWorkOrder(null);
+  };
+
+  const handleSelectWorkOrderFromClient = (workOrder: any) => {
+    setSelectedWorkOrder({
+      id: workOrder.id,
+      number: workOrder.number,
+      description: workOrder.description,
+      clientName: selectedClient?.name || ""
+    });
   };
 
   return (
@@ -453,9 +522,10 @@ export default function AdminDashboard() {
           </Card>
         </TabsContent>
 
-        {/* Work Orders Tab */}
+        {/* Work Orders Tab - HIERARCHICAL NAVIGATION */}
         <TabsContent value="work-orders" className="space-y-4">
           {selectedWorkOrder ? (
+            // Level 3: Show work order report
             <WorkOrderReport
               workOrderId={selectedWorkOrder.id}
               workOrderNumber={selectedWorkOrder.number}
@@ -463,80 +533,116 @@ export default function AdminDashboard() {
               clientName={selectedWorkOrder.clientName}
               onBack={handleBackToWorkOrders}
             />
-          ) : (
+          ) : selectedClient ? (
+            // Level 2: Show work orders for selected client
             <Card>
-            <CardHeader>
-              <CardTitle>Lavorazioni per Commessa</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Visualizza nel dettaglio le lavorazioni eseguite per ogni commessa
-              </p>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Commessa</TableHead>
-                    <TableHead>Lavorazioni</TableHead>
-                    <TableHead>Dipendente</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Ore</TableHead>
-                    <TableHead>Note</TableHead>
-                    <TableHead>Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockOperations.map((operation) => (
-                    <TableRow key={operation.id}>
-                      <TableCell className="font-medium">{operation.clientName}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{operation.workOrderNumber}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {operation.workOrderDescription}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {operation.workTypes.map((type, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {type}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>{operation.employee}</TableCell>
-                      <TableCell>{operation.date}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{operation.hours}h</div>
-                          <div className="text-xs text-muted-foreground">
-                            {operation.startTime} - {operation.endTime}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-xs truncate" title={operation.notes}>
-                          {operation.notes}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewWorkOrderReport(operation)}
-                          data-testid={`button-view-report-${operation.id}`}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Report
-                        </Button>
-                      </TableCell>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Commesse - {selectedClient.name}</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Seleziona una commessa per visualizzare il report dettagliato
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  onClick={handleBackToClients}
+                  data-testid="button-back-to-clients"
+                >
+                  ← Torna ai Clienti
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Numero Commessa</TableHead>
+                      <TableHead>Descrizione</TableHead>
+                      <TableHead>Stato</TableHead>
+                      <TableHead>Operazioni</TableHead>
+                      <TableHead>Ore Totali</TableHead>
+                      <TableHead>Ultima Attività</TableHead>
+                      <TableHead>Azioni</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
+                  </TableHeader>
+                  <TableBody>
+                    {(mockWorkOrdersByClient[selectedClient.id] || []).map((workOrder) => (
+                      <TableRow key={workOrder.id}>
+                        <TableCell className="font-medium">{workOrder.number}</TableCell>
+                        <TableCell>
+                          <div className="max-w-xs">
+                            {workOrder.description}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={workOrder.status === "Completato" ? "default" : "secondary"}
+                          >
+                            {workOrder.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{workOrder.totalOperations} operazioni</Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">{workOrder.totalHours}h</TableCell>
+                        <TableCell>{workOrder.lastActivity}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSelectWorkOrderFromClient(workOrder)}
+                            data-testid={`button-view-workorder-${workOrder.id}`}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Visualizza Report
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ) : (
+            // Level 1: Show client list
+            <Card>
+              <CardHeader>
+                <CardTitle>Commesse per Cliente</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Seleziona un cliente per visualizzare le sue commesse
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome Cliente</TableHead>
+                      <TableHead>Commesse Attive</TableHead>
+                      <TableHead>Azioni</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mockClients.map((client) => (
+                      <TableRow key={client.id}>
+                        <TableCell className="font-medium">{client.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{client.workOrders} commesse</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSelectClient(client)}
+                            data-testid={`button-select-client-${client.id}`}
+                          >
+                            <Briefcase className="h-4 w-4 mr-2" />
+                            Visualizza Commesse
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
             </Card>
           )}
         </TabsContent>
