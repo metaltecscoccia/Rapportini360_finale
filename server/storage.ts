@@ -1,22 +1,84 @@
-import { type User, type InsertUser } from "@shared/schema";
+import { 
+  type User, 
+  type InsertUser,
+  type Client,
+  type InsertClient,
+  type WorkOrder,
+  type InsertWorkOrder,
+  type DailyReport,
+  type InsertDailyReport,
+  type Operation,
+  type InsertOperation
+} from "@shared/schema";
 import { randomUUID } from "crypto";
 
-// modify the interface with any CRUD methods
-// you might need
-
 export interface IStorage {
+  // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  
+  // Clients
+  getAllClients(): Promise<Client[]>;
+  createClient(client: InsertClient): Promise<Client>;
+  
+  // Work Orders
+  getWorkOrdersByClient(clientId: string): Promise<WorkOrder[]>;
+  createWorkOrder(workOrder: InsertWorkOrder): Promise<WorkOrder>;
+  
+  // Daily Reports
+  getAllDailyReports(): Promise<DailyReport[]>;
+  getDailyReportsByDate(date: string): Promise<DailyReport[]>;
+  createDailyReport(report: InsertDailyReport): Promise<DailyReport>;
+  updateDailyReportStatus(id: string, status: string): Promise<DailyReport>;
+  
+  // Operations
+  getOperationsByReportId(reportId: string): Promise<Operation[]>;
+  createOperation(operation: InsertOperation): Promise<Operation>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
+  private clients: Map<string, Client>;
+  private workOrders: Map<string, WorkOrder>;
+  private dailyReports: Map<string, DailyReport>;
+  private operations: Map<string, Operation>;
 
   constructor() {
     this.users = new Map();
+    this.clients = new Map();
+    this.workOrders = new Map();
+    this.dailyReports = new Map();
+    this.operations = new Map();
+    
+    // Initialize with mock data
+    this.initializeMockData();
   }
 
+  private async initializeMockData() {
+    // Mock clients
+    const client1: Client = { id: "1", name: "Acme Corporation", description: null };
+    const client2: Client = { id: "2", name: "TechFlow Solutions", description: null };
+    const client3: Client = { id: "3", name: "Industrial Works", description: null };
+    
+    this.clients.set("1", client1);
+    this.clients.set("2", client2);
+    this.clients.set("3", client3);
+    
+    // Mock work orders
+    const workOrders = [
+      { id: "1", clientId: "1", name: "Progetto Alpha", description: null, isActive: true },
+      { id: "2", clientId: "1", name: "Manutenzione Impianti", description: null, isActive: true },
+      { id: "3", clientId: "2", name: "Sistema Automazione", description: null, isActive: true },
+      { id: "4", clientId: "2", name: "Controllo Qualità", description: null, isActive: true },
+      { id: "5", clientId: "3", name: "Linea Produzione A", description: null, isActive: true },
+      { id: "6", clientId: "3", name: "Retrofit Macchinari", description: null, isActive: true },
+    ];
+    
+    workOrders.forEach(wo => this.workOrders.set(wo.id, wo));
+  }
+
+  // Users
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
   }
@@ -29,9 +91,80 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      ...insertUser, 
+      id,
+      role: insertUser.role || "employee"
+    };
     this.users.set(id, user);
     return user;
+  }
+
+  // Clients
+  async getAllClients(): Promise<Client[]> {
+    return Array.from(this.clients.values());
+  }
+
+  async createClient(insertClient: InsertClient): Promise<Client> {
+    const id = randomUUID();
+    const client: Client = { ...insertClient, id };
+    this.clients.set(id, client);
+    return client;
+  }
+
+  // Work Orders
+  async getWorkOrdersByClient(clientId: string): Promise<WorkOrder[]> {
+    return Array.from(this.workOrders.values()).filter(wo => wo.clientId === clientId);
+  }
+
+  async createWorkOrder(insertWorkOrder: InsertWorkOrder): Promise<WorkOrder> {
+    const id = randomUUID();
+    const workOrder: WorkOrder = { ...insertWorkOrder, id };
+    this.workOrders.set(id, workOrder);
+    return workOrder;
+  }
+
+  // Daily Reports
+  async getAllDailyReports(): Promise<DailyReport[]> {
+    return Array.from(this.dailyReports.values());
+  }
+
+  async getDailyReportsByDate(date: string): Promise<DailyReport[]> {
+    return Array.from(this.dailyReports.values()).filter(report => report.date === date);
+  }
+
+  async createDailyReport(insertReport: InsertDailyReport): Promise<DailyReport> {
+    const id = randomUUID();
+    const report: DailyReport = { 
+      ...insertReport, 
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.dailyReports.set(id, report);
+    return report;
+  }
+
+  async updateDailyReportStatus(id: string, status: string): Promise<DailyReport> {
+    const report = this.dailyReports.get(id);
+    if (!report) {
+      throw new Error("Report not found");
+    }
+    const updatedReport = { ...report, status, updatedAt: new Date() };
+    this.dailyReports.set(id, updatedReport);
+    return updatedReport;
+  }
+
+  // Operations
+  async getOperationsByReportId(reportId: string): Promise<Operation[]> {
+    return Array.from(this.operations.values()).filter(op => op.dailyReportId === reportId);
+  }
+
+  async createOperation(insertOperation: InsertOperation): Promise<Operation> {
+    const id = randomUUID();
+    const operation: Operation = { ...insertOperation, id };
+    this.operations.set(id, operation);
+    return operation;
   }
 }
 

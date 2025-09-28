@@ -66,14 +66,59 @@ export default function AdminDashboard() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleApproveReport = (reportId: string) => {
-    console.log("Approving report", reportId);
-    // TODO: Implement report approval
+  const handleApproveReport = async (reportId: string) => {
+    try {
+      const response = await fetch(`/api/daily-reports/${reportId}/approve`, {
+        method: 'PATCH',
+      });
+      
+      if (response.ok) {
+        console.log("Report approved successfully");
+        // TODO: Refresh the reports list
+        alert("Rapportino approvato con successo!");
+      } else {
+        throw new Error("Failed to approve report");
+      }
+    } catch (error) {
+      console.error("Error approving report:", error);
+      alert("Errore nell'approvazione del rapportino");
+    }
   };
 
   const handleEditReport = (reportId: string) => {
     console.log("Editing report", reportId);
-    // TODO: Implement report editing
+    // TODO: Implement report editing modal
+    alert("Modifica rapportino - funzionalità in sviluppo");
+  };
+
+  const handleExportReports = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      const response = await fetch(`/api/export/daily-reports/${today}`);
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Rapportini_${today}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        console.log("PDF export completed");
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to export PDF");
+      }
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      if (error instanceof Error) {
+        alert(`Errore nell'esportazione: ${error.message}`);
+      } else {
+        alert("Errore nell'esportazione del PDF");
+      }
+    }
   };
 
   const totalPendingReports = mockReports.filter(r => r.status === "In attesa").length;
@@ -91,9 +136,13 @@ export default function AdminDashboard() {
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" data-testid="button-export-reports">
+          <Button 
+            variant="outline" 
+            onClick={handleExportReports}
+            data-testid="button-export-reports"
+          >
             <FileText className="h-4 w-4 mr-2" />
-            Esporta Report
+            Esporta PDF Oggi
           </Button>
         </div>
       </div>
