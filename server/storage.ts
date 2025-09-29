@@ -83,7 +83,7 @@ export class MemStorage implements IStorage {
       { id: "emp2", username: "laura.bianchi", password: "SecurePass456", fullName: "Laura Bianchi", role: "employee" as const },
       { id: "emp3", username: "giuseppe.verde", password: "SecurePass789", fullName: "Giuseppe Verde", role: "employee" as const },
       { id: "emp4", username: "anna.neri", password: "SecurePass321", fullName: "Anna Neri", role: "employee" as const },
-      { id: "admin1", username: "admin", password: "AdminSecure2024!", fullName: "Amministratore", role: "admin" as const }
+      { id: "admin1", username: "admin", password: "Metaltec11", fullName: "Amministratore", role: "admin" as const }
     ];
 
     // Hash passwords for all mock users
