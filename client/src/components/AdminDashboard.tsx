@@ -34,7 +34,6 @@ import {
   Key
 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
-import AttendanceCalendar from "./AttendanceCalendar";
 import WorkOrderReport from "./WorkOrderReport";
 import DailyReportForm from "./DailyReportForm";
 
@@ -174,7 +173,6 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedTab, setSelectedTab] = useState("reports");
-  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedClient, setSelectedClient] = useState<{
     id: string;
     name: string;
@@ -652,10 +650,6 @@ export default function AdminDashboard() {
             <Wrench className="h-4 w-4 mr-2" />
             Commesse
           </TabsTrigger>
-          <TabsTrigger value="attendance" data-testid="tab-attendance">
-            <Calendar className="h-4 w-4 mr-2" />
-            Presenze
-          </TabsTrigger>
           <TabsTrigger value="employees" data-testid="tab-employees">
             <Users className="h-4 w-4 mr-2" />
             Dipendenti
@@ -936,13 +930,6 @@ export default function AdminDashboard() {
           )}
         </TabsContent>
 
-        {/* Attendance Tab */}
-        <TabsContent value="attendance" className="space-y-4">
-          <AttendanceCalendar 
-            currentMonth={currentMonth}
-            onMonthChange={setCurrentMonth}
-          />
-        </TabsContent>
 
         {/* Employees Tab */}
         <TabsContent value="employees" className="space-y-4">

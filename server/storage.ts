@@ -10,10 +10,7 @@ import {
   type Operation,
   type InsertOperation,
   type UpdateDailyReport,
-  type UpdateOperation,
-  type AttendanceRecord,
-  type InsertAttendanceRecord,
-  type AttendanceStatus
+  type UpdateOperation
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { hashPassword } from "./auth";
@@ -52,12 +49,6 @@ export interface IStorage {
   updateOperation(id: string, updates: UpdateOperation): Promise<Operation>;
   deleteOperation(id: string): Promise<boolean>;
   deleteOperationsByReportId(reportId: string): Promise<boolean>;
-  
-  // Attendance Records
-  getAttendanceRecordsByDateRange(startDate: string, endDate: string): Promise<AttendanceRecord[]>;
-  getAttendanceRecord(employeeId: string, date: string): Promise<AttendanceRecord | undefined>;
-  upsertAttendanceRecord(record: InsertAttendanceRecord): Promise<AttendanceRecord>;
-  deleteAttendanceRecord(employeeId: string, date: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -66,7 +57,6 @@ export class MemStorage implements IStorage {
   private workOrders: Map<string, WorkOrder>;
   private dailyReports: Map<string, DailyReport>;
   private operations: Map<string, Operation>;
-  private attendanceRecords: Map<string, AttendanceRecord>; // key: employeeId-date
   private initialized: boolean = false;
 
   constructor() {
@@ -75,7 +65,6 @@ export class MemStorage implements IStorage {
     this.workOrders = new Map();
     this.dailyReports = new Map();
     this.operations = new Map();
-    this.attendanceRecords = new Map();
   }
 
   private async ensureInitialized() {
@@ -343,46 +332,6 @@ export class MemStorage implements IStorage {
     return true;
   }
 
-  // Attendance Records
-  async getAttendanceRecordsByDateRange(startDate: string, endDate: string): Promise<AttendanceRecord[]> {
-    await this.ensureInitialized();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    return Array.from(this.attendanceRecords.values()).filter(record => {
-      const recordDate = new Date(record.date);
-      return recordDate >= start && recordDate <= end;
-    });
-  }
-
-  async getAttendanceRecord(employeeId: string, date: string): Promise<AttendanceRecord | undefined> {
-    await this.ensureInitialized();
-    const key = `${employeeId}-${date}`;
-    return this.attendanceRecords.get(key);
-  }
-
-  async upsertAttendanceRecord(insertRecord: InsertAttendanceRecord): Promise<AttendanceRecord> {
-    await this.ensureInitialized();
-    const key = `${insertRecord.employeeId}-${insertRecord.date}`;
-    const existing = this.attendanceRecords.get(key);
-    
-    const record: AttendanceRecord = {
-      id: existing?.id || randomUUID(),
-      ...insertRecord,
-      notes: insertRecord.notes || null,
-      createdAt: existing?.createdAt || new Date(),
-      updatedAt: new Date()
-    };
-    
-    this.attendanceRecords.set(key, record);
-    return record;
-  }
-
-  async deleteAttendanceRecord(employeeId: string, date: string): Promise<boolean> {
-    await this.ensureInitialized();
-    const key = `${employeeId}-${date}`;
-    return this.attendanceRecords.delete(key);
-  }
 }
 
 export const storage = new MemStorage();
