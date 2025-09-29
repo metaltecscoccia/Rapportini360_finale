@@ -26,6 +26,8 @@ interface DailyReportFormProps {
   employeeName: string;
   date: string;
   onSubmit: (operations: Operation[]) => void;
+  initialOperations?: Operation[]; // For editing existing reports
+  isEditing?: boolean; // To show different UI for editing
 }
 
 // Load data from backend
@@ -84,16 +86,30 @@ function WorkOrderSelect({ clientId, value, onChange, operationId }: WorkOrderSe
   );
 }
 
-export default function DailyReportForm({ employeeName, date, onSubmit }: DailyReportFormProps) {
-  const [operations, setOperations] = useState<Operation[]>([{
-    id: "1",
-    clientId: "",
-    workOrderId: "",
-    workTypes: ["Taglio"],
-    startTime: "",
-    endTime: "",
-    notes: "",
-  }]);
+export default function DailyReportForm({ 
+  employeeName, 
+  date, 
+  onSubmit, 
+  initialOperations, 
+  isEditing = false 
+}: DailyReportFormProps) {
+  // Initialize with provided operations or default empty operation
+  const [operations, setOperations] = useState<Operation[]>(
+    initialOperations && initialOperations.length > 0 
+      ? initialOperations.map((op, index) => ({
+          ...op,
+          id: `${index + 1}` // Ensure unique IDs for form state
+        }))
+      : [{
+          id: "1",
+          clientId: "",
+          workOrderId: "",
+          workTypes: ["Taglio"],
+          startTime: "",
+          endTime: "",
+          notes: "",
+        }]
+  );
 
   const [showHoursDialog, setShowHoursDialog] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
@@ -385,7 +401,7 @@ export default function DailyReportForm({ employeeName, date, onSubmit }: DailyR
               </div>
               <Button type="submit" data-testid="button-submit-report">
                 <Send className="h-4 w-4 mr-2" />
-                Invia Rapportino
+                {isEditing ? "Aggiorna Rapportino" : "Invia Rapportino"}
               </Button>
             </div>
           </form>

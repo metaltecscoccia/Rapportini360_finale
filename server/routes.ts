@@ -320,7 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check authorization - only admin or report owner can edit
-      if (req.session.userRole !== "admin" && req.session.userId !== existingReport.employeeId) {
+      if ((req as any).session.userRole !== "admin" && (req as any).session.userId !== existingReport.employeeId) {
         return res.status(403).json({ error: "Non autorizzato a modificare questo rapportino" });
       }
       
