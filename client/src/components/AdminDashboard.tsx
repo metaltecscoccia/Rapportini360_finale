@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +27,7 @@ import {
   Clock,
   Plus,
   Edit,
+  Trash,
   Calendar,
   Wrench,
   Eye
@@ -244,6 +246,7 @@ export default function AdminDashboard() {
   } | null>(null);
   const [addEmployeeDialogOpen, setAddEmployeeDialogOpen] = useState(false);
   const [editEmployeeDialogOpen, setEditEmployeeDialogOpen] = useState(false);
+  const [deleteEmployeeDialogOpen, setDeleteEmployeeDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
 
   const { toast } = useToast();
@@ -336,6 +339,29 @@ export default function AdminDashboard() {
     },
   });
 
+  // Mutation per eliminare dipendente
+  const deleteEmployeeMutation = useMutation({
+    mutationFn: async (employeeId: string) => {
+      return apiRequest('DELETE', `/api/users/${employeeId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      toast({
+        title: "Dipendente eliminato",
+        description: "Il dipendente è stato eliminato con successo.",
+      });
+      setDeleteEmployeeDialogOpen(false);
+      setSelectedEmployee(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante l'eliminazione del dipendente.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddEmployee = (data: AddEmployeeForm) => {
     createEmployeeMutation.mutate(data);
   };
@@ -353,6 +379,17 @@ export default function AdminDashboard() {
   const handleUpdateEmployee = (data: EditEmployeeForm) => {
     if (selectedEmployee) {
       updateEmployeeMutation.mutate({ ...data, id: selectedEmployee.id });
+    }
+  };
+
+  const handleDeleteEmployee = (employee: any) => {
+    setSelectedEmployee(employee);
+    setDeleteEmployeeDialogOpen(true);
+  };
+
+  const confirmDeleteEmployee = () => {
+    if (selectedEmployee) {
+      deleteEmployeeMutation.mutate(selectedEmployee.id);
     }
   };
 
@@ -1003,6 +1040,30 @@ export default function AdminDashboard() {
                   </Form>
                 </DialogContent>
               </Dialog>
+
+              {/* Dialog conferma eliminazione dipendente */}
+              <AlertDialog open={deleteEmployeeDialogOpen} onOpenChange={setDeleteEmployeeDialogOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Elimina Dipendente</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Sei sicuro di voler eliminare il dipendente "{selectedEmployee?.fullName}"? 
+                      Questa azione non può essere annullata e tutti i dati associati verranno rimossi permanentemente.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annulla</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={confirmDeleteEmployee}
+                      disabled={deleteEmployeeMutation.isPending}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      data-testid="button-confirm-delete-employee"
+                    >
+                      {deleteEmployeeMutation.isPending ? "Eliminando..." : "Elimina"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardHeader>
             <CardContent>
               {isLoadingEmployees ? (
@@ -1028,14 +1089,25 @@ export default function AdminDashboard() {
                           <Badge variant="secondary">Dipendente</Badge>
                         </TableCell>
                         <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleEditEmployee(employee)}
-                            data-testid={`button-edit-employee-${employee.id}`}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleEditEmployee(employee)}
+                              data-testid={`button-edit-employee-${employee.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleDeleteEmployee(employee)}
+                              data-testid={`button-delete-employee-${employee.id}`}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
