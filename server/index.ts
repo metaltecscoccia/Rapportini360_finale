@@ -7,20 +7,12 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
-// Rate limiting for login protection
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
-  message: { error: "Troppi tentativi di login. Riprova tra 15 minuti." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// Rate limiting removed - unlimited login attempts allowed
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Apply rate limiting to login route
-app.use('/api/login', loginLimiter);
+// No rate limiting - unlimited login attempts allowed for all users including admin
 
 // Ensure SESSION_SECRET is configured
 if (!process.env.SESSION_SECRET) {
