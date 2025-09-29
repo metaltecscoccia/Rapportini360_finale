@@ -14,6 +14,7 @@ import {
   type AttendanceStatus
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { hashPassword } from "./auth";
 
 export interface IStorage {
   // Users
@@ -21,6 +22,8 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<InsertUser>): Promise<User>;
+  deleteUser(id: string): Promise<boolean>;
   
   // Clients
   getAllClients(): Promise<Client[]>;
@@ -69,16 +72,24 @@ export class MemStorage implements IStorage {
   }
 
   private async initializeMockData() {
-    // Mock employees  
-    const employee1: User = { id: "emp1", username: "A", password: "A", fullName: "Marco Rossi", role: "employee" };
-    const employee2: User = { id: "emp2", username: "B", password: "B", fullName: "Laura Bianchi", role: "employee" };
-    const employee3: User = { id: "emp3", username: "C", password: "C", fullName: "Giuseppe Verde", role: "employee" };
-    const employee4: User = { id: "emp4", username: "D", password: "D", fullName: "Anna Neri", role: "employee" };
-    
-    this.users.set("emp1", employee1);
-    this.users.set("emp2", employee2);
-    this.users.set("emp3", employee3);
-    this.users.set("emp4", employee4);
+    // Mock employees - hash passwords for security
+    const mockUsers = [
+      { id: "emp1", username: "A", password: "A", fullName: "Marco Rossi", role: "employee" as const },
+      { id: "emp2", username: "B", password: "B", fullName: "Laura Bianchi", role: "employee" as const },
+      { id: "emp3", username: "C", password: "C", fullName: "Giuseppe Verde", role: "employee" as const },
+      { id: "emp4", username: "D", password: "D", fullName: "Anna Neri", role: "employee" as const },
+      { id: "admin1", username: "S", password: "S", fullName: "Amministratore", role: "admin" as const }
+    ];
+
+    // Hash passwords for all mock users
+    for (const userData of mockUsers) {
+      const hashedPassword = await hashPassword(userData.password);
+      const user: User = {
+        ...userData,
+        password: hashedPassword
+      };
+      this.users.set(userData.id, user);
+    }
 
     // Mock clients
     const client1: Client = { id: "1", name: "Acme Corporation", description: null };
@@ -119,13 +130,40 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
+    const hashedPassword = await hashPassword(insertUser.password);
     const user: User = { 
       ...insertUser, 
       id,
+      password: hashedPassword,
       role: insertUser.role || "employee"
     };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUser(id: string, updates: Partial<InsertUser>): Promise<User> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) {
+      throw new Error("Utente non trovato");
+    }
+    
+    // Hash della password se viene aggiornata
+    const updatedData = { ...updates };
+    if (updates.password) {
+      updatedData.password = await hashPassword(updates.password);
+    }
+    
+    const updatedUser: User = {
+      ...existingUser,
+      ...updatedData
+    };
+    
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    return this.users.delete(id);
   }
 
   // Clients
