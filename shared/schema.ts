@@ -53,6 +53,20 @@ export const operations = pgTable("operations", {
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
+}).extend({
+  // Password validation for secure passwords
+  password: z.string()
+    .min(8, "Password deve essere di almeno 8 caratteri")
+    .regex(/[A-Z]/, "Password deve contenere almeno una lettera maiuscola")
+    .regex(/[a-z]/, "Password deve contenere almeno una lettera minuscola")
+    .regex(/[0-9]/, "Password deve contenere almeno un numero"),
+  username: z.string().min(3, "Username deve essere di almeno 3 caratteri"),
+  fullName: z.string().min(2, "Nome e cognome devono essere di almeno 2 caratteri")
+});
+
+// Update user schema for partial updates
+export const updateUserSchema = insertUserSchema.partial().extend({
+  id: z.string().optional()
 });
 
 export const insertClientSchema = createInsertSchema(clients).omit({
@@ -75,6 +89,7 @@ export const insertOperationSchema = createInsertSchema(operations).omit({
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type User = typeof users.$inferSelect;
 
 export type InsertClient = z.infer<typeof insertClientSchema>;

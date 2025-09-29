@@ -5,8 +5,10 @@ import { PDFService } from "./pdfService";
 import { 
   insertAttendanceRecordSchema,
   AttendanceStatusEnum,
-  insertUserSchema
+  insertUserSchema,
+  updateUserSchema
 } from "@shared/schema";
+import { validatePassword } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const pdfService = new PDFService();
@@ -31,6 +33,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid user data", issues: result.error.issues });
       }
       
+      // Additional password validation
+      const passwordValidation = validatePassword(result.data.password);
+      if (!passwordValidation.isValid) {
+        return res.status(400).json({ error: "Password non sicura", issues: passwordValidation.errors });
+      }
+      
       // Check if username already exists
       const existingUser = await storage.getUserByUsername(result.data.username);
       if (existingUser) {
@@ -42,6 +50,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating user:", error);
       res.status(500).json({ error: "Failed to create user" });
+    }
+  });
+
+  // Update user
+  app.put("/api/users/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = updateUserSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ error: "Invalid user data", issues: result.error.issues });
+      }
+      
+      // Check if user exists
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ error: "Utente non trovato" });
+      }
+      
+      // If updating password, validate it
+      if (result.data.password) {
+        const passwordValidation = validatePassword(result.data.password);
+        if (!passwordValidation.isValid) {
+          return res.status(400).json({ error: "Password non sicura", issues: passwordValidation.errors });
+        }
+      }
+      
+      // If updating username, check it doesn't exist
+      if (result.data.username && result.data.username !== existingUser.username) {
+        const existingUserWithUsername = await storage.getUserByUsername(result.data.username);
+        if (existingUserWithUsername) {
+          return res.status(400).json({ error: "Username già esistente" });
+        }
+      }
+      
+      const updatedUser = await storage.updateUser(id, result.data);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  // Delete user
+  app.delete("/api/users/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if user exists
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ error: "Utente non trovato" });
+      }
+      
+      // Prevent deletion of admin users (optional security measure)
+      if (existingUser.role === "admin") {
+        return res.status(403).json({ error: "Non è possibile eliminare utenti amministratori" });
+      }
+      
+      const deleted = await storage.deleteUser(id);
+      
+      if (deleted) {
+        res.json({ success: true, message: "Utente eliminato con successo" });
+      } else {
+        res.status(500).json({ error: "Failed to delete user" });
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ error: "Failed to delete user" });
     }
   });
 
@@ -182,17 +259,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all users (for debugging)
-  app.get("/api/users", async (req, res) => {
-    try {
-      const users = await storage.getAllUsers();
-      console.log("Users endpoint called, returning:", users.length, "users");
-      res.json(users);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      res.status(500).json({ error: "Failed to fetch users" });
-    }
-  });
 
   // Get operations for a specific work order (for final report)
   app.get("/api/work-orders/:workOrderId/operations", async (req, res) => {
