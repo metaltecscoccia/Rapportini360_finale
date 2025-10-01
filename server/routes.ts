@@ -328,6 +328,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all work orders (admin only)
+  app.get("/api/work-orders", requireAdmin, async (req, res) => {
+    try {
+      const workOrders = await storage.getAllWorkOrders();
+      res.json(workOrders);
+    } catch (error: any) {
+      console.error("Error fetching work orders:", error);
+      res.status(500).json({ error: "Failed to fetch work orders" });
+    }
+  });
+
+  // Delete work order (admin only)
+  app.delete("/api/work-orders/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteWorkOrder(id);
+      if (deleted) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "Commessa non trovata" });
+      }
+    } catch (error: any) {
+      console.error("Error deleting work order:", error);
+      res.status(500).json({ error: "Failed to delete work order" });
+    }
+  });
+
   // Get all daily reports (auth required)
   app.get("/api/daily-reports", requireAuth, async (req, res) => {
     try {
