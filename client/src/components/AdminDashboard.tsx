@@ -180,6 +180,8 @@ export default function AdminDashboard() {
   const [editReportDialogOpen, setEditReportDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [reportOperations, setReportOperations] = useState<any[]>([]);
+  const [createReportDialogOpen, setCreateReportDialogOpen] = useState(false);
+  const [selectedEmployeeForReport, setSelectedEmployeeForReport] = useState<any>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -623,7 +625,16 @@ export default function AdminDashboard() {
         <TabsContent value="reports" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Rapportini Giornalieri</CardTitle>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <CardTitle>Rapportini Giornalieri</CardTitle>
+                <Button 
+                  onClick={() => setCreateReportDialogOpen(true)}
+                  data-testid="button-create-report"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuovo Rapportino
+                </Button>
+              </div>
               
               {/* Filters */}
               <div className="flex flex-col md:flex-row gap-4">
@@ -666,6 +677,7 @@ export default function AdminDashboard() {
                     <TableRow>
                       <TableHead>Dipendente</TableHead>
                       <TableHead>Data</TableHead>
+                      <TableHead>Ora Creazione</TableHead>
                       <TableHead>Stato</TableHead>
                       <TableHead>Operazioni</TableHead>
                       <TableHead>Ore Totali</TableHead>
@@ -675,7 +687,7 @@ export default function AdminDashboard() {
                   <TableBody>
                     {filteredReports.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
+                        <TableCell colSpan={7} className="text-center py-8">
                           <div className="text-muted-foreground">
                             {searchTerm || statusFilter !== "all" 
                               ? "Nessun rapportino trovato con i filtri applicati" 
@@ -691,6 +703,12 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>
                             {new Date(report.date).toLocaleDateString("it-IT")}
+                          </TableCell>
+                          <TableCell>
+                            {report.createdAt ? new Date(report.createdAt).toLocaleTimeString("it-IT", { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            }) : "-"}
                           </TableCell>
                           <TableCell>
                             <StatusBadge status={report.status} />
@@ -1162,6 +1180,119 @@ export default function AdminDashboard() {
               data-testid="button-cancel-edit-report"
             >
               Annulla
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog per creazione rapportino da amministratore */}
+      <Dialog 
+        open={createReportDialogOpen} 
+        onOpenChange={(open) => {
+          setCreateReportDialogOpen(open);
+          if (!open) {
+            setSelectedEmployeeForReport(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Crea Rapportino per Dipendente</DialogTitle>
+            <DialogDescription>
+              Seleziona un dipendente e compila il rapportino giornaliero.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {!selectedEmployeeForReport ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Dipendente</Label>
+                <Select
+                  onValueChange={(value) => {
+                    const emp = (employees as any[]).find((e: any) => e.id === value);
+                    setSelectedEmployeeForReport(emp);
+                  }}
+                >
+                  <SelectTrigger data-testid="select-employee-for-report">
+                    <SelectValue placeholder="Seleziona dipendente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(employees as any[])
+                      .filter((emp: any) => emp.role === 'employee')
+                      .map((emp: any) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.fullName}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4">
+              <div className="mb-4 p-4 bg-muted rounded-md">
+                <p className="text-sm font-medium">
+                  Creazione rapportino per: <span className="text-primary">{selectedEmployeeForReport.fullName}</span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Data: {new Date().toLocaleDateString("it-IT")}
+                </p>
+              </div>
+              <DailyReportForm
+                employeeName={selectedEmployeeForReport.fullName}
+                date={new Date().toISOString().split('T')[0]}
+                onSubmit={async (operations) => {
+                  try {
+                    const response = await apiRequest('POST', '/api/daily-reports', {
+                      employeeId: selectedEmployeeForReport.id,
+                      date: new Date().toISOString().split('T')[0],
+                      status: 'In attesa'
+                    });
+                    
+                    const report = await response.json();
+                    
+                    // Crea le operazioni
+                    for (const operation of operations) {
+                      await apiRequest('POST', '/api/operations', {
+                        dailyReportId: report.id,
+                        clientId: operation.clientId,
+                        workOrderId: operation.workOrderId,
+                        workTypes: operation.workTypes,
+                        hours: operation.hours,
+                        notes: operation.notes
+                      });
+                    }
+                    
+                    queryClient.invalidateQueries({ queryKey: ['/api/daily-reports'] });
+                    toast({
+                      title: "Rapportino creato",
+                      description: `Rapportino per ${selectedEmployeeForReport.fullName} creato con successo.`
+                    });
+                    setCreateReportDialogOpen(false);
+                    setSelectedEmployeeForReport(null);
+                  } catch (error: any) {
+                    toast({
+                      title: "Errore",
+                      description: error.message || "Errore nella creazione del rapportino",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+                isEditing={false}
+              />
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setCreateReportDialogOpen(false);
+                setSelectedEmployeeForReport(null);
+              }}
+              data-testid="button-cancel-create-report"
+            >
+              {selectedEmployeeForReport ? "Indietro" : "Annulla"}
             </Button>
           </DialogFooter>
         </DialogContent>
