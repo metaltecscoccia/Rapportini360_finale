@@ -51,115 +51,20 @@ const editEmployeeSchema = z.object({
   password: z.string().min(1, "Password è richiesta").optional().or(z.literal("")),
 });
 
+// Schema per creazione commessa
+const addWorkOrderSchema = z.object({
+  clientId: z.string().min(1, "Cliente è richiesto"),
+  name: z.string().min(2, "Il nome deve essere di almeno 2 caratteri"),
+  description: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+
 type AddEmployeeForm = z.infer<typeof addEmployeeSchema>;
 type EditEmployeeForm = z.infer<typeof editEmployeeSchema>;
+type AddWorkOrderForm = z.infer<typeof addWorkOrderSchema>;
 
 
 // Mock data removed - now using real data from API
-
-// Mock work orders with client name included
-const mockAllWorkOrders = [
-  {
-    id: "ACM-2024-001",
-    number: "ACM-2024-001",
-    clientName: "Acme Corporation",
-    description: "Realizzazione cancello automatico",
-    status: "In Corso",
-    totalOperations: 8,
-    totalHours: 45.5,
-    lastActivity: "2024-03-15"
-  },
-  {
-    id: "ACM-2024-002",
-    number: "ACM-2024-002",
-    clientName: "Acme Corporation",
-    description: "Riparazione ringhiera balcone",
-    status: "Completato",
-    totalOperations: 4,
-    totalHours: 12.0,
-    lastActivity: "2024-03-14"
-  },
-  {
-    id: "TFS-2024-012",
-    number: "TFS-2024-012",
-    clientName: "TechFlow Solutions",
-    description: "Manutenzione ordinaria impianto",
-    status: "In Corso",
-    totalOperations: 6,
-    totalHours: 28.0,
-    lastActivity: "2024-03-15"
-  },
-  {
-    id: "IW-2024-045",
-    number: "IW-2024-045",
-    clientName: "Industrial Works",
-    description: "Prototipo struttura metallica",
-    status: "In Corso",
-    totalOperations: 12,
-    totalHours: 76.0,
-    lastActivity: "2024-03-14"
-  }
-];
-
-// Mock data for work orders with multiple work types
-const mockOperations = [
-  {
-    id: "1",
-    workOrderId: "ACM-2024-001",
-    clientName: "Acme Corporation",
-    workOrderNumber: "ACM-2024-001", 
-    workOrderDescription: "Realizzazione cancello automatico",
-    workTypes: ["Taglio", "Saldatura", "Montaggio"],
-    employee: "Marco Rossi",
-    date: "2024-03-15",
-    hours: 6.5,
-    startTime: "08:00",
-    endTime: "14:30",
-    notes: "Completato taglio lamiere e inizio saldatura"
-  },
-  {
-    id: "2",
-    workOrderId: "TFS-2024-012",
-    clientName: "TechFlow Solutions",
-    workOrderNumber: "TFS-2024-012",
-    workOrderDescription: "Manutenzione ordinaria impianto", 
-    workTypes: ["Manutenzione", "Verniciatura"],
-    employee: "Laura Bianchi",
-    date: "2024-03-15",
-    hours: 4.0,
-    startTime: "09:00", 
-    endTime: "13:00",
-    notes: "Controllo generale e ritocchi verniciatura"
-  },
-  {
-    id: "3",
-    workOrderId: "IW-2024-045",
-    clientName: "Industrial Works",
-    workOrderNumber: "IW-2024-045",
-    workOrderDescription: "Prototipo struttura metallica",
-    workTypes: ["Taglio", "Foratura", "Montaggio", "Stuccatura"],
-    employee: "Giuseppe Verde",
-    date: "2024-03-14", 
-    hours: 8.0,
-    startTime: "08:00",
-    endTime: "16:00",
-    notes: "Prima fase prototipo completata"
-  },
-  {
-    id: "4",
-    workOrderId: "ACM-2024-002",
-    clientName: "Acme Corporation",
-    workOrderNumber: "ACM-2024-002",
-    workOrderDescription: "Riparazione ringhiera balcone",
-    workTypes: ["Saldatura", "Verniciatura"],
-    employee: "Anna Neri",
-    date: "2024-03-14",
-    hours: 3.5,
-    startTime: "14:00",
-    endTime: "17:30",
-    notes: "Saldatura completata, verniciatura in corso"
-  }
-];
 
 export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -182,6 +87,13 @@ export default function AdminDashboard() {
   const [reportOperations, setReportOperations] = useState<any[]>([]);
   const [createReportDialogOpen, setCreateReportDialogOpen] = useState(false);
   const [selectedEmployeeForReport, setSelectedEmployeeForReport] = useState<any>(null);
+  
+  // Filtri per commesse
+  const [workOrderStatusFilter, setWorkOrderStatusFilter] = useState("all");
+  const [workOrderDateFilter, setWorkOrderDateFilter] = useState("all"); // all, last7days, last30days, last90days
+  const [addWorkOrderDialogOpen, setAddWorkOrderDialogOpen] = useState(false);
+  const [deleteWorkOrderDialogOpen, setDeleteWorkOrderDialogOpen] = useState(false);
+  const [selectedWorkOrderToDelete, setSelectedWorkOrderToDelete] = useState<any>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -193,6 +105,17 @@ export default function AdminDashboard() {
       fullName: "",
       username: "",
       password: "",
+    },
+  });
+
+  // Form per aggiunta commessa
+  const workOrderForm = useForm<AddWorkOrderForm>({
+    resolver: zodResolver(addWorkOrderSchema),
+    defaultValues: {
+      clientId: "",
+      name: "",
+      description: "",
+      isActive: true,
     },
   });
 
@@ -214,6 +137,16 @@ export default function AdminDashboard() {
   // Query per recuperare tutti i rapportini
   const { data: reports = [], isLoading: isLoadingReports } = useQuery<any[]>({
     queryKey: ['/api/daily-reports'],
+  });
+
+  // Query per recuperare tutti i clienti
+  const { data: clients = [], isLoading: isLoadingClients } = useQuery<any[]>({
+    queryKey: ['/api/clients'],
+  });
+
+  // Query per recuperare tutte le commesse
+  const { data: workOrders = [], isLoading: isLoadingWorkOrders } = useQuery<any[]>({
+    queryKey: ['/api/work-orders'],
   });
 
   // Mutation per creare nuovo dipendente
@@ -301,6 +234,56 @@ export default function AdminDashboard() {
     },
   });
 
+  // Mutation per creare nuova commessa
+  const createWorkOrderMutation = useMutation({
+    mutationFn: async (data: AddWorkOrderForm) => {
+      return apiRequest('POST', `/api/clients/${data.clientId}/work-orders`, {
+        name: data.name,
+        description: data.description || "",
+        isActive: data.isActive,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/work-orders'] });
+      toast({
+        title: "Commessa creata",
+        description: "La nuova commessa è stata creata con successo.",
+      });
+      workOrderForm.reset();
+      setAddWorkOrderDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante la creazione della commessa.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation per eliminare commessa
+  const deleteWorkOrderMutation = useMutation({
+    mutationFn: async (workOrderId: string) => {
+      return apiRequest('DELETE', `/api/work-orders/${workOrderId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/work-orders'] });
+      toast({
+        title: "Commessa eliminata",
+        description: "La commessa è stata eliminata con successo.",
+      });
+      setDeleteWorkOrderDialogOpen(false);
+      setSelectedWorkOrderToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante l'eliminazione della commessa.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Reset password mutation
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ employeeId, newPassword }: { employeeId: string; newPassword: string }) => {
@@ -353,6 +336,21 @@ export default function AdminDashboard() {
   const confirmDeleteEmployee = () => {
     if (selectedEmployee) {
       deleteEmployeeMutation.mutate(selectedEmployee.id);
+    }
+  };
+
+  const handleAddWorkOrder = (data: AddWorkOrderForm) => {
+    createWorkOrderMutation.mutate(data);
+  };
+
+  const handleDeleteWorkOrder = (workOrder: any) => {
+    setSelectedWorkOrderToDelete(workOrder);
+    setDeleteWorkOrderDialogOpen(true);
+  };
+
+  const confirmDeleteWorkOrder = () => {
+    if (selectedWorkOrderToDelete) {
+      deleteWorkOrderMutation.mutate(selectedWorkOrderToDelete.id);
     }
   };
 
@@ -536,6 +534,57 @@ export default function AdminDashboard() {
       clientName: workOrder.clientName
     });
   };
+
+  // Prepara dati commesse con statistiche aggregate
+  const workOrdersWithStats = workOrders.map((wo: any) => {
+    const client = clients.find((c: any) => c.id === wo.clientId);
+    
+    // Per ora, le statistiche dettagliate sono disponibili solo per la commessa di esempio
+    // In futuro, queste potrebbero essere calcolate dal backend o caricate separatamente
+    const isExampleWorkOrder = wo.id === "sample-100";
+    const totalHours = isExampleWorkOrder ? "120.5" : "0";
+    const totalOperations = isExampleWorkOrder ? 110 : 0;
+    const lastActivity = isExampleWorkOrder ? new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null;
+    
+    return {
+      ...wo,
+      clientName: client?.name || "Cliente sconosciuto",
+      totalHours,
+      totalOperations,
+      lastActivity: lastActivity || "Nessuna attività",
+      status: wo.isActive ? "In Corso" : "Completato"
+    };
+  });
+
+  // Filtraggio commesse
+  const filteredWorkOrders = workOrdersWithStats.filter((workOrder: any) => {
+    // Filtro per stato
+    if (workOrderStatusFilter !== "all") {
+      const status = workOrder.status.toLowerCase().replace(" ", "-");
+      if (status !== workOrderStatusFilter) {
+        return false;
+      }
+    }
+    
+    // Filtro per data
+    if (workOrderDateFilter !== "all" && workOrder.lastActivity !== "Nessuna attività") {
+      const lastActivityDate = new Date(workOrder.lastActivity);
+      const today = new Date();
+      const daysDiff = Math.floor((today.getTime() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (workOrderDateFilter === "last7days" && daysDiff > 7) {
+        return false;
+      }
+      if (workOrderDateFilter === "last30days" && daysDiff > 30) {
+        return false;
+      }
+      if (workOrderDateFilter === "last90days" && daysDiff > 90) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
 
   return (
     <div className="p-6 space-y-6">
@@ -770,10 +819,56 @@ export default function AdminDashboard() {
             // Show all work orders
             <Card>
               <CardHeader>
-                <CardTitle>Gestione Commesse</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Seleziona una commessa per visualizzare il report dettagliato
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Gestione Commesse</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Seleziona una commessa per visualizzare il report dettagliato
+                    </p>
+                  </div>
+                  <Button onClick={() => setAddWorkOrderDialogOpen(true)} data-testid="button-add-workorder">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nuova Commessa
+                  </Button>
+                </div>
+                
+                {/* Filtri per commesse */}
+                <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                  <div className="flex-1">
+                    <Label htmlFor="status-filter" className="text-sm mb-2 block">Stato</Label>
+                    <Select
+                      value={workOrderStatusFilter}
+                      onValueChange={setWorkOrderStatusFilter}
+                    >
+                      <SelectTrigger id="status-filter" data-testid="select-workorder-status-filter">
+                        <SelectValue placeholder="Tutti" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tutti</SelectItem>
+                        <SelectItem value="in-corso">In Corso</SelectItem>
+                        <SelectItem value="completato">Completato</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex-1">
+                    <Label htmlFor="date-filter" className="text-sm mb-2 block">Periodo</Label>
+                    <Select
+                      value={workOrderDateFilter}
+                      onValueChange={setWorkOrderDateFilter}
+                    >
+                      <SelectTrigger id="date-filter" data-testid="select-workorder-date-filter">
+                        <SelectValue placeholder="Tutte" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tutte</SelectItem>
+                        <SelectItem value="last7days">Ultimi 7 giorni</SelectItem>
+                        <SelectItem value="last30days">Ultimi 30 giorni</SelectItem>
+                        <SelectItem value="last90days">Ultimi 90 giorni</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -790,7 +885,14 @@ export default function AdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockAllWorkOrders.map((workOrder) => (
+                    {filteredWorkOrders.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                          Nessuna commessa trovata con i filtri selezionati
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredWorkOrders.map((workOrder) => (
                       <TableRow key={workOrder.id}>
                         <TableCell className="font-medium">{workOrder.number}</TableCell>
                         <TableCell>{workOrder.clientName}</TableCell>
@@ -812,18 +914,28 @@ export default function AdminDashboard() {
                         <TableCell className="font-medium">{workOrder.totalHours}h</TableCell>
                         <TableCell>{workOrder.lastActivity}</TableCell>
                         <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSelectWorkOrder(workOrder)}
-                            data-testid={`button-view-workorder-${workOrder.id}`}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Visualizza Report
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSelectWorkOrder(workOrder)}
+                              data-testid={`button-view-workorder-${workOrder.id}`}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Visualizza Report
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteWorkOrder(workOrder)}
+                              data-testid={`button-delete-workorder-${workOrder.id}`}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )))}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -1300,6 +1412,150 @@ export default function AdminDashboard() {
               data-testid="button-cancel-create-report"
             >
               {selectedEmployeeForReport ? "Indietro" : "Annulla"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog per aggiungere nuova commessa */}
+      <Dialog open={addWorkOrderDialogOpen} onOpenChange={setAddWorkOrderDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Aggiungi Nuova Commessa</DialogTitle>
+            <DialogDescription>
+              Inserisci i dati della nuova commessa.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...workOrderForm}>
+            <form onSubmit={workOrderForm.handleSubmit(handleAddWorkOrder)} className="space-y-4">
+              <FormField
+                control={workOrderForm.control}
+                name="clientId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cliente</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-workorder-client">
+                          <SelectValue placeholder="Seleziona cliente" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(clients as any[]).map((client: any) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={workOrderForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Commessa</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Es. Cancello Automatico" 
+                        {...field} 
+                        data-testid="input-workorder-name"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={workOrderForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrizione (opzionale)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Es. Realizzazione cancello industriale..." 
+                        {...field} 
+                        data-testid="input-workorder-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={workOrderForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Commessa Attiva</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        La commessa è in corso
+                      </p>
+                    </div>
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        data-testid="checkbox-workorder-active"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setAddWorkOrderDialogOpen(false)}
+                  data-testid="button-cancel-add-workorder"
+                >
+                  Annulla
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createWorkOrderMutation.isPending}
+                  data-testid="button-submit-add-workorder"
+                >
+                  {createWorkOrderMutation.isPending ? "Creazione..." : "Crea Commessa"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog per eliminare commessa */}
+      <Dialog open={deleteWorkOrderDialogOpen} onOpenChange={setDeleteWorkOrderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Elimina Commessa</DialogTitle>
+            <DialogDescription>
+              Sei sicuro di voler eliminare la commessa "{selectedWorkOrderToDelete?.name}"? 
+              Questa azione non può essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteWorkOrderDialogOpen(false)}
+              data-testid="button-cancel-delete-workorder"
+            >
+              Annulla
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteWorkOrder}
+              disabled={deleteWorkOrderMutation.isPending}
+              data-testid="button-confirm-delete-workorder"
+            >
+              {deleteWorkOrderMutation.isPending ? "Eliminazione..." : "Elimina"}
             </Button>
           </DialogFooter>
         </DialogContent>

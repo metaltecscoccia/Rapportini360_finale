@@ -29,8 +29,11 @@ export interface IStorage {
   createClient(client: InsertClient): Promise<Client>;
   
   // Work Orders
+  getAllWorkOrders(): Promise<WorkOrder[]>;
   getWorkOrdersByClient(clientId: string): Promise<WorkOrder[]>;
+  getWorkOrder(id: string): Promise<WorkOrder | undefined>;
   createWorkOrder(workOrder: InsertWorkOrder): Promise<WorkOrder>;
+  deleteWorkOrder(id: string): Promise<boolean>;
   
   // Daily Reports
   getAllDailyReports(): Promise<DailyReport[]>;
@@ -112,9 +115,84 @@ export class MemStorage implements IStorage {
       { id: "4", clientId: "2", name: "Controllo Qualità", description: null, isActive: true },
       { id: "5", clientId: "3", name: "Linea Produzione A", description: null, isActive: true },
       { id: "6", clientId: "3", name: "Retrofit Macchinari", description: null, isActive: true },
+      { id: "sample-100", clientId: "1", name: "Cancello Automatico XL-2024", description: "Realizzazione cancello automatico industriale con sistema di automazione completo", isActive: false }, // Commessa completata con 100+ rapportini
     ];
     
     workOrders.forEach(wo => this.workOrders.set(wo.id, wo));
+
+    // Genera 110 rapportini di esempio per la commessa "Cancello Automatico XL-2024"
+    const sampleWorkOrderId = "sample-100";
+    const employeeIds = ["emp1", "emp2", "emp3", "emp4"];
+    const workTypeOptions = ["Taglio", "Saldatura", "Montaggio", "Foratura", "Verniciatura", "Stuccatura"];
+    const notesOptions = [
+      "Lavorazione completata secondo specifiche",
+      "Iniziata fase di preparazione materiali",
+      "Completato assemblaggio componenti principali",
+      "Eseguiti controlli qualità intermedi",
+      "Applicata prima mano di vernice protettiva",
+      "Montaggio sistema di automazione",
+      "Test funzionalità meccaniche superati",
+      "Ritocchi finali e pulizia",
+      "Installazione sensori di sicurezza",
+      "Calibrazione sistema automatico",
+      "Verifica allineamenti strutturali",
+      "Saldature di rinforzo completate",
+      "Foratura piastre di ancoraggio",
+      "Assemblaggio binari di scorrimento",
+      "Installazione motore elettrico",
+      "Collegamento quadro elettrico",
+      "Prima fase completata con successo",
+      "Seconda fase in corso",
+      "Controllo dimensioni e tolleranze",
+      "Preparazione superficie per verniciatura"
+    ];
+
+    // Genera rapportini distribuiti su 3 mesi (90 giorni fa fino a oggi)
+    const today = new Date();
+    for (let i = 0; i < 110; i++) {
+      const daysAgo = Math.floor(Math.random() * 90); // Distribuiti negli ultimi 90 giorni
+      const reportDate = new Date(today);
+      reportDate.setDate(reportDate.getDate() - daysAgo);
+      const dateStr = reportDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      const employeeId = employeeIds[Math.floor(Math.random() * employeeIds.length)];
+      const reportId = `sample-report-${i}`;
+      
+      // Crea il rapportino
+      const report: DailyReport = {
+        id: reportId,
+        employeeId: employeeId,
+        date: dateStr,
+        status: i < 100 ? "Approvato" : "In attesa", // Primi 100 approvati, ultimi 10 in attesa
+        createdAt: new Date(reportDate.getTime() + Math.random() * 8 * 3600000), // Creato durante la giornata
+        updatedAt: new Date(reportDate.getTime() + Math.random() * 8 * 3600000)
+      };
+      this.dailyReports.set(reportId, report);
+      
+      // Crea 1-3 operazioni per ogni rapportino
+      const numOperations = Math.floor(Math.random() * 3) + 1;
+      for (let j = 0; j < numOperations; j++) {
+        const numWorkTypes = Math.floor(Math.random() * 3) + 1; // 1-3 tipi di lavoro
+        const selectedWorkTypes: string[] = [];
+        for (let k = 0; k < numWorkTypes; k++) {
+          const workType = workTypeOptions[Math.floor(Math.random() * workTypeOptions.length)];
+          if (!selectedWorkTypes.includes(workType)) {
+            selectedWorkTypes.push(workType);
+          }
+        }
+        
+        const operation: Operation = {
+          id: `sample-op-${i}-${j}`,
+          dailyReportId: reportId,
+          clientId: "1",
+          workOrderId: sampleWorkOrderId,
+          workTypes: selectedWorkTypes,
+          hours: (Math.floor(Math.random() * 8 * 2) / 2 + 0.5).toString(), // 0.5 a 4 ore con step di 0.5
+          notes: notesOptions[Math.floor(Math.random() * notesOptions.length)]
+        };
+        this.operations.set(operation.id, operation);
+      }
+    }
   }
 
   // Users
@@ -197,9 +275,19 @@ export class MemStorage implements IStorage {
   }
 
   // Work Orders
+  async getAllWorkOrders(): Promise<WorkOrder[]> {
+    await this.ensureInitialized();
+    return Array.from(this.workOrders.values());
+  }
+
   async getWorkOrdersByClient(clientId: string): Promise<WorkOrder[]> {
     await this.ensureInitialized();
     return Array.from(this.workOrders.values()).filter(wo => wo.clientId === clientId);
+  }
+
+  async getWorkOrder(id: string): Promise<WorkOrder | undefined> {
+    await this.ensureInitialized();
+    return this.workOrders.get(id);
   }
 
   async createWorkOrder(insertWorkOrder: InsertWorkOrder): Promise<WorkOrder> {
@@ -213,6 +301,11 @@ export class MemStorage implements IStorage {
     };
     this.workOrders.set(id, workOrder);
     return workOrder;
+  }
+
+  async deleteWorkOrder(id: string): Promise<boolean> {
+    await this.ensureInitialized();
+    return this.workOrders.delete(id);
   }
 
   // Daily Reports
