@@ -355,6 +355,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get today's daily report for current employee
+  app.get("/api/daily-reports/today", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).session.userId;
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      const report = await storage.getDailyReportByEmployeeAndDate(userId, today);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Nessun rapportino trovato per oggi" });
+      }
+      
+      // Get operations for this report
+      const operations = await storage.getOperationsByReportId(report.id);
+      
+      res.json({
+        ...report,
+        operations
+      });
+    } catch (error) {
+      console.error("Error fetching today's daily report:", error);
+      res.status(500).json({ error: "Failed to fetch today's daily report" });
+    }
+  });
+
   // Get all daily reports (auth required)
   app.get("/api/daily-reports", requireAuth, async (req, res) => {
     try {
@@ -547,6 +572,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete daily report (admin only)
+  app.delete("/api/daily-reports/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if report exists
+      const existingReport = await storage.getDailyReport(id);
+      if (!existingReport) {
+        return res.status(404).json({ error: "Rapportino non trovato" });
+      }
+      
+      // Delete all operations associated with this report first
+      await storage.deleteOperationsByReportId(id);
+      
+      // Delete the report
+      const deleted = await storage.deleteDailyReport(id);
+      
+      if (deleted) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ error: "Failed to delete report" });
+      }
+    } catch (error) {
+      console.error("Error deleting daily report:", error);
+      res.status(500).json({ error: "Failed to delete daily report" });
+    }
+  });
 
   // Get operations for a specific work order (for final report)
   app.get("/api/work-orders/:workOrderId/operations", requireAuth, async (req, res) => {

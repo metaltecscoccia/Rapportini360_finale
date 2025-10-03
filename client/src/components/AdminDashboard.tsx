@@ -94,6 +94,8 @@ export default function AdminDashboard() {
   const [addWorkOrderDialogOpen, setAddWorkOrderDialogOpen] = useState(false);
   const [deleteWorkOrderDialogOpen, setDeleteWorkOrderDialogOpen] = useState(false);
   const [selectedWorkOrderToDelete, setSelectedWorkOrderToDelete] = useState<any>(null);
+  const [deleteReportDialogOpen, setDeleteReportDialogOpen] = useState(false);
+  const [selectedReportToDelete, setSelectedReportToDelete] = useState<any>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -354,6 +356,12 @@ export default function AdminDashboard() {
     }
   };
 
+  const confirmDeleteReport = () => {
+    if (selectedReportToDelete) {
+      deleteReportMutation.mutate(selectedReportToDelete.id);
+    }
+  };
+
   const handleResetPassword = (employee: any) => {
     setSelectedEmployee(employee);
     setNewPassword("");
@@ -392,6 +400,29 @@ export default function AdminDashboard() {
       toast({
         title: "Errore",
         description: error.message || "Errore nell'approvazione del rapportino",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Mutation per eliminare rapportino
+  const deleteReportMutation = useMutation({
+    mutationFn: async (reportId: string) => {
+      return apiRequest('DELETE', `/api/daily-reports/${reportId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/daily-reports'] });
+      toast({
+        title: "Rapportino eliminato",
+        description: "Il rapportino è stato eliminato con successo."
+      });
+      setDeleteReportDialogOpen(false);
+      setSelectedReportToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore nell'eliminazione del rapportino",
         variant: "destructive"
       });
     }
@@ -486,9 +517,17 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Error exporting PDF:", error);
       if (error instanceof Error) {
-        alert(`Errore nell'esportazione: ${error.message}`);
+        toast({
+          title: "Esportazione PDF non riuscita",
+          description: error.message || "Errore nell'esportazione del PDF",
+          variant: "destructive"
+        });
       } else {
-        alert("Errore nell'esportazione del PDF");
+        toast({
+          title: "Errore",
+          description: "Errore nell'esportazione del PDF",
+          variant: "destructive"
+        });
       }
     }
   };
@@ -498,7 +537,11 @@ export default function AdminDashboard() {
     if (selectedDate) {
       // Validate date format DD/MM/YYYY
       if (!/^\d{2}\/\d{2}\/\d{4}$/.test(selectedDate)) {
-        alert("Formato data non valido. Usa DD/MM/YYYY");
+        toast({
+          title: "Formato data non valido",
+          description: "Usa il formato DD/MM/YYYY (esempio: 03/10/2025)",
+          variant: "destructive"
+        });
         return;
       }
       
@@ -791,6 +834,17 @@ export default function AdminDashboard() {
                                   <CheckCircle className="h-4 w-4" />
                                 </Button>
                               )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedReportToDelete(report);
+                                  setDeleteReportDialogOpen(true);
+                                }}
+                                data-testid={`button-delete-report-${report.id}`}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1556,6 +1610,37 @@ export default function AdminDashboard() {
               data-testid="button-confirm-delete-workorder"
             >
               {deleteWorkOrderMutation.isPending ? "Eliminazione..." : "Elimina"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog per eliminare rapportino */}
+      <Dialog open={deleteReportDialogOpen} onOpenChange={setDeleteReportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Elimina Rapportino</DialogTitle>
+            <DialogDescription>
+              Sei sicuro di voler eliminare il rapportino di {selectedReportToDelete?.employeeName} del{" "}
+              {selectedReportToDelete?.date ? new Date(selectedReportToDelete.date).toLocaleDateString("it-IT") : ""}? 
+              Questa azione non può essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteReportDialogOpen(false)}
+              data-testid="button-cancel-delete-report"
+            >
+              Annulla
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteReport}
+              disabled={deleteReportMutation.isPending}
+              data-testid="button-confirm-delete-report"
+            >
+              {deleteReportMutation.isPending ? "Eliminazione..." : "Elimina"}
             </Button>
           </DialogFooter>
         </DialogContent>
