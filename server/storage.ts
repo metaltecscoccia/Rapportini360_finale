@@ -39,6 +39,7 @@ export interface IStorage {
   getAllDailyReports(): Promise<DailyReport[]>;
   getDailyReportsByDate(date: string): Promise<DailyReport[]>;
   getDailyReport(id: string): Promise<DailyReport | undefined>;
+  getDailyReportByEmployeeAndDate(employeeId: string, date: string): Promise<DailyReport | undefined>;
   createDailyReport(report: InsertDailyReport): Promise<DailyReport>;
   updateDailyReport(id: string, updates: UpdateDailyReport): Promise<DailyReport>;
   updateDailyReportStatus(id: string, status: string): Promise<DailyReport>;
@@ -322,6 +323,12 @@ export class MemStorage implements IStorage {
   async getDailyReport(id: string): Promise<DailyReport | undefined> {
     await this.ensureInitialized();
     return this.dailyReports.get(id);
+  }
+
+  async getDailyReportByEmployeeAndDate(employeeId: string, date: string): Promise<DailyReport | undefined> {
+    await this.ensureInitialized();
+    const reports = Array.from(this.dailyReports.values());
+    return reports.find(r => r.employeeId === employeeId && r.date === date);
   }
 
   async createDailyReport(insertReport: InsertDailyReport): Promise<DailyReport> {

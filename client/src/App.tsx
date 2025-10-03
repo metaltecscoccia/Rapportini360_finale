@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider, useMutation } from "@tanstack/react-query";
+import { QueryClientProvider, useMutation, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -49,6 +49,14 @@ function AuthenticatedApp({ currentUser, onLogout }: { currentUser: User; onLogo
     }
   };
 
+  // Carica il rapportino di oggi se esiste (solo per dipendenti)
+  const { data: todayReport, isLoading: loadingTodayReport } = useQuery<any>({
+    queryKey: ['/api/daily-reports/today'],
+    enabled: currentUser.role === 'employee',
+    retry: false,
+    staleTime: 0
+  });
+
   // Mutation per creare nuovo rapportino
   const createReportMutation = useMutation({
     mutationFn: async (operations: any[]) => {
@@ -67,6 +75,7 @@ function AuthenticatedApp({ currentUser, onLogout }: { currentUser: User; onLogo
       return response.json();
     },
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/daily-reports/today'] });
       toast({
         title: "Rapportino creato",
         description: "Il rapportino è stato inviato con successo e è in attesa di approvazione.",
@@ -83,8 +92,41 @@ function AuthenticatedApp({ currentUser, onLogout }: { currentUser: User; onLogo
     },
   });
 
+  // Mutation per aggiornare rapportino esistente
+  const updateReportMutation = useMutation({
+    mutationFn: async ({ reportId, operations }: { reportId: string; operations: any[] }) => {
+      const response = await apiRequest('PUT', `/api/daily-reports/${reportId}`, {
+        operations
+      });
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/daily-reports/today'] });
+      toast({
+        title: "Rapportino aggiornato",
+        description: "Le lavorazioni sono state aggiunte con successo.",
+      });
+      console.log("Report updated successfully:", data);
+    },
+    onError: (error: any) => {
+      console.error("Error updating report:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare il rapportino. Riprova più tardi.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleReportSubmit = (operations: any[]) => {
-    createReportMutation.mutate(operations);
+    if (todayReport) {
+      // Aggiorna rapportino esistente
+      updateReportMutation.mutate({ reportId: todayReport.id, operations });
+    } else {
+      // Crea nuovo rapportino
+      createReportMutation.mutate(operations);
+    }
   };
 
   return (
@@ -123,11 +165,19 @@ function AuthenticatedApp({ currentUser, onLogout }: { currentUser: User; onLogo
           <AdminDashboard />
         ) : (
           <div className="py-6">
-            <DailyReportForm
-              employeeName={currentUser.fullName}
-              date={new Date().toLocaleDateString("it-IT")}
-              onSubmit={handleReportSubmit}
-            />
+            {loadingTodayReport ? (
+              <div className="flex items-center justify-center p-8">
+                <p className="text-muted-foreground">Caricamento...</p>
+              </div>
+            ) : (
+              <DailyReportForm
+                employeeName={currentUser.fullName}
+                date={new Date().toLocaleDateString("it-IT")}
+                onSubmit={handleReportSubmit}
+                initialOperations={todayReport?.operations}
+                isEditing={!!todayReport}
+              />
+            )}
           </div>
         )}
       </main>

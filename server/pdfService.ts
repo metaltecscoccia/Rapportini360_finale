@@ -10,7 +10,10 @@ export class PDFService {
     const reports = await storage.getDailyReportsByDate(date);
     
     if (reports.length === 0) {
-      throw new Error(`Nessun rapportino trovato per la data ${date}`);
+      // Format date in Italian format for user-friendly error message
+      const [year, month, day] = date.split('-');
+      const italianDate = `${day}/${month}/${year}`;
+      throw new Error(`Nessun rapportino trovato per la data ${italianDate}. Verifica che ci siano rapportini approvati per questa data.`);
     }
 
     // Get all related data
