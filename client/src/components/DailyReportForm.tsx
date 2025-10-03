@@ -185,8 +185,10 @@ export default function DailyReportForm({
 
   // Funzione per inviare il rapportino (chiamata finale)
   const submitReport = () => {
-    console.log("Submitting daily report with operations:", operations);
-    onSubmit(operations);
+    // Rimuovi il campo 'id' dalle operazioni prima di inviare (serve solo per il form)
+    const operationsToSubmit = operations.map(({ id, ...operation }) => operation) as Operation[];
+    console.log("Submitting daily report with operations:", operationsToSubmit);
+    onSubmit(operationsToSubmit);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
