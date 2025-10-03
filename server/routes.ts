@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { PDFService } from "./pdfService";
+import { WordService } from "./wordService";
 import { 
   insertUserSchema,
   updateUserSchema,
@@ -34,7 +34,7 @@ const requireAdmin = (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  const pdfService = new PDFService();
+  const wordService = new WordService();
 
   // Get current user info
   app.get("/api/me", requireAuth, async (req, res) => {
@@ -453,7 +453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export daily reports as PDF (admin only)
+  // Export daily reports as Word document (admin only)
   app.get("/api/export/daily-reports/:date", requireAdmin, async (req, res) => {
     try {
       const { date } = req.params;
@@ -463,22 +463,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid date format. Use YYYY-MM-DD" });
       }
 
-      console.log(`Generating PDF report for date: ${date}`);
-      const pdfBuffer = await pdfService.generateDailyReportPDF(date);
+      console.log(`Generating Word report for date: ${date}`);
+      const docBuffer = await wordService.generateDailyReportWord(date);
 
-      const filename = `Rapportini_${date}.pdf`;
+      const filename = `Rapportini_${date}.docx`;
       
-      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.setHeader('Content-Length', pdfBuffer.length);
+      res.setHeader('Content-Length', docBuffer.length);
       
-      res.send(pdfBuffer);
+      res.send(docBuffer);
     } catch (error) {
-      console.error("Error generating PDF:", error);
+      console.error("Error generating Word document:", error);
       if (error instanceof Error) {
         res.status(500).json({ error: error.message });
       } else {
-        res.status(500).json({ error: "Failed to generate PDF report" });
+        res.status(500).json({ error: "Failed to generate Word report" });
       }
     }
   });

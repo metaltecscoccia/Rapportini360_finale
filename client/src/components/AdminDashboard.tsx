@@ -504,28 +504,28 @@ export default function AdminDashboard() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Rapportini_${exportDate}.pdf`;
+        a.download = `Rapportini_${exportDate}.docx`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        console.log("PDF export completed");
+        console.log("Word export completed");
       } else {
         const error = await response.json();
-        throw new Error(error.error || "Failed to export PDF");
+        throw new Error(error.error || "Failed to export Word document");
       }
     } catch (error) {
-      console.error("Error exporting PDF:", error);
+      console.error("Error exporting Word document:", error);
       if (error instanceof Error) {
         toast({
-          title: "Esportazione PDF non riuscita",
-          description: error.message || "Errore nell'esportazione del PDF",
+          title: "Esportazione non riuscita",
+          description: error.message || "Errore nell'esportazione del documento Word",
           variant: "destructive"
         });
       } else {
         toast({
           title: "Errore",
-          description: "Errore nell'esportazione del PDF",
+          description: "Errore nell'esportazione del documento Word",
           variant: "destructive"
         });
       }
@@ -647,7 +647,7 @@ export default function AdminDashboard() {
             data-testid="button-export-reports"
           >
             <FileText className="h-4 w-4 mr-2" />
-            Esporta PDF Oggi
+            Esporta Word Oggi
           </Button>
           <Button 
             variant="outline" 
@@ -655,7 +655,7 @@ export default function AdminDashboard() {
             data-testid="button-export-reports-date"
           >
             <FileText className="h-4 w-4 mr-2" />
-            Esporta PDF Data Specifica
+            Esporta Word Data Specifica
           </Button>
         </div>
       </div>
