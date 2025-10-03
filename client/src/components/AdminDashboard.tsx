@@ -59,9 +59,15 @@ const addWorkOrderSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+// Schema per creazione cliente
+const addClientSchema = z.object({
+  name: z.string().min(2, "Il nome deve essere di almeno 2 caratteri"),
+});
+
 type AddEmployeeForm = z.infer<typeof addEmployeeSchema>;
 type EditEmployeeForm = z.infer<typeof editEmployeeSchema>;
 type AddWorkOrderForm = z.infer<typeof addWorkOrderSchema>;
+type AddClientForm = z.infer<typeof addClientSchema>;
 
 
 // Mock data removed - now using real data from API
@@ -96,6 +102,7 @@ export default function AdminDashboard() {
   const [selectedWorkOrderToDelete, setSelectedWorkOrderToDelete] = useState<any>(null);
   const [deleteReportDialogOpen, setDeleteReportDialogOpen] = useState(false);
   const [selectedReportToDelete, setSelectedReportToDelete] = useState<any>(null);
+  const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -128,6 +135,14 @@ export default function AdminDashboard() {
       fullName: "",
       username: "",
       password: "",
+    },
+  });
+
+  // Form per aggiunta cliente
+  const clientForm = useForm<AddClientForm>({
+    resolver: zodResolver(addClientSchema),
+    defaultValues: {
+      name: "",
     },
   });
 
@@ -236,6 +251,32 @@ export default function AdminDashboard() {
     },
   });
 
+  // Mutation per creare nuovo cliente
+  const createClientMutation = useMutation({
+    mutationFn: async (data: AddClientForm) => {
+      return apiRequest('POST', '/api/clients', {
+        name: data.name,
+        description: null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+      toast({
+        title: "Cliente aggiunto",
+        description: "Il nuovo cliente è stato aggiunto con successo.",
+      });
+      clientForm.reset();
+      setAddClientDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante la creazione del cliente.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Mutation per creare nuova commessa
   const createWorkOrderMutation = useMutation({
     mutationFn: async (data: AddWorkOrderForm) => {
@@ -339,6 +380,10 @@ export default function AdminDashboard() {
     if (selectedEmployee) {
       deleteEmployeeMutation.mutate(selectedEmployee.id);
     }
+  };
+
+  const handleAddClient = (data: AddClientForm) => {
+    createClientMutation.mutate(data);
   };
 
   const handleAddWorkOrder = (data: AddWorkOrderForm) => {
@@ -1500,6 +1545,21 @@ export default function AdminDashboard() {
                             {client.name}
                           </SelectItem>
                         ))}
+                        <div className="p-2 border-t mt-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => {
+                              setAddClientDialogOpen(true);
+                            }}
+                            data-testid="button-add-new-client"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Nuovo Cliente
+                          </Button>
+                        </div>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -1578,6 +1638,56 @@ export default function AdminDashboard() {
                   data-testid="button-submit-add-workorder"
                 >
                   {createWorkOrderMutation.isPending ? "Creazione..." : "Crea Commessa"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog per aggiungere nuovo cliente */}
+      <Dialog open={addClientDialogOpen} onOpenChange={setAddClientDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Aggiungi Nuovo Cliente</DialogTitle>
+            <DialogDescription>
+              Inserisci il nome del nuovo cliente.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...clientForm}>
+            <form onSubmit={clientForm.handleSubmit(handleAddClient)} className="space-y-4">
+              <FormField
+                control={clientForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Cliente</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Es. Acme Corporation" 
+                        {...field} 
+                        data-testid="input-client-name"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setAddClientDialogOpen(false)}
+                  data-testid="button-cancel-add-client"
+                >
+                  Annulla
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createClientMutation.isPending}
+                  data-testid="button-submit-add-client"
+                >
+                  {createClientMutation.isPending ? "Creazione..." : "Aggiungi Cliente"}
                 </Button>
               </DialogFooter>
             </form>
