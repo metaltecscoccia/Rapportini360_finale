@@ -296,6 +296,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete client (admin only) - work orders and operations remain in database
+  app.delete("/api/clients/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteClient(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Cliente non trovato" });
+      }
+      
+      res.json({ success: true, message: "Cliente eliminato con successo" });
+    } catch (error: any) {
+      console.error("Error deleting client:", error);
+      res.status(500).json({ error: error.message || "Failed to delete client" });
+    }
+  });
+
   // Get work orders by client
   app.get("/api/clients/:clientId/work-orders", requireAuth, async (req, res) => {
     try {

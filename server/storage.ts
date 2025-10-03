@@ -27,6 +27,7 @@ export interface IStorage {
   // Clients
   getAllClients(): Promise<Client[]>;
   createClient(client: InsertClient): Promise<Client>;
+  deleteClient(id: string): Promise<boolean>;
   
   // Work Orders
   getAllWorkOrders(): Promise<WorkOrder[]>;
@@ -177,6 +178,11 @@ export class MemStorage implements IStorage {
     const client: Client = { ...insertClient, id, description: insertClient.description || null };
     this.clients.set(id, client);
     return client;
+  }
+
+  async deleteClient(id: string): Promise<boolean> {
+    await this.ensureInitialized();
+    return this.clients.delete(id);
   }
 
   // Work Orders
