@@ -1578,25 +1578,12 @@ export default function AdminDashboard() {
                 date={new Date().toISOString().split('T')[0]}
                 onSubmit={async (operations) => {
                   try {
-                    const response = await apiRequest('POST', '/api/daily-reports', {
+                    await apiRequest('POST', '/api/daily-reports', {
                       employeeId: selectedEmployeeForReport.id,
                       date: new Date().toISOString().split('T')[0],
-                      status: 'In attesa'
+                      status: 'In attesa',
+                      operations: operations
                     });
-                    
-                    const report = await response.json();
-                    
-                    // Crea le operazioni
-                    for (const operation of operations) {
-                      await apiRequest('POST', '/api/operations', {
-                        dailyReportId: report.id,
-                        clientId: operation.clientId,
-                        workOrderId: operation.workOrderId,
-                        workTypes: operation.workTypes,
-                        hours: operation.hours,
-                        notes: operation.notes
-                      });
-                    }
                     
                     queryClient.invalidateQueries({ queryKey: ['/api/daily-reports'] });
                     toast({
