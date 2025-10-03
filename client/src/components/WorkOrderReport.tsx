@@ -19,8 +19,7 @@ interface WorkOrderReportProps {
 interface EnrichedOperation {
   id: string;
   workTypes: string[];
-  startTime: string;
-  endTime: string;
+  hours: number;
   notes: string | null;
   employeeName: string;
   employeeId: string;
@@ -56,9 +55,7 @@ function aggregateOperationsByDate(operations: EnrichedOperation[]): DailyAggreg
     
     const hours: Record<string, number> = {};
     ops.forEach(op => {
-      const startTime = new Date(`1970-01-01T${op.startTime}:00`);
-      const endTime = new Date(`1970-01-01T${op.endTime}:00`);
-      const hoursWorked = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+      const hoursWorked = Number(op.hours) || 0;
       
       if (!hours[op.employeeName]) {
         hours[op.employeeName] = 0;
@@ -172,71 +169,91 @@ export default function WorkOrderReport({
         </CardContent>
       </Card>
 
-      {/* Main Report Table */}
+      {/* Main Report Table - Compact Excel Style */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <FileText className="h-4 w-4" />
             Report Giornaliero Commessa
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Aggregazione di tutti i rapportini approvati per questa commessa
           </p>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[120px]">Data</TableHead>
-                <TableHead className="w-[250px]">Dipendenti</TableHead>
-                <TableHead className="w-[200px]">Lavorazioni</TableHead>
-                <TableHead className="w-[150px]">Ore per Dipendente</TableHead>
-                <TableHead className="w-[300px]">Note Amministratore</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reportData.map((row, index) => (
-                <TableRow key={row.date}>
-                  <TableCell className="font-medium">
-                    {new Date(row.date).toLocaleDateString('it-IT')}
-                  </TableCell>
-                  <TableCell>
-                    {row.employees.join(", ")}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {row.workTypes.map((type, typeIndex) => (
-                        <Badge key={typeIndex} variant="secondary" className="text-xs">
-                          {type}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {row.employees.map((emp, empIndex) => (
-                        <div key={empIndex}>
-                          {emp} ({(row.hours as any)[emp] || 0}h)
-                        </div>
-                      ))}
-                      <div className="font-medium mt-1">
-                        Tot: {row.totalHours}h
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      placeholder="Aggiungi note..."
-                      value={row.adminNotes}
-                      onChange={(e) => updateAdminNotes(row.date, e.target.value)}
-                      className="text-sm"
-                      data-testid={`input-admin-notes-${index}`}
-                    />
-                  </TableCell>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b">
+                  <TableHead className="h-8 px-3 text-xs font-semibold w-[90px]">Data</TableHead>
+                  <TableHead className="h-8 px-3 text-xs font-semibold w-[140px]">Dipendenti</TableHead>
+                  <TableHead className="h-8 px-3 text-xs font-semibold w-[80px]">Ore</TableHead>
+                  <TableHead className="h-8 px-3 text-xs font-semibold min-w-[180px]">Lavorazioni</TableHead>
+                  <TableHead className="h-8 px-3 text-xs font-semibold min-w-[200px]">Note Admin</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {reportData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-20 text-center text-sm text-muted-foreground">
+                      Nessuna operazione approvata per questa commessa
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  reportData.map((row, index) => (
+                    <TableRow key={row.date} className="hover-elevate">
+                      <TableCell className="h-10 px-3 py-1 text-xs font-medium">
+                        {new Date(row.date).toLocaleDateString('it-IT', { 
+                          day: '2-digit', 
+                          month: '2-digit',
+                          year: '2-digit'
+                        })}
+                      </TableCell>
+                      <TableCell className="h-10 px-3 py-1">
+                        <div className="text-xs space-y-0.5">
+                          {row.employees.map((emp, empIndex) => (
+                            <div key={empIndex} className="truncate" title={emp}>
+                              {emp}
+                            </div>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="h-10 px-3 py-1">
+                        <div className="text-xs space-y-0.5">
+                          {row.employees.map((emp, empIndex) => (
+                            <div key={empIndex} className="font-medium">
+                              {(row.hours as any)[emp]?.toFixed(1) || 0}h
+                            </div>
+                          ))}
+                          <div className="font-semibold text-primary pt-0.5 border-t mt-0.5">
+                            {row.totalHours.toFixed(1)}h
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="h-10 px-3 py-1">
+                        <div className="flex flex-wrap gap-1">
+                          {row.workTypes.map((type, typeIndex) => (
+                            <Badge key={typeIndex} variant="secondary" className="text-[10px] h-4 px-1.5 py-0">
+                              {type}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="h-10 px-3 py-1">
+                        <Input
+                          placeholder="Note..."
+                          value={adminNotes[row.date] || row.adminNotes}
+                          onChange={(e) => updateAdminNotes(row.date, e.target.value)}
+                          className="text-xs h-7 px-2"
+                          data-testid={`input-admin-notes-${index}`}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

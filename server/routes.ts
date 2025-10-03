@@ -621,7 +621,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/work-orders/:workOrderId/operations", requireAuth, async (req, res) => {
     try {
       const { workOrderId } = req.params;
+      console.log(`[WorkOrder Report] Fetching operations for workOrderId: ${workOrderId}`);
+      
       const operations = await storage.getOperationsByWorkOrderId(workOrderId);
+      console.log(`[WorkOrder Report] Found ${operations.length} operations`);
       
       // Get additional data for each operation (employee names, etc.)
       const enrichedOperations = await Promise.all(
@@ -649,7 +652,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-      res.json(enrichedOperations);
+      console.log(`[WorkOrder Report] Report statuses:`, enrichedOperations.map(op => ({
+        opId: op.id,
+        status: op.reportStatus,
+        date: op.date
+      })));
+      
+      // Filter only operations from approved daily reports
+      const approvedOperations = enrichedOperations.filter(op => op.reportStatus === "Approvato");
+      console.log(`[WorkOrder Report] After filtering: ${approvedOperations.length} approved operations`);
+      
+      res.json(approvedOperations);
     } catch (error) {
       console.error("Error fetching work order operations:", error);
       res.status(500).json({ error: "Failed to fetch work order operations" });
