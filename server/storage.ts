@@ -40,6 +40,7 @@ export interface IStorage {
   getWorkOrdersByClient(clientId: string): Promise<WorkOrder[]>;
   getWorkOrder(id: string): Promise<WorkOrder | undefined>;
   createWorkOrder(workOrder: InsertWorkOrder): Promise<WorkOrder>;
+  updateWorkOrderStatus(id: string, isActive: boolean): Promise<WorkOrder>;
   deleteWorkOrder(id: string): Promise<boolean>;
   
   // Daily Reports
@@ -196,6 +197,20 @@ export class DatabaseStorage implements IStorage {
     await this.ensureInitialized();
     const [workOrder] = await db.insert(workOrders).values(insertWorkOrder).returning();
     return workOrder;
+  }
+
+  async updateWorkOrderStatus(id: string, isActive: boolean): Promise<WorkOrder> {
+    await this.ensureInitialized();
+    const [updatedWorkOrder] = await db.update(workOrders)
+      .set({ isActive })
+      .where(eq(workOrders.id, id))
+      .returning();
+    
+    if (!updatedWorkOrder) {
+      throw new Error("Commessa non trovata");
+    }
+    
+    return updatedWorkOrder;
   }
 
   async deleteWorkOrder(id: string): Promise<boolean> {
