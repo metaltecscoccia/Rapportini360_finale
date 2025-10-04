@@ -1106,11 +1106,25 @@ export default function AdminDashboard() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge 
-                            variant={workOrder.status === "Completato" ? "default" : "secondary"}
+                          <Select
+                            value={workOrder.isActive ? "in-corso" : "completato"}
+                            onValueChange={(value) => {
+                              const isActive = value === "in-corso";
+                              updateWorkOrderStatusMutation.mutate({ workOrderId: workOrder.id, isActive });
+                            }}
+                            disabled={updateWorkOrderStatusMutation.isPending}
                           >
-                            {workOrder.status}
-                          </Badge>
+                            <SelectTrigger 
+                              className="w-[140px]" 
+                              data-testid={`select-workorder-status-${workOrder.id}`}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="in-corso">In Corso</SelectItem>
+                              <SelectItem value="completato">Completato</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{workOrder.totalOperations} operazioni</Badge>
