@@ -235,19 +235,7 @@ export default function DailyReportForm({
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Operazioni</h3>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addOperation}
-                  data-testid="button-add-operation"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Aggiungi Operazione
-                </Button>
-              </div>
+              <h3 className="text-lg font-medium">Operazioni</h3>
               
               {operations.map((operation, index) => (
                 <Card key={operation.id} className="p-4">
@@ -365,17 +353,28 @@ export default function DailyReportForm({
               ))}
             </div>
             
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center gap-3">
               <div className="text-sm text-muted-foreground">
                 <strong>Ore totali: {getTotalHours()}h</strong>
                 <span className="ml-2 text-xs">
                   {getTotalHours() === 8 ? "(✓ Standard)" : getTotalHours() < 8 ? "(⚠ Sotto standard)" : "(⚠ Sopra standard)"}
                 </span>
               </div>
-              <Button type="submit" data-testid="button-submit-report">
-                <Send className="h-4 w-4 mr-2" />
-                {isEditing ? "Aggiorna Rapportino" : "Invia Rapportino"}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addOperation}
+                  data-testid="button-add-operation"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Aggiungi Operazione
+                </Button>
+                <Button type="submit" data-testid="button-submit-report">
+                  <Send className="h-4 w-4 mr-2" />
+                  {isEditing ? "Aggiorna Rapportino" : "Invia Rapportino"}
+                </Button>
+              </div>
             </div>
           </form>
         </CardContent>
