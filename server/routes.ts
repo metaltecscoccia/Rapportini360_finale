@@ -525,6 +525,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update work order (admin only)
+  app.put("/api/work-orders/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = insertWorkOrderSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ error: "Dati commessa non validi", issues: result.error.issues });
+      }
+      
+      const updatedWorkOrder = await storage.updateWorkOrder(id, result.data);
+      res.json(updatedWorkOrder);
+    } catch (error: any) {
+      console.error("Error updating work order:", error);
+      res.status(500).json({ error: "Failed to update work order" });
+    }
+  });
+
   // Update work order status (admin only)
   app.patch("/api/work-orders/:id/status", requireAdmin, async (req, res) => {
     try {
