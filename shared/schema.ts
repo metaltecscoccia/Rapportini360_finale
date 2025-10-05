@@ -20,6 +20,22 @@ export const clients = pgTable("clients", {
   description: text("description"),
 });
 
+// Work types master table (Lavorazioni)
+export const workTypes = pgTable("work_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+});
+
+// Materials master table (Materiali)
+export const materials = pgTable("materials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+});
+
 // Work orders (Commesse) table
 export const workOrders = pgTable("work_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -27,6 +43,8 @@ export const workOrders = pgTable("work_orders", {
   name: text("name").notNull(),
   description: text("description"),
   isActive: boolean("is_active").notNull().default(true),
+  availableWorkTypes: text("available_work_types").array().notNull().default(sql`ARRAY[]::text[]`),
+  availableMaterials: text("available_materials").array().notNull().default(sql`ARRAY[]::text[]`),
 });
 
 // Daily reports table
@@ -46,6 +64,7 @@ export const operations = pgTable("operations", {
   clientId: varchar("client_id").notNull().references(() => clients.id),
   workOrderId: varchar("work_order_id").notNull().references(() => workOrders.id),
   workTypes: text("work_types").array().notNull(), // Multiple work types: ["Taglio", "Saldatura", "Montaggio"]
+  materials: text("materials").array().notNull().default(sql`ARRAY[]::text[]`), // Multiple materials: ["Acciaio", "Alluminio"]
   hours: numeric("hours").notNull(), // Ore lavorate per questa operazione (es. 2.5)
   notes: text("notes"),
 });
@@ -66,6 +85,14 @@ export const updateUserSchema = insertUserSchema.partial().extend({
 });
 
 export const insertClientSchema = createInsertSchema(clients).omit({
+  id: true,
+});
+
+export const insertWorkTypeSchema = createInsertSchema(workTypes).omit({
+  id: true,
+});
+
+export const insertMaterialSchema = createInsertSchema(materials).omit({
   id: true,
 });
 
@@ -102,6 +129,12 @@ export type User = typeof users.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
 
+export type InsertWorkType = z.infer<typeof insertWorkTypeSchema>;
+export type WorkType = typeof workTypes.$inferSelect;
+
+export type InsertMaterial = z.infer<typeof insertMaterialSchema>;
+export type Material = typeof materials.$inferSelect;
+
 export type InsertWorkOrder = z.infer<typeof insertWorkOrderSchema>;
 export type WorkOrder = typeof workOrders.$inferSelect;
 
@@ -113,10 +146,6 @@ export type Operation = typeof operations.$inferSelect;
 
 export type UpdateDailyReport = z.infer<typeof updateDailyReportSchema>;
 export type UpdateOperation = z.infer<typeof updateOperationSchema>;
-
-// Work type enum
-export const WorkTypeEnum = z.enum(["Taglio", "Saldatura", "Montaggio", "Foratura", "Verniciatura", "Stuccatura", "Manutenzione", "Generico"]);
-export type WorkType = z.infer<typeof WorkTypeEnum>;
 
 // Status enum
 export const StatusEnum = z.enum(["In attesa", "Approvato"]);
