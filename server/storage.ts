@@ -60,6 +60,7 @@ export interface IStorage {
   getWorkOrdersByClient(clientId: string): Promise<WorkOrder[]>;
   getWorkOrder(id: string): Promise<WorkOrder | undefined>;
   createWorkOrder(workOrder: InsertWorkOrder): Promise<WorkOrder>;
+  updateWorkOrder(id: string, updates: Partial<InsertWorkOrder>): Promise<WorkOrder>;
   updateWorkOrderStatus(id: string, isActive: boolean): Promise<WorkOrder>;
   deleteWorkOrder(id: string): Promise<boolean>;
   
@@ -303,6 +304,20 @@ export class DatabaseStorage implements IStorage {
     await this.ensureInitialized();
     const [workOrder] = await db.insert(workOrders).values(insertWorkOrder).returning();
     return workOrder;
+  }
+
+  async updateWorkOrder(id: string, updates: Partial<InsertWorkOrder>): Promise<WorkOrder> {
+    await this.ensureInitialized();
+    const [updatedWorkOrder] = await db.update(workOrders)
+      .set(updates)
+      .where(eq(workOrders.id, id))
+      .returning();
+    
+    if (!updatedWorkOrder) {
+      throw new Error("Commessa non trovata");
+    }
+    
+    return updatedWorkOrder;
   }
 
   async updateWorkOrderStatus(id: string, isActive: boolean): Promise<WorkOrder> {
