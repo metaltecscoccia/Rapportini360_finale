@@ -888,25 +888,62 @@ export default function AdminDashboard() {
     mutationFn: async (data: MaterialForm) => {
       return apiRequest('POST', '/api/materials', data);
     },
+    onMutate: async (newMaterial: MaterialForm) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['/api/materials'] });
+      
+      // Snapshot the previous value for rollback
+      const previousMaterials = queryClient.getQueryData(['/api/materials']);
+      
+      // Optimistically update the cache with a temporary ID
+      const optimisticMaterial = {
+        id: `temp-${Date.now()}`,
+        name: newMaterial.name,
+        description: newMaterial.description || "",
+        isActive: true,
+      };
+      
+      queryClient.setQueryData(['/api/materials'], (old: any) => {
+        return old ? [...old, optimisticMaterial] : [optimisticMaterial];
+      });
+      
+      // Auto-select the newly created material in both forms immediately
+      const currentMaterials = workOrderForm.getValues('availableMaterials') || [];
+      workOrderForm.setValue('availableMaterials', [...currentMaterials, newMaterial.name]);
+      
+      const currentEditMaterials = editWorkOrderForm.getValues('availableMaterials') || [];
+      editWorkOrderForm.setValue('availableMaterials', [...currentEditMaterials, newMaterial.name]);
+      
+      // Return context for rollback
+      return { previousMaterials, materialName: newMaterial.name };
+    },
     onSuccess: (response: any) => {
+      // Refetch to get the real data from server
       queryClient.invalidateQueries({ queryKey: ['/api/materials'] });
       toast({
         title: "Materiale aggiunto",
         description: "Il nuovo materiale è stato aggiunto con successo.",
       });
       
-      // Auto-select the newly created material in both forms
-      const currentMaterials = workOrderForm.getValues('availableMaterials') || [];
-      workOrderForm.setValue('availableMaterials', [...currentMaterials, response.name]);
-      
-      const currentEditMaterials = editWorkOrderForm.getValues('availableMaterials') || [];
-      editWorkOrderForm.setValue('availableMaterials', [...currentEditMaterials, response.name]);
-      
       // Reset quick-add form
       setQuickAddMaterialName("");
       setShowQuickAddMaterial(false);
     },
-    onError: (error: any) => {
+    onError: (error: any, newMaterial: MaterialForm, context: any) => {
+      // Rollback optimistic update
+      if (context?.previousMaterials) {
+        queryClient.setQueryData(['/api/materials'], context.previousMaterials);
+      }
+      
+      // Remove from form selections
+      if (context?.materialName) {
+        const currentMaterials = workOrderForm.getValues('availableMaterials') || [];
+        workOrderForm.setValue('availableMaterials', currentMaterials.filter((m: string) => m !== context.materialName));
+        
+        const currentEditMaterials = editWorkOrderForm.getValues('availableMaterials') || [];
+        editWorkOrderForm.setValue('availableMaterials', currentEditMaterials.filter((m: string) => m !== context.materialName));
+      }
+      
       toast({
         title: "Errore",
         description: error.message || "Errore durante l'aggiunta del materiale.",
