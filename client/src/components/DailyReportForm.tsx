@@ -54,7 +54,7 @@ interface OperationCardProps {
   clients: Client[];
   clientsLoading: boolean;
   onRemove: (id: string) => void;
-  onUpdate: (id: string, field: keyof Operation, value: any) => void;
+  setOperations: React.Dispatch<React.SetStateAction<Operation[]>>;
   onToggleWorkType: (operationId: string, workType: string) => void;
   onToggleMaterial: (operationId: string, material: string) => void;
 }
@@ -66,7 +66,7 @@ function OperationCard({
   clients,
   clientsLoading,
   onRemove,
-  onUpdate,
+  setOperations,
   onToggleWorkType,
   onToggleMaterial
 }: OperationCardProps) {
@@ -99,10 +99,11 @@ function OperationCard({
           <Select
             value={operation.clientId}
             onValueChange={(value) => {
-              onUpdate(operation.id, 'clientId', value);
-              onUpdate(operation.id, 'workOrderId', '');
-              onUpdate(operation.id, 'workTypes', []);
-              onUpdate(operation.id, 'materials', []);
+              setOperations(prevOps => prevOps.map(op => 
+                op.id === operation.id 
+                  ? { ...op, clientId: value, workOrderId: "", workTypes: [], materials: [] }
+                  : op
+              ));
             }}
           >
             <SelectTrigger data-testid={`select-client-${operation.id}`}>
@@ -127,9 +128,11 @@ function OperationCard({
           <Select
             value={operation.workOrderId}
             onValueChange={(value) => {
-              onUpdate(operation.id, 'workOrderId', value);
-              onUpdate(operation.id, 'workTypes', []);
-              onUpdate(operation.id, 'materials', []);
+              setOperations(prevOps => prevOps.map(op => 
+                op.id === operation.id 
+                  ? { ...op, workOrderId: value, workTypes: [], materials: [] }
+                  : op
+              ));
             }}
             disabled={!operation.clientId}
           >
@@ -223,7 +226,14 @@ function OperationCard({
             step="0.5"
             min="0"
             value={operation.hours || ''}
-            onChange={(e) => onUpdate(operation.id, 'hours', e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setOperations(prevOps => prevOps.map(op => 
+                op.id === operation.id 
+                  ? { ...op, hours: typeof value === 'string' ? parseFloat(value) || 0 : value }
+                  : op
+              ));
+            }}
             placeholder="Es. 8"
             data-testid={`input-hours-${operation.id}`}
           />
@@ -234,7 +244,14 @@ function OperationCard({
         <Label>Note</Label>
         <Textarea
           value={operation.notes}
-          onChange={(e) => onUpdate(operation.id, 'notes', e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setOperations(prevOps => prevOps.map(op => 
+              op.id === operation.id 
+                ? { ...op, notes: value }
+                : op
+            ));
+          }}
           placeholder="Aggiungi note sull'operazione..."
           rows={3}
           data-testid={`textarea-notes-${operation.id}`}
@@ -287,25 +304,17 @@ export default function DailyReportForm({
       hours: 0,
       notes: "",
     };
-    setOperations([...operations, newOperation]);
+    setOperations(prevOps => [...prevOps, newOperation]);
     console.log("Added new operation");
   };
 
   const removeOperation = (id: string) => {
-    setOperations(operations.filter(op => op.id !== id));
+    setOperations(prevOps => prevOps.filter(op => op.id !== id));
     console.log("Removed operation", id);
   };
 
-  const updateOperation = (id: string, field: keyof Operation, value: any) => {
-    // Convert hours to number to ensure proper calculation
-    const processedValue = field === 'hours' ? (typeof value === 'string' ? parseFloat(value) || 0 : value) : value;
-    setOperations(operations.map(op => 
-      op.id === id ? { ...op, [field]: processedValue } : op
-    ));
-  };
-
   const toggleWorkType = (operationId: string, workType: string) => {
-    setOperations(operations.map(op => {
+    setOperations(prevOps => prevOps.map(op => {
       if (op.id === operationId) {
         const currentTypes = op.workTypes || [];
         const isSelected = currentTypes.includes(workType);
@@ -320,7 +329,7 @@ export default function DailyReportForm({
   };
 
   const toggleMaterial = (operationId: string, material: string) => {
-    setOperations(operations.map(op => {
+    setOperations(prevOps => prevOps.map(op => {
       if (op.id === operationId) {
         const currentMaterials = op.materials || [];
         const isSelected = currentMaterials.includes(material);
@@ -424,7 +433,7 @@ export default function DailyReportForm({
                   clients={clients}
                   clientsLoading={clientsLoading}
                   onRemove={removeOperation}
-                  onUpdate={updateOperation}
+                  setOperations={setOperations}
                   onToggleWorkType={toggleWorkType}
                   onToggleMaterial={toggleMaterial}
                 />
