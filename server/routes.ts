@@ -10,6 +10,8 @@ import {
   insertOperationSchema,
   updateOperationSchema,
   insertClientSchema,
+  insertWorkTypeSchema,
+  insertMaterialSchema,
   insertWorkOrderSchema
 } from "@shared/schema";
 import { validatePassword, verifyPassword, hashPassword } from "./auth";
@@ -310,6 +312,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting client:", error);
       res.status(500).json({ error: error.message || "Failed to delete client" });
+    }
+  });
+
+  // Work Types (Lavorazioni) - Master list management
+  app.get("/api/work-types", requireAuth, async (req, res) => {
+    try {
+      const workTypes = await storage.getAllWorkTypes();
+      res.json(workTypes);
+    } catch (error) {
+      console.error("Error fetching work types:", error);
+      res.status(500).json({ error: "Failed to fetch work types" });
+    }
+  });
+
+  app.post("/api/work-types", requireAdmin, async (req, res) => {
+    try {
+      const result = insertWorkTypeSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ error: "Dati lavorazione non validi", issues: result.error.issues });
+      }
+      
+      const workType = await storage.createWorkType(result.data);
+      res.status(201).json(workType);
+    } catch (error: any) {
+      console.error("Error creating work type:", error);
+      res.status(500).json({ error: "Failed to create work type" });
+    }
+  });
+
+  app.patch("/api/work-types/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updatedWorkType = await storage.updateWorkType(id, req.body);
+      res.json(updatedWorkType);
+    } catch (error: any) {
+      console.error("Error updating work type:", error);
+      res.status(500).json({ error: "Failed to update work type" });
+    }
+  });
+
+  app.delete("/api/work-types/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteWorkType(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Lavorazione non trovata" });
+      }
+      
+      res.json({ success: true, message: "Lavorazione eliminata con successo" });
+    } catch (error: any) {
+      console.error("Error deleting work type:", error);
+      res.status(500).json({ error: "Failed to delete work type" });
+    }
+  });
+
+  // Materials (Materiali) - Master list management
+  app.get("/api/materials", requireAuth, async (req, res) => {
+    try {
+      const materials = await storage.getAllMaterials();
+      res.json(materials);
+    } catch (error) {
+      console.error("Error fetching materials:", error);
+      res.status(500).json({ error: "Failed to fetch materials" });
+    }
+  });
+
+  app.post("/api/materials", requireAdmin, async (req, res) => {
+    try {
+      const result = insertMaterialSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ error: "Dati materiale non validi", issues: result.error.issues });
+      }
+      
+      const material = await storage.createMaterial(result.data);
+      res.status(201).json(material);
+    } catch (error: any) {
+      console.error("Error creating material:", error);
+      res.status(500).json({ error: "Failed to create material" });
+    }
+  });
+
+  app.patch("/api/materials/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updatedMaterial = await storage.updateMaterial(id, req.body);
+      res.json(updatedMaterial);
+    } catch (error: any) {
+      console.error("Error updating material:", error);
+      res.status(500).json({ error: "Failed to update material" });
+    }
+  });
+
+  app.delete("/api/materials/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteMaterial(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Materiale non trovato" });
+      }
+      
+      res.json({ success: true, message: "Materiale eliminato con successo" });
+    } catch (error: any) {
+      console.error("Error deleting material:", error);
+      res.status(500).json({ error: "Failed to delete material" });
     }
   });
 
