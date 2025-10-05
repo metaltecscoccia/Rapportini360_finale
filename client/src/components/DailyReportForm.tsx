@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Send } from "lucide-react";
-import { WorkType, Client, WorkOrder } from "@shared/schema";
+import { Client, WorkOrder } from "@shared/schema";
 import StatusBadge from "./StatusBadge";
 import { useQuery } from "@tanstack/react-query";
 
@@ -16,7 +16,8 @@ interface Operation {
   id: string;
   clientId: string;
   workOrderId: string;
-  workTypes: WorkType[];
+  workTypes: string[];
+  materials: string[];
   hours: number; // Ore lavorate per questa operazione (es. 2.5)
   notes: string;
 }
@@ -44,8 +45,6 @@ const useWorkOrdersByClient = (clientId: string) => {
     select: (data) => data || []
   });
 };
-
-const workTypes: WorkType[] = ["Taglio", "Saldatura", "Montaggio", "Foratura", "Verniciatura", "Stuccatura", "Manutenzione", "Generico"];
 
 // WorkOrderSelect component to handle work order loading for each operation
 interface WorkOrderSelectProps {
@@ -98,13 +97,15 @@ export default function DailyReportForm({
       ? initialOperations.map((op, index) => ({
           ...op,
           id: `${index + 1}`, // Ensure unique IDs for form state
+          materials: op.materials || [], // Ensure materials array exists
           hours: typeof op.hours === 'string' ? parseFloat(op.hours) || 0 : op.hours // Ensure numeric
         }))
       : [{
           id: "1",
           clientId: "",
           workOrderId: "",
-          workTypes: ["Taglio"],
+          workTypes: [],
+          materials: [],
           hours: 0,
           notes: "",
         }]
@@ -116,12 +117,32 @@ export default function DailyReportForm({
   // Load clients from backend
   const { data: clients = [], isLoading: clientsLoading } = useClients();
 
+  // Fetch work orders for all unique client IDs used in operations
+  const uniqueClientIds = useMemo(() => {
+    return Array.from(new Set(operations.map(op => op.clientId).filter(Boolean)));
+  }, [operations]);
+
+  // Create queries for all unique clients
+  const workOrderQueries = uniqueClientIds.map(clientId => 
+    useWorkOrdersByClient(clientId)
+  );
+
+  // Build a map of clientId -> workOrders for easy lookup
+  const workOrdersByClientMap = useMemo(() => {
+    const map: Record<string, WorkOrder[]> = {};
+    uniqueClientIds.forEach((clientId, index) => {
+      map[clientId] = workOrderQueries[index]?.data || [];
+    });
+    return map;
+  }, [uniqueClientIds, workOrderQueries]);
+
   const addOperation = () => {
     const newOperation: Operation = {
       id: Date.now().toString(),
       clientId: "",
       workOrderId: "",
       workTypes: [],
+      materials: [],
       hours: 0,
       notes: "",
     };
@@ -142,7 +163,7 @@ export default function DailyReportForm({
     ));
   };
 
-  const toggleWorkType = (operationId: string, workType: WorkType) => {
+  const toggleWorkType = (operationId: string, workType: string) => {
     setOperations(operations.map(op => {
       if (op.id === operationId) {
         const currentTypes = op.workTypes || [];
@@ -157,6 +178,21 @@ export default function DailyReportForm({
     console.log("Toggled work type", operationId, workType);
   };
 
+  const toggleMaterial = (operationId: string, material: string) => {
+    setOperations(operations.map(op => {
+      if (op.id === operationId) {
+        const currentMaterials = op.materials || [];
+        const isSelected = currentMaterials.includes(material);
+        const newMaterials = isSelected
+          ? currentMaterials.filter(m => m !== material)
+          : [...currentMaterials, material];
+        return { ...op, materials: newMaterials };
+      }
+      return op;
+    }));
+    console.log("Toggled material", operationId, material);
+  };
+
 
   // Funzione per validare tutti i campi obbligatori
   const validateRequiredFields = (): { isValid: boolean; missingFields: string[] } => {
@@ -167,6 +203,7 @@ export default function DailyReportForm({
       if (!operation.workOrderId) missingFields.push(`Operazione ${index + 1}: Commessa`);
       if (!operation.workTypes || operation.workTypes.length === 0) missingFields.push(`Operazione ${index + 1}: Seleziona almeno una Lavorazione`);
       if (!operation.hours || operation.hours <= 0) missingFields.push(`Operazione ${index + 1}: Inserire ore valide (maggiori di 0)`);
+      // NOTE: materials are optional, so no validation required
     });
 
     return {
@@ -237,120 +274,184 @@ export default function DailyReportForm({
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Operazioni</h3>
               
-              {operations.map((operation, index) => (
-                <Card key={operation.id} className="p-4">
-                  <div className="flex items-start justify-between mb-4">
-                    <h4 className="font-medium">Operazione {index + 1}</h4>
-                    {operations.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeOperation(operation.id)}
-                        data-testid={`button-remove-operation-${operation.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label>Cliente</Label>
-                      <Select
-                        value={operation.clientId}
-                        onValueChange={(value) => {
-                          // Update both clientId and reset workOrderId in single operation
-                          setOperations(prevOps => prevOps.map(op => 
-                            op.id === operation.id 
-                              ? { ...op, clientId: value, workOrderId: "" }
-                              : op
-                          ));
-                        }}
-                      >
-                        <SelectTrigger data-testid={`select-client-${operation.id}`}>
-                          <SelectValue placeholder="Seleziona cliente" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {clientsLoading ? (
-                            <SelectItem value="loading" disabled>Caricamento...</SelectItem>
-                          ) : (
-                            clients.map((client) => (
-                              <SelectItem key={client.id} value={client.id}>
-                                {client.name}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <WorkOrderSelect
-                      clientId={operation.clientId}
-                      value={operation.workOrderId}
-                      onChange={(value) => updateOperation(operation.id, "workOrderId", value)}
-                      operationId={operation.id}
-                    />
-                    
-                    <div className="space-y-2">
-                      <Label>Lavorazioni</Label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 border rounded-md">
-                        {workTypes.map(type => (
-                          <div key={type} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`worktype-${operation.id}-${type}`}
-                              checked={operation.workTypes?.includes(type) || false}
-                              onCheckedChange={() => toggleWorkType(operation.id, type)}
-                              data-testid={`checkbox-worktype-${operation.id}-${type}`}
-                            />
-                            <Label 
-                              htmlFor={`worktype-${operation.id}-${type}`}
-                              className="text-sm font-normal cursor-pointer"
-                            >
-                              {type}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                      {operation.workTypes && operation.workTypes.length > 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          Selezionate: <strong>{operation.workTypes.join(", ")}</strong>
-                        </div>
+              {operations.map((operation, index) => {
+                // Get work orders for this operation's client
+                const workOrders = workOrdersByClientMap[operation.clientId] || [];
+                // Find the selected work order
+                const selectedWorkOrder = workOrders.find(wo => wo.id === operation.workOrderId);
+                // Get available work types and materials from the selected work order
+                const availableWorkTypes = selectedWorkOrder?.availableWorkTypes || [];
+                const availableMaterials = selectedWorkOrder?.availableMaterials || [];
+                
+                return (
+                  <Card key={operation.id} className="p-4">
+                    <div className="flex items-start justify-between mb-4">
+                      <h4 className="font-medium">Operazione {index + 1}</h4>
+                      {operations.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeOperation(operation.id)}
+                          data-testid={`button-remove-operation-${operation.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       )}
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label>Ore lavorate</Label>
-                      <Input
-                        type="number"
-                        step="0.25"
-                        min="0"
-                        max="24"
-                        value={operation.hours || ''}
-                        onChange={(e) => {
-                          updateOperation(operation.id, "hours", e.target.value);
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Cliente</Label>
+                        <Select
+                          value={operation.clientId}
+                          onValueChange={(value) => {
+                            // Update clientId and reset workOrderId, workTypes, and materials
+                            setOperations(prevOps => prevOps.map(op => 
+                              op.id === operation.id 
+                                ? { ...op, clientId: value, workOrderId: "", workTypes: [], materials: [] }
+                                : op
+                            ));
+                          }}
+                        >
+                          <SelectTrigger data-testid={`select-client-${operation.id}`}>
+                            <SelectValue placeholder="Seleziona cliente" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {clientsLoading ? (
+                              <SelectItem value="loading" disabled>Caricamento...</SelectItem>
+                            ) : (
+                              clients.map((client) => (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {client.name}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <WorkOrderSelect
+                        clientId={operation.clientId}
+                        value={operation.workOrderId}
+                        onChange={(value) => {
+                          // Reset workTypes and materials when work order changes
+                          setOperations(prevOps => prevOps.map(op => 
+                            op.id === operation.id 
+                              ? { ...op, workOrderId: value, workTypes: [], materials: [] }
+                              : op
+                          ));
                         }}
-                        placeholder="Es. 2.5"
-                        data-testid={`input-hours-${operation.id}`}
+                        operationId={operation.id}
                       />
-                      <div className="text-xs text-muted-foreground">
-                        Inserire le ore in formato decimale (es. 2,5 per 2 ore e 30 minuti)
+                      
+                      <div className="space-y-2">
+                        <Label>Lavorazioni</Label>
+                        {!operation.workOrderId ? (
+                          <div className="p-3 border rounded-md text-sm text-muted-foreground" data-testid={`worktype-empty-${operation.id}`}>
+                            Seleziona prima una commessa
+                          </div>
+                        ) : availableWorkTypes.length === 0 ? (
+                          <div className="p-3 border rounded-md text-sm text-muted-foreground" data-testid={`worktype-no-data-${operation.id}`}>
+                            Nessuna lavorazione disponibile
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 border rounded-md" data-testid={`worktype-container-${operation.id}`}>
+                            {availableWorkTypes.map(type => (
+                              <div key={type} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`worktype-${operation.id}-${type}`}
+                                  checked={operation.workTypes?.includes(type) || false}
+                                  onCheckedChange={() => toggleWorkType(operation.id, type)}
+                                  data-testid={`checkbox-worktype-${operation.id}-${type}`}
+                                />
+                                <Label 
+                                  htmlFor={`worktype-${operation.id}-${type}`}
+                                  className="text-sm font-normal cursor-pointer"
+                                >
+                                  {type}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {operation.workTypes && operation.workTypes.length > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            Selezionate: <strong>{operation.workTypes.join(", ")}</strong>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Materiali (opzionale)</Label>
+                        {!operation.workOrderId ? (
+                          <div className="p-3 border rounded-md text-sm text-muted-foreground" data-testid={`material-empty-${operation.id}`}>
+                            Seleziona prima una commessa
+                          </div>
+                        ) : availableMaterials.length === 0 ? (
+                          <div className="p-3 border rounded-md text-sm text-muted-foreground" data-testid={`material-no-data-${operation.id}`}>
+                            Nessun materiale disponibile
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 border rounded-md" data-testid={`material-container-${operation.id}`}>
+                            {availableMaterials.map(material => (
+                              <div key={material} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`material-${operation.id}-${material}`}
+                                  checked={operation.materials?.includes(material) || false}
+                                  onCheckedChange={() => toggleMaterial(operation.id, material)}
+                                  data-testid={`checkbox-material-${operation.id}-${material}`}
+                                />
+                                <Label 
+                                  htmlFor={`material-${operation.id}-${material}`}
+                                  className="text-sm font-normal cursor-pointer"
+                                >
+                                  {material}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {operation.materials && operation.materials.length > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            Selezionati: <strong>{operation.materials.join(", ")}</strong>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Ore lavorate</Label>
+                        <Input
+                          type="number"
+                          step="0.25"
+                          min="0"
+                          max="24"
+                          value={operation.hours || ''}
+                          onChange={(e) => {
+                            updateOperation(operation.id, "hours", e.target.value);
+                          }}
+                          placeholder="Es. 2.5"
+                          data-testid={`input-hours-${operation.id}`}
+                        />
+                        <div className="text-xs text-muted-foreground">
+                          Inserire le ore in formato decimale (es. 2,5 per 2 ore e 30 minuti)
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="mt-4 space-y-2">
-                    <Label>Note (opzionale)</Label>
-                    <Textarea
-                      value={operation.notes}
-                      onChange={(e) => updateOperation(operation.id, "notes", e.target.value)}
-                      placeholder="Aggiungi note aggiuntive..."
-                      rows={3}
-                      data-testid={`textarea-notes-${operation.id}`}
-                    />
-                  </div>
-                </Card>
-              ))}
+                    
+                    <div className="mt-4 space-y-2">
+                      <Label>Note (opzionale)</Label>
+                      <Textarea
+                        value={operation.notes}
+                        onChange={(e) => updateOperation(operation.id, "notes", e.target.value)}
+                        placeholder="Aggiungi note aggiuntive..."
+                        rows={3}
+                        data-testid={`textarea-notes-${operation.id}`}
+                      />
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
             
             <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
