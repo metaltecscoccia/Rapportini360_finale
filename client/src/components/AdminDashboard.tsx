@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -141,6 +141,9 @@ export default function AdminDashboard() {
   const [clientWorkOrdersCount, setClientWorkOrdersCount] = useState<number>(0);
   const [clientOperationsCount, setClientOperationsCount] = useState<number>(0);
   const [employeeReportsCount, setEmployeeReportsCount] = useState<number>(0);
+  
+  // Ref for auto-focus on toDate input
+  const toDateInputRef = useRef<HTMLInputElement>(null);
   
   // State for work types management
   const [addWorkTypeDialogOpen, setAddWorkTypeDialogOpen] = useState(false);
@@ -1556,7 +1559,13 @@ export default function AdminDashboard() {
                     <Input
                       type="date"
                       value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
+                      onChange={(e) => {
+                        setFromDate(e.target.value);
+                        // Auto-focus sul campo toDate dopo la selezione
+                        setTimeout(() => {
+                          toDateInputRef.current?.focus();
+                        }, 0);
+                      }}
                       placeholder="Da"
                       className="w-[135px]"
                       data-testid="input-from-date"
@@ -1564,6 +1573,7 @@ export default function AdminDashboard() {
                   </div>
                   <span className="text-muted-foreground">-</span>
                   <Input
+                    ref={toDateInputRef}
                     type="date"
                     value={toDate}
                     onChange={(e) => setToDate(e.target.value)}
@@ -1571,22 +1581,6 @@ export default function AdminDashboard() {
                     className="w-[135px]"
                     data-testid="input-to-date"
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const today = new Date();
-                      const year = today.getFullYear();
-                      const month = String(today.getMonth() + 1).padStart(2, '0');
-                      const day = String(today.getDate()).padStart(2, '0');
-                      const todayStr = `${year}-${month}-${day}`;
-                      setFromDate(todayStr);
-                      setToDate(todayStr);
-                    }}
-                    data-testid="button-today"
-                  >
-                    Oggi
-                  </Button>
                 </div>
               </div>
             </CardHeader>
