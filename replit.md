@@ -7,6 +7,7 @@ This is a daily work report management system designed for employees and adminis
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Date format: DD/MM/YYYY (Italian format) for all date displays in the application.
 
 ## System Architecture
 
@@ -84,3 +85,21 @@ Preferred communication style: Simple, everyday language.
 
 ### Session Management
 - **Connect PG Simple**: PostgreSQL session store for Express sessions
+
+## Date Handling
+
+### Italian Date Format (DD/MM/YYYY)
+All dates in the application are displayed in Italian format (DD/MM/YYYY) as per user requirements. The system uses custom utility functions to ensure consistent date formatting across the entire application.
+
+### Date Utilities (`client/src/lib/dateUtils.ts`)
+- **formatDateToItalian(dateStr)**: Converts YYYY-MM-DD to DD/MM/YYYY using manual regex parsing to avoid timezone issues
+- **formatDateToISO(dateStr)**: Converts DD/MM/YYYY to YYYY-MM-DD with validation
+- **getTodayItalian()**: Returns today's date in DD/MM/YYYY format
+- **getTodayISO()**: Returns today's date in YYYY-MM-DD format
+- **isValidItalianDate(dateStr)**: Validates DD/MM/YYYY format
+
+### Storage Format
+- Database stores dates in YYYY-MM-DD format for compatibility and proper sorting
+- All UI displays convert to DD/MM/YYYY for user-friendly Italian format
+- Date input fields use native HTML5 date picker (browser format) for better UX
+- Conversions are handled automatically by the date utilities to prevent timezone-related bugs
