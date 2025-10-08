@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { WordService } from "./wordService";
+import { generateAttendanceExcel } from "./excelService";
 import { 
   insertUserSchema,
   updateUserSchema,
@@ -12,7 +13,9 @@ import {
   insertClientSchema,
   insertWorkTypeSchema,
   insertMaterialSchema,
-  insertWorkOrderSchema
+  insertWorkOrderSchema,
+  insertAttendanceEntrySchema,
+  updateAttendanceEntrySchema
 } from "@shared/schema";
 import { validatePassword, verifyPassword, hashPassword } from "./auth";
 
@@ -999,6 +1002,161 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching work order operations:", error);
       res.status(500).json({ error: "Failed to fetch work order operations" });
+    }
+  });
+
+  // ==================== ATTENDANCE ENTRIES (ASSENZE) ====================
+  
+  // Get all attendance entries for a month (admin only)
+  app.get("/api/attendance-entries", requireAdmin, async (req, res) => {
+    try {
+      const { year, month } = req.query;
+      
+      if (!year || !month) {
+        return res.status(400).json({ error: "Year and month are required" });
+      }
+      
+      const organizationId = (req as any).session.organizationId;
+      const entries = await storage.getAllAttendanceEntries(
+        organizationId, 
+        year as string, 
+        month as string
+      );
+      
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching attendance entries:", error);
+      res.status(500).json({ error: "Failed to fetch attendance entries" });
+    }
+  });
+
+  // Create attendance entry (admin only)
+  app.post("/api/attendance-entries", requireAdmin, async (req, res) => {
+    try {
+      const result = insertAttendanceEntrySchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: "Dati assenza non validi", 
+          issues: result.error.issues 
+        });
+      }
+      
+      const organizationId = (req as any).session.organizationId;
+      
+      // Check if entry already exists for this user and date
+      const existing = await storage.getAttendanceEntry(
+        result.data.userId,
+        result.data.date,
+        organizationId
+      );
+      
+      if (existing) {
+        return res.status(400).json({ 
+          error: "Esiste già un'assenza per questo dipendente in questa data" 
+        });
+      }
+      
+      const entry = await storage.createAttendanceEntry(result.data, organizationId);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error creating attendance entry:", error);
+      res.status(500).json({ error: "Failed to create attendance entry" });
+    }
+  });
+
+  // Update attendance entry (admin only)
+  app.put("/api/attendance-entries/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = updateAttendanceEntrySchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: "Dati assenza non validi", 
+          issues: result.error.issues 
+        });
+      }
+      
+      const entry = await storage.updateAttendanceEntry(id, result.data);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error updating attendance entry:", error);
+      res.status(500).json({ error: "Failed to update attendance entry" });
+    }
+  });
+
+  // Delete attendance entry (admin only)
+  app.delete("/api/attendance-entries/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteAttendanceEntry(id);
+      
+      if (deleted) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ error: "Failed to delete attendance entry" });
+      }
+    } catch (error) {
+      console.error("Error deleting attendance entry:", error);
+      res.status(500).json({ error: "Failed to delete attendance entry" });
+    }
+  });
+
+  // ==================== MONTHLY ATTENDANCE (FOGLIO PRESENZE) ====================
+  
+  // Get monthly attendance data (admin only)
+  app.get("/api/attendance/monthly", requireAdmin, async (req, res) => {
+    try {
+      const { year, month } = req.query;
+      
+      if (!year || !month) {
+        return res.status(400).json({ error: "Year and month are required" });
+      }
+      
+      const organizationId = (req as any).session.organizationId;
+      const data = await storage.getMonthlyAttendance(
+        organizationId,
+        year as string,
+        month as string
+      );
+      
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching monthly attendance:", error);
+      res.status(500).json({ error: "Failed to fetch monthly attendance" });
+    }
+  });
+
+  // Export monthly attendance to Excel (admin only)
+  app.get("/api/attendance/export-excel", requireAdmin, async (req, res) => {
+    try {
+      const { year, month } = req.query;
+      
+      if (!year || !month) {
+        return res.status(400).json({ error: "Year and month are required" });
+      }
+      
+      const organizationId = (req as any).session.organizationId;
+      const buffer = await generateAttendanceExcel(
+        organizationId,
+        year as string,
+        month as string
+      );
+      
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=Presenze_${year}-${month}.xlsx`
+      );
+      
+      res.send(Buffer.from(buffer));
+    } catch (error) {
+      console.error("Error exporting attendance to Excel:", error);
+      res.status(500).json({ error: "Failed to export attendance to Excel" });
     }
   });
 

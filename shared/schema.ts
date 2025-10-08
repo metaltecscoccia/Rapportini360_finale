@@ -86,6 +86,17 @@ export const operations = pgTable("operations", {
   notes: text("notes"),
 });
 
+// Attendance entries (Assenze manuali gestite dall'admin)
+export const attendanceEntries = pgTable("attendance_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  date: text("date").notNull(), // YYYY-MM-DD format
+  absenceType: text("absence_type").notNull(), // F, P, M, CP, L104
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
 // Insert schemas
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   id: true,
@@ -140,12 +151,26 @@ export const insertOperationSchema = createInsertSchema(operations).omit({
   hours: z.union([z.string(), z.number()]).transform(val => String(val))
 });
 
+export const insertAttendanceEntrySchema = createInsertSchema(attendanceEntries).omit({
+  id: true,
+  organizationId: true, // Will be set automatically from session
+  createdAt: true,
+}).extend({
+  absenceType: z.enum(["F", "P", "M", "CP", "L104"], {
+    errorMap: () => ({ message: "Tipo assenza non valido" })
+  })
+});
+
 // Update schemas for editing
 export const updateDailyReportSchema = insertDailyReportSchema.partial().extend({
   id: z.string().optional()
 });
 
 export const updateOperationSchema = insertOperationSchema.partial().extend({
+  id: z.string().optional()
+});
+
+export const updateAttendanceEntrySchema = insertAttendanceEntrySchema.partial().extend({
   id: z.string().optional()
 });
 
@@ -175,9 +200,17 @@ export type DailyReport = typeof dailyReports.$inferSelect;
 export type InsertOperation = z.infer<typeof insertOperationSchema>;
 export type Operation = typeof operations.$inferSelect;
 
+export type InsertAttendanceEntry = z.infer<typeof insertAttendanceEntrySchema>;
+export type AttendanceEntry = typeof attendanceEntries.$inferSelect;
+export type UpdateAttendanceEntry = z.infer<typeof updateAttendanceEntrySchema>;
+
 export type UpdateDailyReport = z.infer<typeof updateDailyReportSchema>;
 export type UpdateOperation = z.infer<typeof updateOperationSchema>;
 
 // Status enum
 export const StatusEnum = z.enum(["In attesa", "Approvato"]);
 export type Status = z.infer<typeof StatusEnum>;
+
+// Absence type enum
+export const AbsenceTypeEnum = z.enum(["F", "P", "M", "CP", "L104"]);
+export type AbsenceType = z.infer<typeof AbsenceTypeEnum>;

@@ -45,6 +45,7 @@ import {
 import StatusBadge from "./StatusBadge";
 import WorkOrderReport from "./WorkOrderReport";
 import DailyReportForm from "./DailyReportForm";
+import AttendanceSheet from "./AttendanceSheet";
 
 // Schema per form aggiunta dipendente
 const addEmployeeSchema = z.object({
@@ -1501,6 +1502,10 @@ export default function AdminDashboard() {
             <Hammer className="h-4 w-4 mr-2" />
             Configurazione
           </TabsTrigger>
+          <TabsTrigger value="attendance" data-testid="tab-attendance">
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Presenze
+          </TabsTrigger>
         </TabsList>
 
         {/* Reports Tab */}
@@ -2585,6 +2590,11 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
           </div>
+        </TabsContent>
+
+        {/* Attendance Tab */}
+        <TabsContent value="attendance">
+          <AttendanceSheet />
         </TabsContent>
       </Tabs>
 
