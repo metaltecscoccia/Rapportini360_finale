@@ -6,6 +6,7 @@ import {
   workOrders,
   dailyReports,
   operations,
+  attendanceEntries,
   type User, 
   type InsertUser,
   type Client,
@@ -20,6 +21,9 @@ import {
   type InsertDailyReport,
   type Operation,
   type InsertOperation,
+  type AttendanceEntry,
+  type InsertAttendanceEntry,
+  type UpdateAttendanceEntry,
   type UpdateDailyReport,
   type UpdateOperation
 } from "@shared/schema";
@@ -100,6 +104,16 @@ export interface IStorage {
     totalHours: number;
     lastActivity: string | null;
   }>>;
+  
+  // Attendance Entries (Assenze)
+  getAllAttendanceEntries(organizationId: string, year: string, month: string): Promise<AttendanceEntry[]>;
+  getAttendanceEntry(userId: string, date: string, organizationId: string): Promise<AttendanceEntry | undefined>;
+  createAttendanceEntry(entry: InsertAttendanceEntry, organizationId: string): Promise<AttendanceEntry>;
+  updateAttendanceEntry(id: string, updates: UpdateAttendanceEntry): Promise<AttendanceEntry>;
+  deleteAttendanceEntry(id: string): Promise<boolean>;
+  
+  // Monthly Attendance (Foglio Presenze)
+  getMonthlyAttendance(organizationId: string, year: string, month: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -627,6 +641,130 @@ export class DatabaseStorage implements IStorage {
           stats.dates.sort().reverse()[0] : null
       };
     });
+  }
+
+  // Attendance Entries (Assenze)
+  async getAllAttendanceEntries(organizationId: string, year: string, month: string): Promise<AttendanceEntry[]> {
+    await this.ensureInitialized();
+    const startDate = `${year}-${month.padStart(2, '0')}-01`;
+    const endDate = `${year}-${month.padStart(2, '0')}-31`;
+    
+    const allEntries = await db.select()
+      .from(attendanceEntries)
+      .where(eq(attendanceEntries.organizationId, organizationId));
+    
+    return allEntries.filter(entry => entry.date >= startDate && entry.date <= endDate);
+  }
+
+  async getAttendanceEntry(userId: string, date: string, organizationId: string): Promise<AttendanceEntry | undefined> {
+    await this.ensureInitialized();
+    const entries = await db.select()
+      .from(attendanceEntries)
+      .where(
+        and(
+          eq(attendanceEntries.userId, userId),
+          eq(attendanceEntries.date, date),
+          eq(attendanceEntries.organizationId, organizationId)
+        )
+      );
+    return entries[0];
+  }
+
+  async createAttendanceEntry(entry: InsertAttendanceEntry, organizationId: string): Promise<AttendanceEntry> {
+    await this.ensureInitialized();
+    const result = await db.insert(attendanceEntries).values({
+      ...entry,
+      organizationId
+    }).returning();
+    return result[0];
+  }
+
+  async updateAttendanceEntry(id: string, updates: UpdateAttendanceEntry): Promise<AttendanceEntry> {
+    await this.ensureInitialized();
+    const result = await db.update(attendanceEntries)
+      .set(updates)
+      .where(eq(attendanceEntries.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteAttendanceEntry(id: string): Promise<boolean> {
+    await this.ensureInitialized();
+    await db.delete(attendanceEntries).where(eq(attendanceEntries.id, id));
+    return true;
+  }
+
+  async getMonthlyAttendance(organizationId: string, year: string, month: string): Promise<any> {
+    await this.ensureInitialized();
+    
+    // Get all employees
+    const allUsers = await db.select()
+      .from(users)
+      .where(
+        and(
+          eq(users.organizationId, organizationId),
+          eq(users.role, 'employee'),
+          eq(users.isActive, true)
+        )
+      );
+    
+    // Get daily reports for the month
+    const startDate = `${year}-${month.padStart(2, '0')}-01`;
+    const endDate = `${year}-${month.padStart(2, '0')}-31`;
+    
+    const reports = await db.select()
+      .from(dailyReports)
+      .where(
+        and(
+          eq(dailyReports.organizationId, organizationId),
+          eq(dailyReports.status, 'Approvato')
+        )
+      );
+    
+    const monthReports = reports.filter(r => r.date >= startDate && r.date <= endDate);
+    
+    // Get all operations for these reports
+    const reportIds = monthReports.map(r => r.id);
+    const allOperations = await db.select().from(operations);
+    const monthOperations = allOperations.filter(op => reportIds.includes(op.dailyReportId));
+    
+    // Get attendance entries for the month
+    const absences = await this.getAllAttendanceEntries(organizationId, year, month);
+    
+    // Build attendance data
+    const attendanceData = allUsers.map(user => {
+      const userReports = monthReports.filter(r => r.employeeId === user.id);
+      const userAbsences = absences.filter(a => a.userId === user.id);
+      
+      const dailyData: Record<string, { ordinary: number; overtime: number; absence?: string }> = {};
+      
+      // Process daily reports
+      userReports.forEach(report => {
+        const reportOps = monthOperations.filter(op => op.dailyReportId === report.id);
+        const totalHours = reportOps.reduce((sum, op) => sum + Number(op.hours), 0);
+        
+        const ordinary = Math.min(totalHours, 8);
+        const overtime = Math.max(totalHours - 8, 0);
+        
+        dailyData[report.date] = { ordinary, overtime };
+      });
+      
+      // Add absences
+      userAbsences.forEach(absence => {
+        if (!dailyData[absence.date]) {
+          dailyData[absence.date] = { ordinary: 0, overtime: 0 };
+        }
+        dailyData[absence.date].absence = absence.absenceType;
+      });
+      
+      return {
+        userId: user.id,
+        fullName: user.fullName,
+        dailyData
+      };
+    });
+    
+    return attendanceData;
   }
 }
 
