@@ -195,9 +195,12 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(clients);
   }
 
-  async createClient(insertClient: InsertClient): Promise<Client> {
+  async createClient(insertClient: InsertClient, organizationId: string): Promise<Client> {
     await this.ensureInitialized();
-    const [client] = await db.insert(clients).values(insertClient).returning();
+    const [client] = await db.insert(clients).values({
+      ...insertClient,
+      organizationId
+    }).returning();
     return client;
   }
 
@@ -219,9 +222,12 @@ export class DatabaseStorage implements IStorage {
     return workType || undefined;
   }
 
-  async createWorkType(insertWorkType: InsertWorkType): Promise<WorkType> {
+  async createWorkType(insertWorkType: InsertWorkType, organizationId: string): Promise<WorkType> {
     await this.ensureInitialized();
-    const [workType] = await db.insert(workTypes).values(insertWorkType).returning();
+    const [workType] = await db.insert(workTypes).values({
+      ...insertWorkType,
+      organizationId
+    }).returning();
     return workType;
   }
 
@@ -257,9 +263,12 @@ export class DatabaseStorage implements IStorage {
     return material || undefined;
   }
 
-  async createMaterial(insertMaterial: InsertMaterial): Promise<Material> {
+  async createMaterial(insertMaterial: InsertMaterial, organizationId: string): Promise<Material> {
     await this.ensureInitialized();
-    const [material] = await db.insert(materials).values(insertMaterial).returning();
+    const [material] = await db.insert(materials).values({
+      ...insertMaterial,
+      organizationId
+    }).returning();
     return material;
   }
 
