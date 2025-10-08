@@ -117,12 +117,15 @@ export class DatabaseStorage implements IStorage {
     
     if (existingAdmin.length === 0) {
       const hashedPassword = await hashPassword("Metaltec11");
+      // Use default organization ID
+      const defaultOrgId = "b578579d-c664-4382-8504-bd7740dbfd9b";
       await db.insert(users).values({
         username: "admin",
         password: hashedPassword,
         plainPassword: null,
         role: "admin",
-        fullName: "Amministratore"
+        fullName: "Amministratore",
+        organizationId: defaultOrgId
       });
     }
   }
@@ -145,7 +148,7 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: InsertUser, organizationId: string): Promise<User> {
     await this.ensureInitialized();
     const hashedPassword = await hashPassword(insertUser.password);
     const role = insertUser.role || "employee";
@@ -154,7 +157,8 @@ export class DatabaseStorage implements IStorage {
       ...insertUser,
       password: hashedPassword,
       plainPassword: role === 'employee' ? insertUser.password : null,
-      role: role
+      role: role,
+      organizationId
     }).returning();
     
     return user;
