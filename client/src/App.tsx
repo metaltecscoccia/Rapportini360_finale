@@ -14,6 +14,7 @@ import AdminDashboard from "@/components/AdminDashboard";
 import ThemeToggle from "@/components/ThemeToggle";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatDateToItalian } from "@/lib/dateUtils";
 
 type User = {
   username: string;
@@ -172,7 +173,7 @@ function AuthenticatedApp({ currentUser, onLogout }: { currentUser: User; onLogo
             ) : (
               <DailyReportForm
                 employeeName={currentUser.fullName}
-                date={new Date().toLocaleDateString("it-IT")}
+                date={formatDateToItalian(new Date().toISOString().split('T')[0])}
                 onSubmit={handleReportSubmit}
                 initialOperations={todayReport?.operations}
                 isEditing={!!todayReport}
