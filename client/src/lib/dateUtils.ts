@@ -1,97 +1,12 @@
 /**
- * Utility functions for date formatting and conversion
- * Italian format: DD/MM/YYYY
- * Database format: YYYY-MM-DD
+ * Re-export shared date utilities
+ * This file maintains backward compatibility while using shared utilities
  */
-
-/**
- * Convert date from YYYY-MM-DD to DD/MM/YYYY format
- * Parses manually to avoid timezone issues
- */
-export function formatDateToItalian(dateStr: string): string {
-  if (!dateStr) return '';
-  
-  // If already in DD/MM/YYYY format, return as is
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-    return dateStr;
-  }
-  
-  // Parse YYYY-MM-DD format manually to avoid timezone issues
-  const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (isoMatch) {
-    const [, year, month, day] = isoMatch;
-    return `${day}/${month}/${year}`;
-  }
-  
-  // Fallback: return original string
-  return dateStr;
-}
-
-/**
- * Convert date from DD/MM/YYYY to YYYY-MM-DD format
- * Validates input before conversion
- */
-export function formatDateToISO(dateStr: string): string {
-  if (!dateStr) return '';
-  
-  // If already in ISO format, return as is
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    return dateStr;
-  }
-  
-  // Parse DD/MM/YYYY format
-  const parts = dateStr.split('/');
-  if (parts.length !== 3) return '';
-  
-  const [day, month, year] = parts;
-  
-  // Basic validation
-  const d = parseInt(day, 10);
-  const m = parseInt(month, 10);
-  const y = parseInt(year, 10);
-  
-  if (isNaN(d) || isNaN(m) || isNaN(y)) return '';
-  if (d < 1 || d > 31 || m < 1 || m > 12 || y < 1900) return '';
-  
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-}
-
-/**
- * Get today's date in DD/MM/YYYY format
- */
-export function getTodayItalian(): string {
-  const today = new Date();
-  return formatDateToItalian(today.toISOString().split('T')[0]);
-}
-
-/**
- * Get today's date in YYYY-MM-DD format
- */
-export function getTodayISO(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
-/**
- * Validate DD/MM/YYYY format
- */
-export function isValidItalianDate(dateStr: string): boolean {
-  if (!dateStr) return false;
-  
-  const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-  const match = dateStr.match(regex);
-  
-  if (!match) return false;
-  
-  const [, day, month, year] = match;
-  const d = parseInt(day, 10);
-  const m = parseInt(month, 10);
-  const y = parseInt(year, 10);
-  
-  if (m < 1 || m > 12) return false;
-  if (d < 1 || d > 31) return false;
-  if (y < 1900 || y > 2100) return false;
-  
-  // Check actual date validity
-  const date = new Date(y, m - 1, d);
-  return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
-}
+export {
+  formatDateToItalian,
+  formatDateToItalianLong,
+  formatDateToISO,
+  getTodayItalian,
+  getTodayISO,
+  isValidItalianDate
+} from '@shared/dateUtils';
