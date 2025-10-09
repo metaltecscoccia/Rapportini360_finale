@@ -326,4 +326,79 @@
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
   }
+
+  /* Uppy Modal Customization */
+  .uppy-Dashboard-isFixed {
+    z-index: 9999 !important;
+  }
+
+  /* Mobile-friendly modal sizing and positioning */
+  @media (max-width: 768px) {
+    .uppy-Dashboard-inner {
+      max-height: 85vh !important;
+      max-width: 95vw !important;
+      margin: auto !important;
+      border-radius: 12px !important;
+    }
+
+    .uppy-Dashboard-isFixed .uppy-Dashboard-inner {
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      position: fixed !important;
+    }
+
+    /* Larger touch targets for mobile */
+    .uppy-Dashboard-Item-action--remove,
+    .uppy-DashboardContent-addMore {
+      min-width: 44px !important;
+      min-height: 44px !important;
+    }
+
+    /* Better webcam button visibility */
+    .uppy-DashboardTab {
+      padding: 12px 16px !important;
+      font-size: 15px !important;
+    }
+  }
+
+  /* Desktop - keep modal reasonable size */
+  @media (min-width: 769px) {
+    .uppy-Dashboard-inner {
+      max-width: 650px !important;
+      max-height: 90vh !important;
+      border-radius: 16px !important;
+    }
+
+    .uppy-Dashboard-isFixed .uppy-Dashboard-inner {
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+    }
+  }
+
+  /* Theme integration */
+  .uppy-Dashboard-inner {
+    background-color: hsl(var(--popover)) !important;
+    border: 1px solid hsl(var(--popover-border)) !important;
+  }
+
+  .uppy-Dashboard-AddFiles-title {
+    color: hsl(var(--popover-foreground)) !important;
+  }
+
+  .uppy-DashboardTab-btn {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  .uppy-DashboardTab-btn:hover {
+    background-color: hsl(var(--accent)) !important;
+    color: hsl(var(--accent-foreground)) !important;
+  }
+
+  .uppy-size--md .uppy-Dashboard-note {
+    color: hsl(var(--muted-foreground)) !important;
+    font-size: 14px !important;
+    margin-top: 8px !important;
+  }
 }
