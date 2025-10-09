@@ -45,6 +45,7 @@ export function ObjectUploader({
       .use(Webcam, {
         modes: ['picture'], // Solo foto, non video
         mirror: true, // Rifletti l'anteprima della fotocamera frontale
+        // @ts-ignore - facingMode is a valid webcam option but missing from types
         facingMode: 'environment', // Usa fotocamera posteriore su mobile di default
       })
       .use(AwsS3, {
@@ -60,7 +61,12 @@ export function ObjectUploader({
   // Cleanup: close Uppy instance and release camera stream on unmount
   useEffect(() => {
     return () => {
-      uppy.close();
+      try {
+        // @ts-ignore - close() exists but may not be in all type definitions
+        uppy.close({ reason: 'unmount' });
+      } catch (e) {
+        console.warn('Failed to close Uppy instance:', e);
+      }
     };
   }, [uppy]);
 
@@ -80,6 +86,7 @@ export function ObjectUploader({
         open={showModal}
         onRequestClose={() => setShowModal(false)}
         proudlyDisplayPoweredByUppy={false}
+        note="Scatta una foto o seleziona dalla libreria"
       />
     </div>
   );
