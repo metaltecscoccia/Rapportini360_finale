@@ -269,7 +269,7 @@ function OperationCard({
           {operation.photos && operation.photos.map((photoPath, idx) => (
             <div key={idx} className="relative">
               <img 
-                src={photoPath} 
+                src={`/objects/${encodeURIComponent(photoPath)}`}
                 alt={`Foto ${idx + 1}`} 
                 className="w-20 h-20 object-cover rounded-md border"
                 data-testid={`photo-preview-${operation.id}-${idx}`}
