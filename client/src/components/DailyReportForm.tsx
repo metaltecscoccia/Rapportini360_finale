@@ -7,10 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Send } from "lucide-react";
+import { Plus, Trash2, Send, Camera, X } from "lucide-react";
 import { Client, WorkOrder } from "@shared/schema";
 import StatusBadge from "./StatusBadge";
 import { useQuery } from "@tanstack/react-query";
+import { ObjectUploader } from "./ObjectUploader";
+import type { UploadResult } from "@uppy/core";
+import { useToast } from "@/hooks/use-toast";
 
 interface Operation {
   id: string;
@@ -20,6 +23,7 @@ interface Operation {
   materials: string[];
   hours: number; // Ore lavorate per questa operazione (es. 2.5)
   notes: string;
+  photos: string[]; // Photo paths from object storage
 }
 
 interface DailyReportFormProps {
@@ -70,6 +74,7 @@ function OperationCard({
   onToggleWorkType,
   onToggleMaterial
 }: OperationCardProps) {
+  const { toast } = useToast();
   const { data: workOrders = [], isLoading: workOrdersLoading } = useWorkOrdersByClient(operation.clientId);
   
   const selectedWorkOrder = workOrders.find(wo => wo.id === operation.workOrderId);
@@ -257,6 +262,129 @@ function OperationCard({
           data-testid={`textarea-notes-${operation.id}`}
         />
       </div>
+      
+      <div className="mt-4 space-y-2">
+        <Label>Foto (max 5)</Label>
+        <div className="flex flex-wrap gap-2">
+          {operation.photos && operation.photos.map((photoPath, idx) => (
+            <div key={idx} className="relative">
+              <img 
+                src={photoPath} 
+                alt={`Foto ${idx + 1}`} 
+                className="w-20 h-20 object-cover rounded-md border"
+                data-testid={`photo-preview-${operation.id}-${idx}`}
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                className="absolute -top-2 -right-2 h-6 w-6"
+                onClick={() => {
+                  setOperations(prevOps => prevOps.map(op =>
+                    op.id === operation.id
+                      ? { ...op, photos: op.photos.filter((_, i) => i !== idx) }
+                      : op
+                  ));
+                }}
+                data-testid={`button-remove-photo-${operation.id}-${idx}`}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ))}
+          
+          {(!operation.photos || operation.photos.length < 5) && (
+            <ObjectUploader
+              maxNumberOfFiles={1}
+              maxFileSize={10485760}
+              buttonVariant="outline"
+              buttonClassName="w-20 h-20"
+              onGetUploadParameters={async () => {
+                const response = await fetch('/api/operations/photos/upload', {
+                  method: 'POST',
+                  credentials: 'include',
+                });
+                
+                if (!response.ok) {
+                  throw new Error(`Impossibile ottenere URL upload: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                if (!data.uploadURL) {
+                  throw new Error("URL upload non disponibile");
+                }
+                
+                return {
+                  method: 'PUT' as const,
+                  url: data.uploadURL,
+                };
+              }}
+              onComplete={async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>, uppy) => {
+                try {
+                  if (result.failed && result.failed.length > 0) {
+                    toast({
+                      title: "Errore upload",
+                      description: "Impossibile caricare la foto. Riprova.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (result.successful && result.successful.length > 0) {
+                    const uploadURL = result.successful[0].response?.uploadURL;
+                    
+                    if (!uploadURL) {
+                      throw new Error("Upload URL non disponibile");
+                    }
+                    
+                    const metadataResponse = await fetch('/api/operations/photos', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
+                      body: JSON.stringify({ photoURL: uploadURL }),
+                    });
+                    
+                    if (!metadataResponse.ok) {
+                      const errorText = await metadataResponse.text();
+                      throw new Error(`Impossibile salvare i metadati: ${errorText || metadataResponse.status}`);
+                    }
+                    
+                    const metadataData = await metadataResponse.json();
+                    if (!metadataData.objectPath) {
+                      throw new Error("Object path non ricevuto dal server");
+                    }
+                    
+                    setOperations(prevOps => prevOps.map(op =>
+                      op.id === operation.id
+                        ? { ...op, photos: [...(op.photos || []), metadataData.objectPath] }
+                        : op
+                    ));
+                    
+                    toast({
+                      title: "Foto caricata",
+                      description: "La foto è stata aggiunta con successo",
+                    });
+                  }
+                } catch (error) {
+                  console.error("Errore upload foto:", error);
+                  toast({
+                    title: "Errore",
+                    description: error instanceof Error ? error.message : "Impossibile caricare la foto",
+                    variant: "destructive",
+                  });
+                } finally {
+                  uppy.reset();
+                }
+              }}
+            >
+              <Camera className="h-5 w-5" />
+            </ObjectUploader>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Carica foto per documentare il lavoro svolto
+        </p>
+      </div>
     </Card>
   );
 }
@@ -275,7 +403,8 @@ export default function DailyReportForm({
           ...op,
           id: `${index + 1}`, // Ensure unique IDs for form state
           materials: op.materials || [], // Ensure materials array exists
-          hours: typeof op.hours === 'string' ? parseFloat(op.hours) || 0 : op.hours // Ensure numeric
+          hours: typeof op.hours === 'string' ? parseFloat(op.hours) || 0 : op.hours, // Ensure numeric
+          photos: op.photos || [], // Ensure photos array exists
         }))
       : [{
           id: "1",
@@ -285,6 +414,7 @@ export default function DailyReportForm({
           materials: [],
           hours: 0,
           notes: "",
+          photos: [],
         }]
   );
 
@@ -303,6 +433,7 @@ export default function DailyReportForm({
       materials: [],
       hours: 0,
       notes: "",
+      photos: [],
     };
     setOperations(prevOps => [...prevOps, newOperation]);
     console.log("Added new operation");
