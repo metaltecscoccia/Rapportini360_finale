@@ -151,15 +151,21 @@ The application now supports uploading up to 5 photos per operation with full in
 - **Sharp Integration**: Server-side image resizing prevents Word bloat (photos compressed from multi-MB to ~50KB)
 - **Parallel Loading**: `Promise.all` for photo fetching eliminates sequential latency
 - **Aspect Ratio**: Word export uses `toBuffer({ resolveWithObject: true })` to get real dimensions, prevents distortion
-- **Lifecycle Cleanup**: `uppy.close()` in useEffect cleanup releases camera stream on unmount
-- **Error Handling**: Toast feedback, `uppy.cancelAll()` for cleanup, null filtering for missing photos
+- **Lifecycle Cleanup**: `uppy.close({ reason: 'unmount' })` in useEffect cleanup releases camera stream on unmount
+- **Error Handling**: Toast feedback, try-catch for cleanup, null filtering for missing photos
 - **CSS Imports**: Uppy core, dashboard, and webcam styles imported in `main.tsx` for proper loading
 
 ### Mobile Fixes (2025-10-09)
 - **Photo Thumbnails**: Fixed URL construction - server returns complete `/objects/photo.jpg` path, removed duplicate prefix
 - **Crash Prevention**: Added `onError` handler with SVG placeholder fallback to prevent white screen on failed image loads
 - **Error Loop Protection**: `onerror = null` after fallback prevents infinite retry loops
-- **Uppy API**: Fixed TypeScript error by replacing `uppy.reset()` with `uppy.cancelAll()`
+- **Uppy Popup Enhancement**: 
+  - Mobile-friendly modal sizing (85vh height, 95vw width, centered vertically)
+  - Desktop optimization (650px max-width, centered positioning)
+  - Touch-friendly buttons (min 44px targets)
+  - Theme-integrated styling with app color scheme
+  - Proper webcam cleanup with `uppy.close()` to release camera stream
+  - Rear camera default on mobile via `facingMode: 'environment'`
 
 ## Word Export Endpoints
 
