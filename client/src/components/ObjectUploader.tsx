@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import Uppy from "@uppy/core";
 import { DashboardModal } from "@uppy/react";
 import AwsS3 from "@uppy/aws-s3";
+import Webcam from "@uppy/webcam";
 import type { UploadResult } from "@uppy/core";
 import { Button } from "@/components/ui/button";
 
@@ -41,6 +42,11 @@ export function ObjectUploader({
       },
       autoProceed: false,
     })
+      .use(Webcam, {
+        modes: ['picture'], // Solo foto, non video
+        mirror: true, // Rifletti l'anteprima della fotocamera frontale
+        facingMode: 'environment', // Usa fotocamera posteriore su mobile di default
+      })
       .use(AwsS3, {
         shouldUseMultipart: false,
         getUploadParameters: onGetUploadParameters,
@@ -50,6 +56,13 @@ export function ObjectUploader({
         setShowModal(false);
       })
   );
+
+  // Cleanup: close Uppy instance and release camera stream on unmount
+  useEffect(() => {
+    return () => {
+      uppy.close();
+    };
+  }, [uppy]);
 
   return (
     <div>
