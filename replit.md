@@ -137,15 +137,23 @@ The application now supports uploading up to 5 photos per operation with full in
 - **Database Schema**: `operations.photos` field (text[]) stores array of object paths
 - **Object Storage**: Replit object storage with ACL-based multi-tenant isolation
 - **Upload Component**: `ObjectUploader` with Uppy integration, max 5 photos, comprehensive error handling
+- **Camera Capture**: Uppy Webcam plugin for taking photos directly (mobile camera / desktop webcam)
 - **Display**: 80×80px thumbnails in operation cards and form, always-visible delete buttons for mobile
 - **Word Export**: Photos embedded with preserved aspect ratio (300px max width, 80% quality) using ImageRun
+
+### Camera & Upload Options
+- **Mobile**: Direct access to device camera for instant photo capture
+- **Desktop**: Webcam integration for taking photos
+- **Library Upload**: Traditional file picker for uploading existing photos
+- **Webcam Configuration**: Picture mode only (no video), rear camera default on mobile, mirrored preview
 
 ### Technical Details
 - **Sharp Integration**: Server-side image resizing prevents Word bloat (photos compressed from multi-MB to ~50KB)
 - **Parallel Loading**: `Promise.all` for photo fetching eliminates sequential latency
 - **Aspect Ratio**: Word export uses `toBuffer({ resolveWithObject: true })` to get real dimensions, prevents distortion
+- **Lifecycle Cleanup**: `uppy.close()` in useEffect cleanup releases camera stream on unmount
 - **Error Handling**: Toast feedback, automatic Uppy reset, null filtering for missing photos
-- **CSS Imports**: Uppy styles imported in `main.tsx` (not component-level) for proper loading
+- **CSS Imports**: Uppy core, dashboard, and webcam styles imported in `main.tsx` for proper loading
 
 ## Word Export Endpoints
 
