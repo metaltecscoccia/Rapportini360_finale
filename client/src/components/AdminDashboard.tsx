@@ -40,7 +40,8 @@ import {
   ChevronDown,
   ChevronUp,
   MapPin,
-  ClipboardList
+  ClipboardList,
+  Camera
 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import WorkOrderReport from "./WorkOrderReport";
@@ -1797,6 +1798,26 @@ export default function AdminDashboard() {
                                                 {operation.notes && (
                                                   <div className="text-sm text-muted-foreground pt-1 border-t">
                                                     <span className="font-medium">Note operazione:</span> {operation.notes}
+                                                  </div>
+                                                )}
+                                                
+                                                {operation.photos && operation.photos.length > 0 && (
+                                                  <div className="pt-2 border-t">
+                                                    <span className="text-xs text-muted-foreground font-medium flex items-center gap-1 mb-2">
+                                                      <Camera className="h-3 w-3" />
+                                                      Foto allegate:
+                                                    </span>
+                                                    <div className="flex flex-wrap gap-2">
+                                                      {operation.photos.map((photoPath: string, idx: number) => (
+                                                        <img 
+                                                          key={idx}
+                                                          src={`/objects/${encodeURIComponent(photoPath)}`}
+                                                          alt={`Foto ${idx + 1}`} 
+                                                          className="w-20 h-20 object-cover rounded-md border"
+                                                          data-testid={`operation-photo-${index}-${idx}`}
+                                                        />
+                                                      ))}
+                                                    </div>
                                                   </div>
                                                 )}
                                               </div>
