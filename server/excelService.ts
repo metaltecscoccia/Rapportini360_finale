@@ -153,6 +153,11 @@ export async function generateAttendanceExcel(
     row2.alignment = { horizontal: 'center', vertical: 'middle' };
     row2.font = { size: 9 };
 
+    // Merge name cell across both rows
+    worksheet.mergeCells(row1.number, 1, row2.number, 1);
+    const mergedNameCell = worksheet.getCell(row1.number, 1);
+    mergedNameCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
     // Apply borders and background colors to both rows
     [row1, row2].forEach(row => {
       row.eachCell((cell, colNumber) => {
@@ -191,12 +196,7 @@ export async function generateAttendanceExcel(
       });
     });
     
-    // Make second row slightly lighter
-    row2.getCell(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFF5F5F5' }
-    };
+    // Make second row tipo cell slightly lighter
     row2.getCell(2).fill = {
       type: 'pattern',
       pattern: 'solid',
