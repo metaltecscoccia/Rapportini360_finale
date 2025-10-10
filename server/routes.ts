@@ -924,6 +924,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Change daily report date
+  app.patch("/api/daily-reports/:id/change-date", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { newDate } = req.body;
+      const organizationId = (req as any).session.organizationId;
+
+      // Validate new date
+      if (!newDate || typeof newDate !== 'string') {
+        return res.status(400).json({ error: "Data non valida" });
+      }
+
+      // Check if report exists
+      const existingReport = await storage.getDailyReport(id);
+      if (!existingReport) {
+        return res.status(404).json({ error: "Rapportino non trovato" });
+      }
+
+      // Check if a report already exists for this employee on the new date
+      const conflictingReport = await storage.getDailyReportByEmployeeAndDate(
+        existingReport.employeeId,
+        newDate,
+        organizationId
+      );
+
+      if (conflictingReport && conflictingReport.id !== id) {
+        return res.status(409).json({ 
+          error: "Esiste già un rapportino per questo dipendente in questa data" 
+        });
+      }
+
+      // Update the date
+      const updatedReport = await storage.updateDailyReport(id, { date: newDate });
+      res.json(updatedReport);
+    } catch (error) {
+      console.error("Error changing report date:", error);
+      res.status(500).json({ error: "Impossibile modificare la data del rapportino" });
+    }
+  });
+
   // Delete daily report (admin only)
   app.delete("/api/daily-reports/:id", requireAdmin, async (req, res) => {
     try {
