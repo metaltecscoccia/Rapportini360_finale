@@ -137,6 +137,9 @@ export default function AdminDashboard() {
   const [selectedWorkOrderToDelete, setSelectedWorkOrderToDelete] = useState<any>(null);
   const [deleteReportDialogOpen, setDeleteReportDialogOpen] = useState(false);
   const [selectedReportToDelete, setSelectedReportToDelete] = useState<any>(null);
+  const [changeDateDialogOpen, setChangeDateDialogOpen] = useState(false);
+  const [selectedReportToChangeDate, setSelectedReportToChangeDate] = useState<any>(null);
+  const [newReportDate, setNewReportDate] = useState<string>("");
   const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
   const [deleteClientDialogOpen, setDeleteClientDialogOpen] = useState(false);
   const [selectedClientToDelete, setSelectedClientToDelete] = useState<any>(null);
@@ -1091,6 +1094,31 @@ export default function AdminDashboard() {
     }
   });
 
+  // Mutation per cambiare data rapportino
+  const changeDateMutation = useMutation({
+    mutationFn: async ({ reportId, newDate }: { reportId: string; newDate: string }) => {
+      return apiRequest('PATCH', `/api/daily-reports/${reportId}/change-date`, { newDate });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/daily-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/work-orders/stats'] });
+      toast({
+        title: "Data modificata",
+        description: "La data del rapportino è stata modificata con successo."
+      });
+      setChangeDateDialogOpen(false);
+      setSelectedReportToChangeDate(null);
+      setNewReportDate("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile modificare la data del rapportino",
+        variant: "destructive"
+      });
+    }
+  });
+
   // Mutation per eliminare rapportino
   const deleteReportMutation = useMutation({
     mutationFn: async (reportId: string) => {
@@ -1675,6 +1703,18 @@ export default function AdminDashboard() {
                                     data-testid={`button-edit-report-${report.id}`}
                                   >
                                     <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedReportToChangeDate(report);
+                                      setNewReportDate(report.date);
+                                      setChangeDateDialogOpen(true);
+                                    }}
+                                    data-testid={`button-change-date-${report.id}`}
+                                  >
+                                    <Calendar className="h-4 w-4" />
                                   </Button>
                                   {report.status === "In attesa" && (
                                     <Button
@@ -2659,6 +2699,70 @@ export default function AdminDashboard() {
               data-testid="button-confirm-password"
             >
               {resetPasswordMutation.isPending ? "Aggiornando..." : "Aggiorna Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog per cambiare data rapportino */}
+      <Dialog open={changeDateDialogOpen} onOpenChange={setChangeDateDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Modifica Data Rapportino</DialogTitle>
+            <DialogDescription>
+              Seleziona la nuova data per il rapportino giornaliero.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedReportToChangeDate && (
+            <div className="space-y-4">
+              <div className="bg-muted p-4 rounded-lg">
+                <div className="space-y-2">
+                  <div>
+                    <Label className="text-sm font-medium">Dipendente:</Label>
+                    <p className="text-sm">{selectedReportToChangeDate.employeeName || "Sconosciuto"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Data attuale:</Label>
+                    <p className="text-sm">{formatDateToItalian(selectedReportToChangeDate.date)}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="newDate">Nuova Data</Label>
+                <Input
+                  id="newDate"
+                  type="date"
+                  value={newReportDate}
+                  onChange={(e) => setNewReportDate(e.target.value)}
+                  data-testid="input-new-date"
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setChangeDateDialogOpen(false)}
+              data-testid="button-cancel-change-date"
+            >
+              Annulla
+            </Button>
+            <Button 
+              onClick={() => {
+                if (selectedReportToChangeDate && newReportDate) {
+                  changeDateMutation.mutate({
+                    reportId: selectedReportToChangeDate.id,
+                    newDate: newReportDate
+                  });
+                }
+              }}
+              disabled={changeDateMutation.isPending || !newReportDate}
+              data-testid="button-confirm-change-date"
+            >
+              {changeDateMutation.isPending ? "Salvando..." : "Salva"}
             </Button>
           </DialogFooter>
         </DialogContent>
