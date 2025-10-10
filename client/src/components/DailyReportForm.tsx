@@ -42,10 +42,9 @@ const useClients = () => {
   });
 };
 
-const useWorkOrdersByClient = (clientId: string) => {
+const useAllActiveWorkOrders = () => {
   return useQuery<WorkOrder[]>({
-    queryKey: [`/api/clients/${clientId}/work-orders`],
-    enabled: !!clientId,
+    queryKey: ['/api/work-orders/active'],
     select: (data) => data || []
   });
 };
@@ -57,6 +56,8 @@ interface OperationCardProps {
   operationsLength: number;
   clients: Client[];
   clientsLoading: boolean;
+  allWorkOrders: WorkOrder[];
+  workOrdersLoading: boolean;
   onRemove: (id: string) => void;
   setOperations: React.Dispatch<React.SetStateAction<Operation[]>>;
   onToggleWorkType: (operationId: string, workType: string) => void;
@@ -69,13 +70,17 @@ function OperationCard({
   operationsLength,
   clients,
   clientsLoading,
+  allWorkOrders,
+  workOrdersLoading,
   onRemove,
   setOperations,
   onToggleWorkType,
   onToggleMaterial
 }: OperationCardProps) {
   const { toast } = useToast();
-  const { data: workOrders = [], isLoading: workOrdersLoading } = useWorkOrdersByClient(operation.clientId);
+  
+  // Filter work orders for the selected client
+  const workOrders = allWorkOrders.filter(wo => wo.clientId === operation.clientId);
   
   const selectedWorkOrder = workOrders.find(wo => wo.id === operation.workOrderId);
   const availableWorkTypes = selectedWorkOrder?.availableWorkTypes || [];
@@ -425,8 +430,9 @@ export default function DailyReportForm({
   const [showHoursDialog, setShowHoursDialog] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
 
-  // Load clients from backend
+  // Load clients and all active work orders from backend
   const { data: clients = [], isLoading: clientsLoading } = useClients();
+  const { data: allWorkOrders = [], isLoading: workOrdersLoading } = useAllActiveWorkOrders();
 
   const addOperation = () => {
     const newOperation: Operation = {
@@ -567,6 +573,8 @@ export default function DailyReportForm({
                   operationsLength={operations.length}
                   clients={clients}
                   clientsLoading={clientsLoading}
+                  allWorkOrders={allWorkOrders}
+                  workOrdersLoading={workOrdersLoading}
                   onRemove={removeOperation}
                   setOperations={setOperations}
                   onToggleWorkType={toggleWorkType}
