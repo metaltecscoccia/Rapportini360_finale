@@ -105,7 +105,7 @@ function OperationCard({
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label>Cliente</Label>
+          <Label className="font-semibold text-foreground">Cliente</Label>
           <Select
             value={operation.clientId}
             onValueChange={(value) => {
@@ -134,7 +134,7 @@ function OperationCard({
         </div>
         
         <div className="space-y-2">
-          <Label>Commessa</Label>
+          <Label className="font-semibold text-foreground">Commessa</Label>
           <Select
             value={operation.workOrderId}
             onValueChange={(value) => {
@@ -164,7 +164,7 @@ function OperationCard({
         </div>
         
         <div className="space-y-2">
-          <Label>Lavorazioni</Label>
+          <Label className="font-semibold text-foreground">Lavorazioni</Label>
           {!operation.workOrderId ? (
             <div className="p-3 border rounded-md text-sm text-muted-foreground" data-testid={`worktype-empty-${operation.id}`}>
               Seleziona prima una commessa
@@ -198,7 +198,7 @@ function OperationCard({
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <div className="space-y-2">
-          <Label>Materiali (opzionale)</Label>
+          <Label className="font-semibold text-foreground">Materiali (opzionale)</Label>
           {!operation.workOrderId ? (
             <div className="p-3 border rounded-md text-sm text-muted-foreground" data-testid={`material-empty-${operation.id}`}>
               Seleziona prima una commessa
@@ -230,7 +230,7 @@ function OperationCard({
         </div>
         
         <div className="space-y-2">
-          <Label>Ore lavorate</Label>
+          <Label className="font-semibold text-foreground">Ore lavorate</Label>
           <Input
             type="number"
             step="0.5"
@@ -251,7 +251,7 @@ function OperationCard({
       </div>
       
       <div className="mt-4 space-y-2">
-        <Label>Note</Label>
+        <Label className="font-semibold text-foreground">Note</Label>
         <Textarea
           value={operation.notes}
           onChange={(e) => {
@@ -269,7 +269,7 @@ function OperationCard({
       </div>
       
       <div className="mt-4 space-y-2">
-        <Label>Foto (max 5)</Label>
+        <Label className="font-semibold text-foreground">Foto (max 5)</Label>
         <div className="flex flex-wrap gap-2">
           {operation.photos && operation.photos.map((photoPath, idx) => (
             <div key={idx} className="relative">
