@@ -790,22 +790,37 @@ export class DatabaseStorage implements IStorage {
     // Get attendance entries for the month
     const absences = await this.getAllAttendanceEntries(organizationId, year, month);
     
+    // Get all hours adjustments for these reports
+    const allAdjustments = await db.select().from(hoursAdjustments);
+    const monthAdjustments = allAdjustments.filter(adj => reportIds.includes(adj.dailyReportId));
+    
     // Build attendance data
     const attendanceData = allUsers.map(user => {
       const userReports = monthReports.filter(r => r.employeeId === user.id);
       const userAbsences = absences.filter(a => a.userId === user.id);
       
-      const dailyData: Record<string, { ordinary: number; overtime: number; absence?: string }> = {};
+      const dailyData: Record<string, { ordinary: number; overtime: number; absence?: string; adjustment?: number }> = {};
       
       // Process daily reports
       userReports.forEach(report => {
         const reportOps = monthOperations.filter(op => op.dailyReportId === report.id);
-        const totalHours = reportOps.reduce((sum, op) => sum + Number(op.hours), 0);
+        let totalHours = reportOps.reduce((sum, op) => sum + Number(op.hours), 0);
+        
+        // Apply hours adjustment if exists
+        const adjustment = monthAdjustments.find(adj => adj.dailyReportId === report.id);
+        if (adjustment) {
+          const adjustmentValue = Number(adjustment.adjustment);
+          totalHours += adjustmentValue;
+        }
         
         const ordinary = Math.min(totalHours, 8);
         const overtime = Math.max(totalHours - 8, 0);
         
-        dailyData[report.date] = { ordinary, overtime };
+        dailyData[report.date] = { 
+          ordinary, 
+          overtime,
+          ...(adjustment && { adjustment: Number(adjustment.adjustment) })
+        };
       });
       
       // Add absences
