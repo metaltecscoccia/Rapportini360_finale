@@ -7,6 +7,7 @@ import {
   dailyReports,
   operations,
   attendanceEntries,
+  hoursAdjustments,
   type User, 
   type InsertUser,
   type Client,
@@ -24,6 +25,9 @@ import {
   type AttendanceEntry,
   type InsertAttendanceEntry,
   type UpdateAttendanceEntry,
+  type HoursAdjustment,
+  type InsertHoursAdjustment,
+  type UpdateHoursAdjustment,
   type UpdateDailyReport,
   type UpdateOperation
 } from "@shared/schema";
@@ -111,6 +115,12 @@ export interface IStorage {
   createAttendanceEntry(entry: InsertAttendanceEntry, organizationId: string): Promise<AttendanceEntry>;
   updateAttendanceEntry(id: string, updates: UpdateAttendanceEntry): Promise<AttendanceEntry>;
   deleteAttendanceEntry(id: string): Promise<boolean>;
+  
+  // Hours adjustments
+  getHoursAdjustment(dailyReportId: string, organizationId: string): Promise<HoursAdjustment | undefined>;
+  createHoursAdjustment(adjustment: InsertHoursAdjustment, organizationId: string): Promise<HoursAdjustment>;
+  updateHoursAdjustment(id: string, updates: UpdateHoursAdjustment): Promise<HoursAdjustment>;
+  deleteHoursAdjustment(id: string): Promise<boolean>;
   
   // Monthly Attendance (Foglio Presenze)
   getMonthlyAttendance(organizationId: string, year: string, month: string): Promise<any>;
@@ -700,6 +710,46 @@ export class DatabaseStorage implements IStorage {
   async deleteAttendanceEntry(id: string): Promise<boolean> {
     await this.ensureInitialized();
     await db.delete(attendanceEntries).where(eq(attendanceEntries.id, id));
+    return true;
+  }
+
+  async getHoursAdjustment(dailyReportId: string, organizationId: string): Promise<HoursAdjustment | undefined> {
+    await this.ensureInitialized();
+    const adjustments = await db.select()
+      .from(hoursAdjustments)
+      .where(
+        and(
+          eq(hoursAdjustments.dailyReportId, dailyReportId),
+          eq(hoursAdjustments.organizationId, organizationId)
+        )
+      );
+    return adjustments[0];
+  }
+
+  async createHoursAdjustment(adjustment: InsertHoursAdjustment, organizationId: string): Promise<HoursAdjustment> {
+    await this.ensureInitialized();
+    const result = await db.insert(hoursAdjustments).values({
+      ...adjustment,
+      organizationId
+    }).returning();
+    return result[0];
+  }
+
+  async updateHoursAdjustment(id: string, updates: UpdateHoursAdjustment): Promise<HoursAdjustment> {
+    await this.ensureInitialized();
+    const result = await db.update(hoursAdjustments)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(hoursAdjustments.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteHoursAdjustment(id: string): Promise<boolean> {
+    await this.ensureInitialized();
+    await db.delete(hoursAdjustments).where(eq(hoursAdjustments.id, id));
     return true;
   }
 

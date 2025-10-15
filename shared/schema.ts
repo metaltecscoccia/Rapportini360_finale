@@ -98,6 +98,17 @@ export const attendanceEntries = pgTable("attendance_entries", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
+// Hours adjustments (Aggiustamenti ore per rapportini)
+export const hoursAdjustments = pgTable("hours_adjustments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  dailyReportId: varchar("daily_report_id").notNull().references(() => dailyReports.id),
+  adjustment: numeric("adjustment").notNull(), // Valore positivo o negativo (es. +0.5 o -1.5)
+  reason: text("reason"), // Motivo opzionale dell'aggiustamento
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
 // Insert schemas
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   id: true,
@@ -162,6 +173,15 @@ export const insertAttendanceEntrySchema = createInsertSchema(attendanceEntries)
   })
 });
 
+export const insertHoursAdjustmentSchema = createInsertSchema(hoursAdjustments).omit({
+  id: true,
+  organizationId: true, // Will be set automatically from session
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  adjustment: z.union([z.string(), z.number()]).transform(val => String(val))
+});
+
 // Update schemas for editing
 export const updateDailyReportSchema = insertDailyReportSchema.partial().extend({
   id: z.string().optional()
@@ -172,6 +192,10 @@ export const updateOperationSchema = insertOperationSchema.partial().extend({
 });
 
 export const updateAttendanceEntrySchema = insertAttendanceEntrySchema.partial().extend({
+  id: z.string().optional()
+});
+
+export const updateHoursAdjustmentSchema = insertHoursAdjustmentSchema.partial().extend({
   id: z.string().optional()
 });
 
@@ -204,6 +228,10 @@ export type Operation = typeof operations.$inferSelect;
 export type InsertAttendanceEntry = z.infer<typeof insertAttendanceEntrySchema>;
 export type AttendanceEntry = typeof attendanceEntries.$inferSelect;
 export type UpdateAttendanceEntry = z.infer<typeof updateAttendanceEntrySchema>;
+
+export type InsertHoursAdjustment = z.infer<typeof insertHoursAdjustmentSchema>;
+export type HoursAdjustment = typeof hoursAdjustments.$inferSelect;
+export type UpdateHoursAdjustment = z.infer<typeof updateHoursAdjustmentSchema>;
 
 export type UpdateDailyReport = z.infer<typeof updateDailyReportSchema>;
 export type UpdateOperation = z.infer<typeof updateOperationSchema>;
