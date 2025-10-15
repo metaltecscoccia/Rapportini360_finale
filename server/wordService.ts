@@ -65,17 +65,14 @@ export class WordService {
         );
         documentSections.push(...employeeSection);
         
-        // Add spacing between employees
+        // Add minimal spacing between employees
         if (i < reports.length - 1) {
           documentSections.push(
-            new Paragraph({ text: '' }),
-            new Paragraph({ text: '' }),
             new Paragraph({
               text: '─────────────────────────────────────────────────────────',
               alignment: AlignmentType.CENTER,
-              spacing: { before: 200, after: 200 }
-            }),
-            new Paragraph({ text: '' })
+              spacing: { before: 100, after: 100 }
+            })
           );
         }
       }
@@ -239,16 +236,6 @@ export class WordService {
       }) as any
     );
     
-    // Summary
-    sections.push(
-      new Paragraph({
-        children: [new TextRun({
-          text: `Riepilogo: ${operations.length} operazioni • ${totalHours.toFixed(1)} ore totali`,
-          italics: true
-        })],
-        spacing: { before: 200 }
-      })
-    );
 
     // Add photos for each operation that has them
     for (let i = 0; i < operations.length; i++) {
@@ -555,16 +542,6 @@ export class WordService {
       }) as any
     );
 
-    // Summary
-    documentSections.push(
-      new Paragraph({
-        children: [new TextRun({
-          text: `Riepilogo: ${enrichedOperations.length} operazioni • ${totalHours.toFixed(1)} ore totali`,
-          italics: true
-        })],
-        spacing: { before: 200, after: 200 }
-      })
-    );
 
     const doc = new Document({
       sections: [{
@@ -681,17 +658,14 @@ export class WordService {
         );
         documentSections.push(...employeeSection);
         
-        // Add spacing between employees
+        // Add minimal spacing between employees
         if (i < filteredReports.length - 1) {
           documentSections.push(
-            new Paragraph({ text: '' }),
-            new Paragraph({ text: '' }),
             new Paragraph({
               text: '─────────────────────────────────────────────────────────',
               alignment: AlignmentType.CENTER,
-              spacing: { before: 200, after: 200 }
-            }),
-            new Paragraph({ text: '' })
+              spacing: { before: 100, after: 100 }
+            })
           );
         }
       }
