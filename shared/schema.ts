@@ -105,6 +105,7 @@ export const hoursAdjustments = pgTable("hours_adjustments", {
   dailyReportId: varchar("daily_report_id").notNull().references(() => dailyReports.id),
   adjustment: numeric("adjustment").notNull(), // Valore positivo o negativo (es. +0.5 o -1.5)
   reason: text("reason"), // Motivo opzionale dell'aggiustamento
+  createdBy: varchar("created_by").notNull().references(() => users.id), // Admin che ha creato l'aggiustamento
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });

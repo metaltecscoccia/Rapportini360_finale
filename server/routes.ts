@@ -18,7 +18,9 @@ import {
   insertMaterialSchema,
   insertWorkOrderSchema,
   insertAttendanceEntrySchema,
-  updateAttendanceEntrySchema
+  updateAttendanceEntrySchema,
+  insertHoursAdjustmentSchema,
+  updateHoursAdjustmentSchema
 } from "@shared/schema";
 import { validatePassword, verifyPassword, hashPassword } from "./auth";
 
@@ -1248,6 +1250,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting attendance entry:", error);
       res.status(500).json({ error: "Failed to delete attendance entry" });
+    }
+  });
+
+  // ==================== HOURS ADJUSTMENTS ====================
+  
+  // Get hours adjustment for a daily report (admin only)
+  app.get("/api/hours-adjustment/:dailyReportId", requireAdmin, async (req, res) => {
+    try {
+      const { dailyReportId } = req.params;
+      const organizationId = (req as any).session.organizationId;
+      
+      const adjustment = await storage.getHoursAdjustment(dailyReportId, organizationId);
+      res.json(adjustment || null);
+    } catch (error) {
+      console.error("Error fetching hours adjustment:", error);
+      res.status(500).json({ error: "Failed to fetch hours adjustment" });
+    }
+  });
+
+  // Create hours adjustment (admin only)
+  app.post("/api/hours-adjustment", requireAdmin, async (req, res) => {
+    try {
+      const result = insertHoursAdjustmentSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: "Dati aggiustamento non validi", 
+          issues: result.error.issues 
+        });
+      }
+      
+      const organizationId = (req as any).session.organizationId;
+      const userId = (req as any).session.userId;
+      
+      // Check if adjustment already exists for this report
+      const existing = await storage.getHoursAdjustment(
+        result.data.dailyReportId,
+        organizationId
+      );
+      
+      if (existing) {
+        return res.status(400).json({ 
+          error: "Esiste già un aggiustamento per questo rapportino" 
+        });
+      }
+      
+      const adjustment = await storage.createHoursAdjustment({
+        ...result.data,
+        createdBy: userId
+      }, organizationId);
+      res.json(adjustment);
+    } catch (error) {
+      console.error("Error creating hours adjustment:", error);
+      res.status(500).json({ error: "Failed to create hours adjustment" });
+    }
+  });
+
+  // Update hours adjustment (admin only)
+  app.patch("/api/hours-adjustment/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = updateHoursAdjustmentSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: "Dati aggiustamento non validi", 
+          issues: result.error.issues 
+        });
+      }
+      
+      const adjustment = await storage.updateHoursAdjustment(id, result.data);
+      res.json(adjustment);
+    } catch (error) {
+      console.error("Error updating hours adjustment:", error);
+      res.status(500).json({ error: "Failed to update hours adjustment" });
+    }
+  });
+
+  // Delete hours adjustment (admin only)
+  app.delete("/api/hours-adjustment/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteHoursAdjustment(id);
+      
+      if (deleted) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ error: "Failed to delete hours adjustment" });
+      }
+    } catch (error) {
+      console.error("Error deleting hours adjustment:", error);
+      res.status(500).json({ error: "Failed to delete hours adjustment" });
     }
   });
 
