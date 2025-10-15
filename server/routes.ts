@@ -1011,6 +1011,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update hours for a daily report (admin only)
+  app.patch("/api/daily-reports/hours", requireAdmin, async (req, res) => {
+    try {
+      const { userId, date, ordinary, overtime } = req.body;
+      const organizationId = (req as any).session.organizationId;
+
+      // Validate inputs
+      if (!userId || !date || ordinary === undefined) {
+        return res.status(400).json({ error: "userId, date, and ordinary are required" });
+      }
+
+      // Find the report for this employee and date
+      const report = await storage.getDailyReportByEmployeeAndDate(userId, date, organizationId);
+      if (!report) {
+        return res.status(404).json({ error: "Rapportino non trovato per questa data" });
+      }
+
+      // Only allow editing approved reports
+      if (report.status !== 'Approvato') {
+        return res.status(400).json({ error: "Solo i rapportini approvati possono essere modificati" });
+      }
+
+      // Get operations for this report
+      const operations = await storage.getOperationsByReportId(report.id);
+      if (operations.length === 0) {
+        return res.status(400).json({ error: "Nessuna operazione trovata per questo rapportino" });
+      }
+
+      // Calculate current and target total hours
+      const currentTotal = operations.reduce((sum, op) => sum + Number(op.hours), 0);
+      const targetTotal = Number(ordinary) + Number(overtime || 0);
+
+      if (operations.length === 1) {
+        // Single operation: simply update the hours
+        await storage.updateOperation(operations[0].id, { hours: targetTotal });
+      } else {
+        // Multiple operations: distribute proportionally to preserve relative allocation
+        if (currentTotal > 0) {
+          const scaleFactor = targetTotal / currentTotal;
+          for (const op of operations) {
+            const newHours = Number(op.hours) * scaleFactor;
+            await storage.updateOperation(op.id, { hours: newHours });
+          }
+        } else {
+          // If all operations were 0, put all hours in first operation
+          await storage.updateOperation(operations[0].id, { hours: targetTotal });
+          for (let i = 1; i < operations.length; i++) {
+            await storage.updateOperation(operations[i].id, { hours: 0 });
+          }
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating report hours:", error);
+      res.status(500).json({ error: "Impossibile aggiornare le ore" });
+    }
+  });
+
   // Delete daily report (admin only)
   app.delete("/api/daily-reports/:id", requireAdmin, async (req, res) => {
     try {
