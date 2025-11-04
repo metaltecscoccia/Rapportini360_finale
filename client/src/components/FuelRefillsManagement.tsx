@@ -405,7 +405,7 @@ export default function FuelRefillsManagement() {
         </CardHeader>
         <CardContent>
           <div className="text-4xl font-bold text-primary">
-            {remainingLiters.toFixed(2)} L
+            {parseFloat(remainingLiters as any).toFixed(2)} L
           </div>
           <p className="text-sm text-muted-foreground mt-2">
             Carburante disponibile per i mezzi
@@ -797,10 +797,10 @@ export default function FuelRefillsManagement() {
                         {formatDateToItalian(refill.refillDate)} {new Date(refill.refillDate).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                       </TableCell>
                       <TableCell>{getVehicleName(refill.vehicleId)}</TableCell>
-                      <TableCell className="text-right">{refill.litersBefore?.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{refill.litersAfter?.toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-medium">{refill.litersRefilled?.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{refill.kmReading?.toFixed(0) || "-"}</TableCell>
+                      <TableCell className="text-right">{refill.litersBefore ? parseFloat(refill.litersBefore).toFixed(2) : "-"}</TableCell>
+                      <TableCell className="text-right">{refill.litersAfter ? parseFloat(refill.litersAfter).toFixed(2) : "-"}</TableCell>
+                      <TableCell className="text-right font-medium">{refill.litersRefilled ? parseFloat(refill.litersRefilled).toFixed(2) : "-"}</TableCell>
+                      <TableCell className="text-right">{refill.kmReading ? parseFloat(refill.kmReading).toFixed(0) : "-"}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -1050,8 +1050,8 @@ export default function FuelRefillsManagement() {
                     return (
                       <TableRow key={load.id} data-testid={`row-tank-load-${load.id}`}>
                         <TableCell>{formatDateToItalian(load.loadDate)}</TableCell>
-                        <TableCell className="font-medium">{load.liters.toFixed(2)} L</TableCell>
-                        <TableCell>{load.totalCost ? `€ ${load.totalCost.toFixed(2)}` : "-"}</TableCell>
+                        <TableCell className="font-medium">{parseFloat(load.liters).toFixed(2)} L</TableCell>
+                        <TableCell>{load.totalCost ? `€ ${parseFloat(load.totalCost).toFixed(2)}` : "-"}</TableCell>
                         <TableCell>{load.supplier || "-"}</TableCell>
                         <TableCell>{load.notes || "-"}</TableCell>
                         <TableCell className="text-right">
