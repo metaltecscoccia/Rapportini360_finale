@@ -1759,7 +1759,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/fuel-refills/export", requireAdmin, async (req, res) => {
     try {
       const organizationId = (req as any).session.organizationId;
-      const { vehicleId, month, year } = req.query;
+      const vehicleId = req.query.vehicleId as string | undefined;
+      const month = req.query.month as string | undefined;
+      const year = req.query.year as string | undefined;
       
       const allRefills = await storage.getAllFuelRefills(organizationId);
       const allVehicles = await storage.getAllVehicles(organizationId);

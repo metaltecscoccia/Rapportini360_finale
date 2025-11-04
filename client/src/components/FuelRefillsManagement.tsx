@@ -15,7 +15,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateToItalian } from "@/lib/dateUtils";
-import { Plus, Edit, Trash, Fuel, Filter } from "lucide-react";
+import { Plus, Edit, Trash, Fuel, Filter, Download } from "lucide-react";
 import type { FuelRefill, Vehicle } from "@shared/schema";
 
 const fuelRefillSchema = z.object({
@@ -242,6 +242,43 @@ export default function FuelRefillsManagement() {
     return (a - b).toFixed(2);
   };
 
+  const handleExport = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (vehicleFilter !== "all") params.append("vehicleId", vehicleFilter);
+      if (monthFilter) params.append("month", monthFilter);
+      if (yearFilter) params.append("year", yearFilter);
+
+      const response = await fetch(`/api/fuel-refills/export?${params.toString()}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) throw new Error("Export failed");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = response.headers.get("Content-Disposition")?.split("filename=")[1]?.replace(/"/g, "") || "rifornimenti.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Export completato",
+        description: "Il file Excel è stato scaricato con successo",
+      });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile esportare i dati",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -253,7 +290,12 @@ export default function FuelRefillsManagement() {
                 Gestione Rifornimenti
               </CardTitle>
             </div>
-            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleExport} data-testid="button-export-refills">
+                <Download className="h-4 w-4 mr-2" />
+                Esporta Excel
+              </Button>
+              <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button data-testid="button-add-refill">
                   <Plus className="h-4 w-4 mr-2" />
@@ -413,6 +455,7 @@ export default function FuelRefillsManagement() {
                 </Form>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
