@@ -108,6 +108,10 @@ export default function FuelRefillsManagement() {
     queryKey: ["/api/fuel-remaining"],
   });
 
+  const { data: tankLoads = [], isLoading: isLoadingTankLoads } = useQuery({
+    queryKey: ["/api/fuel-tank-loads"],
+  });
+
   const remainingLiters = fuelRemainingData?.remaining || 0;
 
   const createRefillMutation = useMutation({
@@ -176,6 +180,7 @@ export default function FuelRefillsManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/fuel-refills"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/fuel-remaining"] });
       toast({
         title: "Rifornimento aggiornato",
         description: "Il rifornimento è stato aggiornato con successo",
@@ -254,6 +259,32 @@ export default function FuelRefillsManagement() {
       toast({
         title: "Errore",
         description: "Impossibile registrare il carico",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteTankLoadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/fuel-tank-loads/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to delete fuel tank load");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/fuel-tank-loads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/fuel-remaining"] });
+      toast({
+        title: "Carico eliminato",
+        description: "Il carico è stato eliminato con successo",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il carico",
         variant: "destructive",
       });
     },
@@ -970,6 +1001,68 @@ export default function FuelRefillsManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Storico Carichi Cisterna */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Fuel className="h-5 w-5" />
+            Storico Carichi Cisterna
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoadingTankLoads ? (
+            <div className="text-center py-8 text-muted-foreground">Caricamento...</div>
+          ) : (tankLoads as any[]).length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nessun carico registrato
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data e Ora</TableHead>
+                    <TableHead>Litri Caricati</TableHead>
+                    <TableHead>Costo Totale</TableHead>
+                    <TableHead>Fornitore</TableHead>
+                    <TableHead>Note</TableHead>
+                    <TableHead className="text-right">Azioni</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(tankLoads as any[]).map((load: any) => {
+                    const loadDateTime = new Date(load.loadDate);
+                    return (
+                      <TableRow key={load.id} data-testid={`row-tank-load-${load.id}`}>
+                        <TableCell>{formatDateToItalian(loadDateTime)}</TableCell>
+                        <TableCell className="font-medium">{load.liters.toFixed(2)} L</TableCell>
+                        <TableCell>{load.totalCost ? `€ ${load.totalCost.toFixed(2)}` : "-"}</TableCell>
+                        <TableCell>{load.supplier || "-"}</TableCell>
+                        <TableCell>{load.notes || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              if (window.confirm("Sei sicuro di voler eliminare questo carico?")) {
+                                deleteTankLoadMutation.mutate(load.id);
+                              }
+                            }}
+                            data-testid={`button-delete-tank-load-${load.id}`}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
