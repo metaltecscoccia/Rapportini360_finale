@@ -26,7 +26,6 @@ const fuelRefillSchema = z.object({
   litersAfter: z.string().min(1, "Litri dopo è richiesto"),
   km: z.string().optional(),
   hours: z.string().optional(),
-  cost: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -50,7 +49,6 @@ export default function FuelRefillsManagement() {
       litersAfter: "",
       km: "",
       hours: "",
-      cost: "",
       notes: "",
     },
   });
@@ -65,7 +63,6 @@ export default function FuelRefillsManagement() {
       litersAfter: "",
       km: "",
       hours: "",
-      cost: "",
       notes: "",
     },
   });
@@ -94,7 +91,6 @@ export default function FuelRefillsManagement() {
         litersRefilled: parseFloat(data.litersAfter) - parseFloat(data.litersBefore),
         kmReading: data.km ? parseFloat(data.km) : null,
         engineHoursReading: data.hours ? parseFloat(data.hours) : null,
-        totalCost: data.cost ? parseFloat(data.cost) : null,
         notes: data.notes || null,
       };
       const response = await fetch("/api/fuel-refills", {
@@ -135,7 +131,6 @@ export default function FuelRefillsManagement() {
         litersRefilled: parseFloat(data.litersAfter) - parseFloat(data.litersBefore),
         kmReading: data.km ? parseFloat(data.km) : null,
         engineHoursReading: data.hours ? parseFloat(data.hours) : null,
-        totalCost: data.cost ? parseFloat(data.cost) : null,
         notes: data.notes || null,
       };
       const response = await fetch(`/api/fuel-refills/${id}`, {
@@ -204,9 +199,8 @@ export default function FuelRefillsManagement() {
       refillTime: time,
       litersBefore: refill.litersBefore?.toString() || "",
       litersAfter: refill.litersAfter?.toString() || "",
-      km: refill.km?.toString() || "",
-      hours: refill.hours?.toString() || "",
-      cost: refill.cost?.toString() || "",
+      km: refill.kmReading?.toString() || "",
+      hours: refill.engineHoursReading?.toString() || "",
       notes: refill.notes || "",
     });
     setEditDialogOpen(true);
@@ -386,20 +380,6 @@ export default function FuelRefillsManagement() {
 
                     <FormField
                       control={addForm.control}
-                      name="cost"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Costo € (opzionale)</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="number" step="0.01" placeholder="0.00" data-testid="input-refill-cost" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={addForm.control}
                       name="notes"
                       render={({ field }) => (
                         <FormItem>
@@ -470,7 +450,6 @@ export default function FuelRefillsManagement() {
                     <TableHead className="text-right">Dopo (L)</TableHead>
                     <TableHead className="text-right">Erogati (L)</TableHead>
                     <TableHead className="text-right">Km</TableHead>
-                    <TableHead className="text-right">Costo €</TableHead>
                     <TableHead className="text-right">Azioni</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -484,8 +463,7 @@ export default function FuelRefillsManagement() {
                       <TableCell className="text-right">{refill.litersBefore?.toFixed(2)}</TableCell>
                       <TableCell className="text-right">{refill.litersAfter?.toFixed(2)}</TableCell>
                       <TableCell className="text-right font-medium">{refill.litersRefilled?.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{refill.km?.toFixed(0) || "-"}</TableCell>
-                      <TableCell className="text-right">{refill.cost ? `€${refill.cost.toFixed(2)}` : "-"}</TableCell>
+                      <TableCell className="text-right">{refill.kmReading?.toFixed(0) || "-"}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -647,20 +625,6 @@ export default function FuelRefillsManagement() {
                   )}
                 />
               </div>
-
-              <FormField
-                control={editForm.control}
-                name="cost"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Costo € (opzionale)</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="number" step="0.01" placeholder="0.00" data-testid="input-edit-refill-cost" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={editForm.control}
