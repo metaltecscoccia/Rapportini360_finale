@@ -1949,6 +1949,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/fuel-refills/statistics", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const year = req.query.year as string | undefined;
+      const month = req.query.month as string | undefined;
+      const statistics = await storage.getFuelRefillsStatistics(organizationId, year, month);
+      res.json(statistics);
+    } catch (error) {
+      console.error("Error fetching fuel refills statistics:", error);
+      res.status(500).json({ error: "Failed to fetch fuel refills statistics" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

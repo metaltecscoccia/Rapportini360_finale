@@ -168,6 +168,22 @@ export interface IStorage {
   updateFuelTankLoad(id: string, updates: UpdateFuelTankLoad, organizationId: string): Promise<FuelTankLoad>;
   deleteFuelTankLoad(id: string, organizationId: string): Promise<boolean>;
   getRemainingFuelLiters(organizationId: string): Promise<number>;
+  getFuelRefillsStatistics(organizationId: string, year?: string, month?: string): Promise<{
+    byVehicle: Array<{
+      vehicleId: string;
+      vehicleName: string;
+      totalLiters: number;
+      totalCost: number;
+      refillCount: number;
+    }>;
+    byMonth: Array<{
+      month: string;
+      year: string;
+      totalLiters: number;
+      totalCost: number;
+      refillCount: number;
+    }>;
+  }>;
   
   // Monthly Attendance (Foglio Presenze)
   getMonthlyAttendance(organizationId: string, year: string, month: string): Promise<any>;
@@ -1087,6 +1103,109 @@ export class DatabaseStorage implements IStorage {
     }, 0);
     
     return totalLoads - totalRefills;
+  }
+
+  async getFuelRefillsStatistics(organizationId: string, year?: string, month?: string) {
+    await this.ensureInitialized();
+    
+    // Get all refills for the organization
+    let refills = await db.select()
+      .from(fuelRefills)
+      .where(eq(fuelRefills.organizationId, organizationId))
+      .orderBy(desc(fuelRefills.refillDate));
+    
+    // Filter by year and month if provided
+    if (year) {
+      refills = refills.filter(r => {
+        const refillDate = new Date(r.refillDate);
+        return refillDate.getFullYear().toString() === year;
+      });
+    }
+    if (month) {
+      refills = refills.filter(r => {
+        const refillDate = new Date(r.refillDate);
+        return (refillDate.getMonth() + 1).toString().padStart(2, '0') === month.padStart(2, '0');
+      });
+    }
+    
+    // Get all vehicles
+    const allVehicles = await db.select()
+      .from(vehicles)
+      .where(eq(vehicles.organizationId, organizationId));
+    
+    // Aggregate by vehicle
+    const vehicleStats = new Map<string, { totalLiters: number; totalCost: number; refillCount: number; vehicleName: string }>();
+    
+    for (const refill of refills) {
+      const vehicleId = refill.vehicleId;
+      const vehicle = allVehicles.find(v => v.id === vehicleId);
+      const vehicleName = vehicle ? `${vehicle.name} (${vehicle.licensePlate})` : 'Sconosciuto';
+      
+      if (!vehicleStats.has(vehicleId)) {
+        vehicleStats.set(vehicleId, {
+          totalLiters: 0,
+          totalCost: 0,
+          refillCount: 0,
+          vehicleName
+        });
+      }
+      
+      const stats = vehicleStats.get(vehicleId)!;
+      stats.totalLiters += parseFloat(refill.litersRefilled || '0');
+      // Calculate cost from litersRefilled (assuming price per liter can be calculated)
+      // For now, we don't have cost data in refills, so we'll set it to 0
+      stats.totalCost += 0;
+      stats.refillCount += 1;
+    }
+    
+    const byVehicle = Array.from(vehicleStats.entries()).map(([vehicleId, stats]) => ({
+      vehicleId,
+      vehicleName: stats.vehicleName,
+      totalLiters: stats.totalLiters,
+      totalCost: stats.totalCost,
+      refillCount: stats.refillCount
+    }));
+    
+    // Aggregate by month
+    const monthStats = new Map<string, { totalLiters: number; totalCost: number; refillCount: number; year: string }>();
+    
+    for (const refill of refills) {
+      const refillDate = new Date(refill.refillDate);
+      const monthKey = refillDate.toISOString().substring(0, 7); // YYYY-MM
+      const [yearStr, monthStr] = monthKey.split('-');
+      
+      if (!monthStats.has(monthKey)) {
+        monthStats.set(monthKey, {
+          totalLiters: 0,
+          totalCost: 0,
+          refillCount: 0,
+          year: yearStr
+        });
+      }
+      
+      const stats = monthStats.get(monthKey)!;
+      stats.totalLiters += parseFloat(refill.litersRefilled || '0');
+      stats.totalCost += 0;
+      stats.refillCount += 1;
+    }
+    
+    const byMonth = Array.from(monthStats.entries())
+      .map(([monthKey, stats]) => {
+        const [year, month] = monthKey.split('-');
+        return {
+          month,
+          year,
+          totalLiters: stats.totalLiters,
+          totalCost: stats.totalCost,
+          refillCount: stats.refillCount
+        };
+      })
+      .sort((a, b) => `${a.year}-${a.month}`.localeCompare(`${b.year}-${b.month}`));
+    
+    return {
+      byVehicle,
+      byMonth
+    };
   }
 
   async getMonthlyAttendance(organizationId: string, year: string, month: string): Promise<any> {
