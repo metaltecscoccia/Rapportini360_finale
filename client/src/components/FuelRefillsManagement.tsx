@@ -29,7 +29,17 @@ const fuelRefillSchema = z.object({
   notes: z.string().optional(),
 });
 
+const fuelTankLoadSchema = z.object({
+  loadDate: z.string().min(1, "Data è richiesta"),
+  loadTime: z.string().min(1, "Ora è richiesta"),
+  liters: z.string().min(1, "Litri è richiesto"),
+  totalCost: z.string().optional(),
+  supplier: z.string().optional(),
+  notes: z.string().optional(),
+});
+
 type FuelRefillForm = z.infer<typeof fuelRefillSchema>;
+type FuelTankLoadForm = z.infer<typeof fuelTankLoadSchema>;
 
 export default function FuelRefillsManagement() {
   const { toast } = useToast();
@@ -40,6 +50,7 @@ export default function FuelRefillsManagement() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedRefill, setSelectedRefill] = useState<any | null>(null);
+  const [addLoadDialogOpen, setAddLoadDialogOpen] = useState(false);
 
   const addForm = useForm<FuelRefillForm>({
     resolver: zodResolver(fuelRefillSchema),
@@ -69,6 +80,18 @@ export default function FuelRefillsManagement() {
     },
   });
 
+  const loadForm = useForm<FuelTankLoadForm>({
+    resolver: zodResolver(fuelTankLoadSchema),
+    defaultValues: {
+      loadDate: new Date().toISOString().split('T')[0],
+      loadTime: new Date().toTimeString().slice(0,5),
+      liters: "",
+      totalCost: "",
+      supplier: "",
+      notes: "",
+    },
+  });
+
   const { data: vehicles = [], isLoading: isLoadingVehicles } = useQuery({
     queryKey: ["/api/vehicles"],
   });
@@ -80,6 +103,12 @@ export default function FuelRefillsManagement() {
   const { data: currentUser } = useQuery({
     queryKey: ["/api/me"],
   });
+
+  const { data: fuelRemainingData } = useQuery({
+    queryKey: ["/api/fuel-remaining"],
+  });
+
+  const remainingLiters = fuelRemainingData?.remaining || 0;
 
   const createRefillMutation = useMutation({
     mutationFn: async (data: FuelRefillForm) => {
@@ -106,6 +135,7 @@ export default function FuelRefillsManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/fuel-refills"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/fuel-remaining"] });
       toast({
         title: "Rifornimento registrato",
         description: "Il rifornimento è stato registrato con successo",
@@ -174,6 +204,7 @@ export default function FuelRefillsManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/fuel-refills"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/fuel-remaining"] });
       toast({
         title: "Rifornimento eliminato",
         description: "Il rifornimento è stato eliminato con successo",
@@ -185,6 +216,44 @@ export default function FuelRefillsManagement() {
       toast({
         title: "Errore",
         description: "Impossibile eliminare il rifornimento",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createTankLoadMutation = useMutation({
+    mutationFn: async (data: FuelTankLoadForm) => {
+      const loadDateTime = `${data.loadDate}T${data.loadTime}:00`;
+      const payload = {
+        loadDate: loadDateTime,
+        liters: parseFloat(data.liters),
+        totalCost: data.totalCost ? parseFloat(data.totalCost) : null,
+        supplier: data.supplier || null,
+        notes: data.notes || null,
+      };
+      const response = await fetch("/api/fuel-tank-loads", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to create fuel tank load");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/fuel-tank-loads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/fuel-remaining"] });
+      toast({
+        title: "Carico registrato",
+        description: "Il carico della cisterna è stato registrato con successo",
+      });
+      setAddLoadDialogOpen(false);
+      loadForm.reset();
+    },
+    onError: () => {
+      toast({
+        title: "Errore",
+        description: "Impossibile registrare il carico",
         variant: "destructive",
       });
     },
@@ -281,25 +350,158 @@ export default function FuelRefillsManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Litri Rimanenti Card */}
+      <Card className="border-l-4 border-l-primary">
+        <CardHeader>
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Litri Rimanenti in Cisterna
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-4xl font-bold text-primary">
+            {remainingLiters.toFixed(2)} L
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            Carburante disponibile per i mezzi
+          </p>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
+            <div className="flex items-center gap-3">
               <CardTitle className="flex items-center gap-2">
                 <Fuel className="h-5 w-5" />
                 Gestione Rifornimenti
               </CardTitle>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={handleExport} 
+                data-testid="button-export-refills"
+                title="Esporta Excel"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleExport} data-testid="button-export-refills">
-                <Download className="h-4 w-4 mr-2" />
-                Esporta Excel
-              </Button>
+              <Dialog open={addLoadDialogOpen} onOpenChange={setAddLoadDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="secondary" data-testid="button-add-load">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Carico
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-xl">
+                  <DialogHeader>
+                    <DialogTitle>Registra Carico Cisterna</DialogTitle>
+                    <DialogDescription>
+                      Inserisci i dettagli del carico di carburante nella cisterna
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...loadForm}>
+                    <form onSubmit={loadForm.handleSubmit((data) => createTankLoadMutation.mutate(data))} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={loadForm.control}
+                          name="loadDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Data</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="date" data-testid="input-load-date" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={loadForm.control}
+                          name="loadTime"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Ora</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="time" data-testid="input-load-time" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={loadForm.control}
+                        name="liters"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Litri Caricati</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" step="0.01" placeholder="0.00" data-testid="input-load-liters" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={loadForm.control}
+                        name="totalCost"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Costo Totale (€)</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" step="0.01" placeholder="0.00" data-testid="input-load-cost" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={loadForm.control}
+                        name="supplier"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Fornitore</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Nome fornitore" data-testid="input-load-supplier" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={loadForm.control}
+                        name="notes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Note</FormLabel>
+                            <FormControl>
+                              <Textarea {...field} placeholder="Note aggiuntive" data-testid="textarea-load-notes" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <DialogFooter>
+                        <Button type="submit" disabled={createTankLoadMutation.isPending} data-testid="button-submit-load">
+                          {createTankLoadMutation.isPending ? "Salvataggio..." : "Registra Carico"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+              
               <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button data-testid="button-add-refill">
+                <Button variant="default" data-testid="button-add-refill">
                   <Plus className="h-4 w-4 mr-2" />
-                  Registra Rifornimento
+                  Scarico
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
