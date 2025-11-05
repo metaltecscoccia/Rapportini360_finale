@@ -1588,6 +1588,10 @@ export default function AdminDashboard() {
             <Building2 className="h-4 w-4 mr-2" />
             Clienti
           </TabsTrigger>
+          <TabsTrigger value="work-orders" data-testid="tab-work-orders">
+            <Wrench className="h-4 w-4 mr-2" />
+            Commesse
+          </TabsTrigger>
           <TabsTrigger value="employees" data-testid="tab-employees">
             <Users className="h-4 w-4 mr-2" />
             Dipendenti
