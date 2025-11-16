@@ -1605,7 +1605,8 @@ export default function AdminDashboard() {
             Presenze
           </TabsTrigger>
         </TabsList>
-{/* Reports Tab */}
+
+        {/* Reports Tab */}
         <TabsContent value="reports" className="space-y-4">
           <Card>
             <CardHeader>
