@@ -72,12 +72,18 @@ function AuthenticatedApp({
     data: todayReport,
     isLoading: loadingTodayReport,
     error: reportError,
+    isError: hasReportError,
   } = useQuery<any>({
     queryKey: ["/api/daily-reports/today"],
     enabled: currentUser.role === "employee",
     retry: false,
     staleTime: 0,
   });
+
+  // Determine if the error is a 404 (no report exists) or a real server error
+  // The queryClient throws errors in format "404: error message"
+  const isReportNotFound = hasReportError && (reportError as Error)?.message?.startsWith('404');
+  const hasServerError = hasReportError && !isReportNotFound;
 
   // Mutation to create new daily report
   const createReportMutation = useMutation({
@@ -200,11 +206,12 @@ function AuthenticatedApp({
                   <p className="text-muted-foreground mt-2">Caricamento...</p>
                 </div>
               </div>
-            ) : reportError ? (
+            ) : hasServerError ? (
               <div className="flex items-center justify-center p-8">
                 <div className="text-center">
-                  <p className="text-muted-foreground">
-                    Nessun rapportino trovato per oggi. Creane uno nuovo!
+                  <p className="text-destructive mb-2">Errore di caricamento</p>
+                  <p className="text-muted-foreground text-sm">
+                    Si è verificato un errore durante il caricamento del rapportino. Riprova più tardi.
                   </p>
                 </div>
               </div>
