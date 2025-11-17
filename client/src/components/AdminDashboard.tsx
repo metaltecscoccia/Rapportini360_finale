@@ -3160,6 +3160,645 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog per aggiungere nuovo cliente */}
+      <Dialog open={addClientDialogOpen} onOpenChange={setAddClientDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Aggiungi Nuovo Cliente</DialogTitle>
+            <DialogDescription>
+              Inserisci il nome del nuovo cliente.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...clientForm}>
+            <form onSubmit={clientForm.handleSubmit(handleAddClient)} className="space-y-4">
+              <FormField
+                control={clientForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Cliente</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Es. Acme Corporation" 
+                        {...field} 
+                        data-testid="input-client-name"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setAddClientDialogOpen(false)}
+                  data-testid="button-cancel-add-client"
+                >
+                  Annulla
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createClientMutation.isPending}
+                  data-testid="button-submit-client"
+                >
+                  {createClientMutation.isPending ? "Aggiungendo..." : "Aggiungi Cliente"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog conferma eliminazione cliente */}
+      <AlertDialog open={deleteClientDialogOpen} onOpenChange={setDeleteClientDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Elimina Cliente</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare il cliente "{selectedClientToDelete?.name}"?
+              {(clientWorkOrdersCount > 0 || clientOperationsCount > 0) && (
+                <span className="block mt-2 font-semibold text-destructive">
+                  Questa operazione eliminerà anche:
+                  {clientWorkOrdersCount > 0 && (
+                    <span className="block">• {clientWorkOrdersCount} {clientWorkOrdersCount === 1 ? 'commessa' : 'commesse'}</span>
+                  )}
+                  {clientOperationsCount > 0 && (
+                    <span className="block">• {clientOperationsCount} {clientOperationsCount === 1 ? 'operazione' : 'operazioni'}</span>
+                  )}
+                </span>
+              )}
+              <span className="block mt-2">
+                Questa azione non può essere annullata.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-client">Annulla</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteClient}
+              disabled={deleteClientMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-client"
+            >
+              {deleteClientMutation.isPending ? "Eliminando..." : "Elimina"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog per modificare commessa */}
+      <Dialog open={editWorkOrderDialogOpen} onOpenChange={setEditWorkOrderDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modifica Commessa</DialogTitle>
+            <DialogDescription>
+              Modifica i dati della commessa.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editWorkOrderForm}>
+            <form onSubmit={editWorkOrderForm.handleSubmit(handleUpdateWorkOrder)} className="space-y-4">
+              <FormField
+                control={editWorkOrderForm.control}
+                name="clientId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cliente</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-edit-client">
+                          <SelectValue placeholder="Seleziona cliente" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(clients as any[]).map((client: any) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editWorkOrderForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Commessa</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Es. Cancello Automatico" 
+                        {...field} 
+                        data-testid="input-edit-work-order-name"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editWorkOrderForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrizione (opzionale)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Descrizione della commessa" 
+                        {...field} 
+                        data-testid="input-edit-work-order-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editWorkOrderForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Stato Commessa
+                      </FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        {field.value ? "Attiva" : "Archiviata"}
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-edit-work-order-active"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setEditWorkOrderDialogOpen(false)}
+                  data-testid="button-cancel-edit-work-order"
+                >
+                  Annulla
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={updateWorkOrderMutation.isPending}
+                  data-testid="button-submit-edit-work-order"
+                >
+                  {updateWorkOrderMutation.isPending ? "Aggiornando..." : "Aggiorna Commessa"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog conferma eliminazione commessa */}
+      <AlertDialog open={deleteWorkOrderDialogOpen} onOpenChange={setDeleteWorkOrderDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Elimina Commessa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare la commessa "{selectedWorkOrderToDelete?.name}"?
+              <span className="block mt-2">
+                Questa azione eliminerà la commessa e tutte le operazioni associate. Questa azione non può essere annullata.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-work-order">Annulla</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteWorkOrder}
+              disabled={deleteWorkOrderMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-work-order"
+            >
+              {deleteWorkOrderMutation.isPending ? "Eliminando..." : "Elimina"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog per aggiungere tipo lavorazione */}
+      <Dialog open={addWorkTypeDialogOpen} onOpenChange={setAddWorkTypeDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Aggiungi Tipo Lavorazione</DialogTitle>
+            <DialogDescription>
+              Inserisci i dati del nuovo tipo di lavorazione.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...workTypeForm}>
+            <form onSubmit={workTypeForm.handleSubmit(handleAddWorkType)} className="space-y-4">
+              <FormField
+                control={workTypeForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Lavorazione</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Es. Saldatura" 
+                        {...field} 
+                        data-testid="input-work-type-name"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={workTypeForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrizione (opzionale)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Descrizione della lavorazione" 
+                        {...field} 
+                        data-testid="input-work-type-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={workTypeForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Stato
+                      </FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        {field.value ? "Attiva" : "Non attiva"}
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-work-type-active"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setAddWorkTypeDialogOpen(false)}
+                  data-testid="button-cancel-add-work-type"
+                >
+                  Annulla
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createWorkTypeMutation.isPending}
+                  data-testid="button-submit-work-type"
+                >
+                  {createWorkTypeMutation.isPending ? "Aggiungendo..." : "Aggiungi Lavorazione"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog per modificare tipo lavorazione */}
+      <Dialog open={editWorkTypeDialogOpen} onOpenChange={setEditWorkTypeDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Modifica Tipo Lavorazione</DialogTitle>
+            <DialogDescription>
+              Modifica i dati del tipo di lavorazione.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...workTypeForm}>
+            <form onSubmit={workTypeForm.handleSubmit(handleUpdateWorkType)} className="space-y-4">
+              <FormField
+                control={workTypeForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Lavorazione</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Es. Saldatura" 
+                        {...field} 
+                        data-testid="input-edit-work-type-name"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={workTypeForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrizione (opzionale)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Descrizione della lavorazione" 
+                        {...field} 
+                        data-testid="input-edit-work-type-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={workTypeForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Stato
+                      </FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        {field.value ? "Attiva" : "Non attiva"}
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-edit-work-type-active"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setEditWorkTypeDialogOpen(false)}
+                  data-testid="button-cancel-edit-work-type"
+                >
+                  Annulla
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={updateWorkTypeMutation.isPending}
+                  data-testid="button-submit-edit-work-type"
+                >
+                  {updateWorkTypeMutation.isPending ? "Aggiornando..." : "Aggiorna Lavorazione"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog conferma eliminazione tipo lavorazione */}
+      <AlertDialog open={deleteWorkTypeDialogOpen} onOpenChange={setDeleteWorkTypeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Elimina Tipo Lavorazione</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare il tipo di lavorazione "{selectedWorkType?.name}"?
+              <span className="block mt-2">
+                Questa azione non può essere annullata.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-work-type">Annulla</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteWorkType}
+              disabled={deleteWorkTypeMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-work-type"
+            >
+              {deleteWorkTypeMutation.isPending ? "Eliminando..." : "Elimina"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog per aggiungere materiale */}
+      <Dialog open={addMaterialDialogOpen} onOpenChange={setAddMaterialDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Aggiungi Materiale</DialogTitle>
+            <DialogDescription>
+              Inserisci i dati del nuovo materiale.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...materialForm}>
+            <form onSubmit={materialForm.handleSubmit(handleAddMaterial)} className="space-y-4">
+              <FormField
+                control={materialForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Materiale</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Es. Acciaio Inox" 
+                        {...field} 
+                        data-testid="input-material-name"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={materialForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrizione (opzionale)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Descrizione del materiale" 
+                        {...field} 
+                        data-testid="input-material-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={materialForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Stato
+                      </FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        {field.value ? "Attivo" : "Non attivo"}
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-material-active"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setAddMaterialDialogOpen(false)}
+                  data-testid="button-cancel-add-material"
+                >
+                  Annulla
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createMaterialMutation.isPending}
+                  data-testid="button-submit-material"
+                >
+                  {createMaterialMutation.isPending ? "Aggiungendo..." : "Aggiungi Materiale"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog per modificare materiale */}
+      <Dialog open={editMaterialDialogOpen} onOpenChange={setEditMaterialDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Modifica Materiale</DialogTitle>
+            <DialogDescription>
+              Modifica i dati del materiale.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...materialForm}>
+            <form onSubmit={materialForm.handleSubmit(handleUpdateMaterial)} className="space-y-4">
+              <FormField
+                control={materialForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Materiale</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Es. Acciaio Inox" 
+                        {...field} 
+                        data-testid="input-edit-material-name"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={materialForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrizione (opzionale)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Descrizione del materiale" 
+                        {...field} 
+                        data-testid="input-edit-material-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={materialForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Stato
+                      </FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        {field.value ? "Attivo" : "Non attivo"}
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-edit-material-active"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setEditMaterialDialogOpen(false)}
+                  data-testid="button-cancel-edit-material"
+                >
+                  Annulla
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={updateMaterialMutation.isPending}
+                  data-testid="button-submit-edit-material"
+                >
+                  {updateMaterialMutation.isPending ? "Aggiornando..." : "Aggiorna Materiale"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog conferma eliminazione materiale */}
+      <AlertDialog open={deleteMaterialDialogOpen} onOpenChange={setDeleteMaterialDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Elimina Materiale</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare il materiale "{selectedMaterial?.name}"?
+              <span className="block mt-2">
+                Questa azione non può essere annullata.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-material">Annulla</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteMaterial}
+              disabled={deleteMaterialMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-material"
+            >
+              {deleteMaterialMutation.isPending ? "Eliminando..." : "Elimina"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Dialog per aggiustamento ore */}
       <HoursAdjustmentDialog
         open={hoursAdjustmentDialogOpen}
