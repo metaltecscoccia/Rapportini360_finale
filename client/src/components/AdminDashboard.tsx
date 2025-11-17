@@ -318,7 +318,7 @@ export default function AdminDashboard() {
   });
 
   // Query per dipendenti mancanti (solo quando il dialog è aperto)
-  const { data: missingEmployeesData, isLoading: isLoadingMissingEmployees } = useQuery<any>({
+  const { data: missingEmployeesData, isLoading: isLoadingMissingEmployees, isError: isMissingEmployeesError } = useQuery<any>({
     queryKey: ['/api/daily-reports/missing-employees', missingEmployeesDate],
     queryFn: async () => {
       const res = await fetch(`/api/daily-reports/missing-employees?date=${missingEmployeesDate}`, {
@@ -3086,6 +3086,79 @@ export default function AdminDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog dipendenti mancanti */}
+      <Dialog open={missingEmployeesDialogOpen} onOpenChange={setMissingEmployeesDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Dipendenti Mancanti</DialogTitle>
+            <DialogDescription>
+              Dipendenti che non hanno inviato il rapportino per la data selezionata
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Label htmlFor="missing-employees-date">Data:</Label>
+              <Input
+                id="missing-employees-date"
+                type="date"
+                value={missingEmployeesDate}
+                onChange={(e) => setMissingEmployeesDate(e.target.value)}
+                className="w-[200px]"
+                data-testid="input-missing-employees-date"
+              />
+            </div>
+            {isLoadingMissingEmployees ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Caricamento...
+              </div>
+            ) : isMissingEmployeesError ? (
+              <div className="text-center py-8 text-destructive">
+                <p className="mb-2">Errore nel caricamento dei dati</p>
+                <p className="text-sm text-muted-foreground">
+                  Si è verificato un errore durante il recupero dei dipendenti mancanti.
+                </p>
+              </div>
+            ) : missingEmployeesData && missingEmployeesData.missingEmployees && missingEmployeesData.missingEmployees.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {missingEmployeesData.missingEmployees.length} {missingEmployeesData.missingEmployees.length === 1 ? 'dipendente non ha' : 'dipendenti non hanno'} inviato il rapportino per il{' '}
+                  {new Date(missingEmployeesDate + 'T00:00:00').toLocaleDateString('it-IT', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric' 
+                  })}
+                </p>
+                <div className="border rounded-lg divide-y">
+                  {missingEmployeesData.missingEmployees.map((employee: any) => (
+                    <div key={employee.id} className="p-3 flex items-center justify-between hover:bg-muted/50">
+                      <div>
+                        <p className="font-medium">{employee.fullName}</p>
+                        <p className="text-sm text-muted-foreground">{employee.username}</p>
+                      </div>
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>Tutti i dipendenti hanno inviato il rapportino per questa data!</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setMissingEmployeesDialogOpen(false)}
+              data-testid="button-close-missing-employees"
+            >
+              Chiudi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog per aggiustamento ore */}
       <HoursAdjustmentDialog
