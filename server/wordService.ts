@@ -470,27 +470,32 @@ export class WordService {
           new TableCell({
             children: [new Paragraph({ text: 'Data', alignment: AlignmentType.CENTER })],
             shading: { fill: 'E5E7EB' },
-            width: { size: 15, type: WidthType.PERCENTAGE }
+            width: { size: 12, type: WidthType.PERCENTAGE }
           }),
           new TableCell({
             children: [new Paragraph({ text: 'Dipendente', alignment: AlignmentType.CENTER })],
             shading: { fill: 'E5E7EB' },
-            width: { size: 20, type: WidthType.PERCENTAGE }
+            width: { size: 18, type: WidthType.PERCENTAGE }
           }),
           new TableCell({
             children: [new Paragraph({ text: 'Tipo Lavorazione', alignment: AlignmentType.CENTER })],
             shading: { fill: 'E5E7EB' },
-            width: { size: 30, type: WidthType.PERCENTAGE }
+            width: { size: 22, type: WidthType.PERCENTAGE }
+          }),
+          new TableCell({
+            children: [new Paragraph({ text: 'Materiali', alignment: AlignmentType.CENTER })],
+            shading: { fill: 'E5E7EB' },
+            width: { size: 18, type: WidthType.PERCENTAGE }
           }),
           new TableCell({
             children: [new Paragraph({ text: 'Ore', alignment: AlignmentType.CENTER })],
             shading: { fill: 'E5E7EB' },
-            width: { size: 10, type: WidthType.PERCENTAGE }
+            width: { size: 8, type: WidthType.PERCENTAGE }
           }),
           new TableCell({
             children: [new Paragraph({ text: 'Note', alignment: AlignmentType.CENTER })],
             shading: { fill: 'E5E7EB' },
-            width: { size: 25, type: WidthType.PERCENTAGE }
+            width: { size: 22, type: WidthType.PERCENTAGE }
           })
         ]
       })
@@ -518,6 +523,9 @@ export class WordService {
               children: [new Paragraph({ text: op.workTypes.join(', ') })]
             }),
             new TableCell({
+              children: [new Paragraph({ text: (op.materials && op.materials.length > 0) ? op.materials.join(', ') : '-' })]
+            }),
+            new TableCell({
               children: [new Paragraph({ text: hours.toFixed(1) + 'h', alignment: AlignmentType.CENTER })]
             }),
             new TableCell({
@@ -532,6 +540,7 @@ export class WordService {
     tableRows.push(
       new TableRow({
         children: [
+          new TableCell({ children: [new Paragraph({ text: '' })] }),
           new TableCell({ children: [new Paragraph({ text: '' })] }),
           new TableCell({ children: [new Paragraph({ text: '' })] }),
           new TableCell({
