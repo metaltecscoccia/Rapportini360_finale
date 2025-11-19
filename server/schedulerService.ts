@@ -3,7 +3,7 @@ import { storage } from './storage';
 import { pushNotificationService } from './pushNotificationService';
 import { getTodayISO } from '@shared/dateUtils';
 import { db } from './db';
-import { pushSubscriptions, users, dailyReports } from '@shared/schema';
+import { pushSubscriptions, users, dailyReports, attendanceEntries } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 export class SchedulerService {
@@ -66,6 +66,13 @@ export class SchedulerService {
       // Check each employee's report status
       for (const { subscription, user } of subscriptionsWithUsers) {
         try {
+          // Verify user has organizationId first
+          if (!user.organizationId) {
+            console.error(`[Scheduler] User ${user.id} has no organizationId`);
+            failed++;
+            continue;
+          }
+
           // Check if user has submitted report for today
           const todayReport = await db
             .select()
@@ -85,12 +92,27 @@ export class SchedulerService {
             continue;
           }
 
-          // User hasn't submitted report, send reminder
-          if (!user.organizationId) {
-            console.error(`[Scheduler] User ${user.id} has no organizationId`);
-            failed++;
+          // Check if user is marked as absent today
+          const absenceEntry = await db
+            .select()
+            .from(attendanceEntries)
+            .where(
+              and(
+                eq(attendanceEntries.userId, user.id),
+                eq(attendanceEntries.organizationId, user.organizationId),
+                eq(attendanceEntries.date, today)
+              )
+            )
+            .limit(1);
+
+          if (absenceEntry.length > 0) {
+            // User is marked as absent, skip reminder
+            skipped++;
+            console.log(`[Scheduler] User ${user.fullName} is absent (${absenceEntry[0].absenceType}), skipping reminder`);
             continue;
           }
+
+          // User hasn't submitted report and is not absent, send reminder
 
           const success = await pushNotificationService.sendToUser(
             user.id,
@@ -121,7 +143,7 @@ export class SchedulerService {
         }
       }
 
-      console.log(`[Scheduler] Reminder check complete: ${sent} sent, ${skipped} skipped (already submitted), ${failed} failed`);
+      console.log(`[Scheduler] Reminder check complete: ${sent} sent, ${skipped} skipped (already submitted or absent), ${failed} failed`);
     } catch (error) {
       console.error('[Scheduler] Error checking and sending daily report reminders:', error);
     }
