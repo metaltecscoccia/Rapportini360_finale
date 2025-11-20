@@ -1407,6 +1407,44 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleExportReportsTxt = async (selectedDate?: string) => {
+    try {
+      const exportDate = selectedDate || new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      const response = await fetch(`/api/export/daily-reports-txt/${exportDate}`);
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Rapportini_${exportDate}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        console.log("TXT export completed");
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to export TXT document");
+      }
+    } catch (error) {
+      console.error("Error exporting TXT document:", error);
+      if (error instanceof Error) {
+        toast({
+          title: "Esportazione non riuscita",
+          description: error.message || "Errore nell'esportazione del documento TXT",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Errore",
+          description: "Errore nell'esportazione del documento TXT",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   const handleExportFilteredReports = async () => {
     try {
       // Costruisci URL con parametri per intervallo di date
@@ -1661,7 +1699,16 @@ export default function AdminDashboard() {
                     data-testid="button-export-filtered"
                   >
                     <FileText className="h-4 w-4 mr-2" />
-                    Esporta
+                    Esporta Word
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExportReportsTxt()}
+                    data-testid="button-export-txt"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Esporta TXT
                   </Button>
                   <Button 
                     variant="outline"
