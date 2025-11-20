@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import rateLimit from "express-rate-limit";
 import { storage } from "./storage";
 import { WordService } from "./wordService";
+import { txtService } from "./txtService";
 import { generateAttendanceExcel } from "./excelService";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { ObjectPermission, ObjectAccessGroupType } from "./objectAcl";
@@ -964,6 +965,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ error: error.message });
       } else {
         res.status(500).json({ error: "Failed to generate Word report" });
+      }
+    }
+  });
+
+  // Export daily reports as TXT document (admin only)
+  app.get("/api/export/daily-reports-txt/:date", requireAdmin, async (req, res) => {
+    try {
+      const { date } = req.params;
+      const organizationId = (req as any).session.organizationId;
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res
+          .status(400)
+          .json({ error: "Invalid date format. Use YYYY-MM-DD" });
+      }
+
+      const txtContent = await txtService.generateDailyReportTxt(
+        date,
+        organizationId,
+      );
+
+      const filename = `Rapportini_${date}.txt`;
+
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`,
+      );
+      res.setHeader("Content-Length", Buffer.byteLength(txtContent, 'utf8'));
+
+      res.send(txtContent);
+    } catch (error) {
+      console.error("Error generating TXT document:", error);
+      if (error instanceof Error) {
+        res.status(500).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to generate TXT report" });
       }
     }
   });
