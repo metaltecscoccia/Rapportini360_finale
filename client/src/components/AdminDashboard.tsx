@@ -45,7 +45,9 @@ import {
   ClipboardList,
   Camera,
   Calculator,
-  Bell
+  Bell,
+  UserX,
+  UserCheck
 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import WorkOrderReport from "./WorkOrderReport";
@@ -619,6 +621,28 @@ export default function AdminDashboard() {
       toast({
         title: "Errore",
         description: error.message || "Errore durante l'aggiornamento della password.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Toggle employee status mutation
+  const toggleEmployeeStatusMutation = useMutation({
+    mutationFn: async ({ employeeId, isActive }: { employeeId: string; isActive: boolean }) => {
+      return apiRequest('PUT', `/api/users/${employeeId}/status`, { isActive });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users/active'] });
+      toast({
+        title: "Stato aggiornato",
+        description: "Lo stato del dipendente è stato aggiornato con successo.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante l'aggiornamento dello stato.",
         variant: "destructive",
       });
     },
@@ -2691,6 +2715,19 @@ export default function AdminDashboard() {
                               disabled={resetPasswordMutation.isPending}
                             >
                               <Key className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => toggleEmployeeStatusMutation.mutate({ 
+                                employeeId: employee.id, 
+                                isActive: !employee.isActive 
+                              })}
+                              data-testid={`button-toggle-status-${employee.id}`}
+                              className={employee.isActive ? "text-orange-600 hover:text-orange-700" : "text-green-600 hover:text-green-700"}
+                              disabled={toggleEmployeeStatusMutation.isPending}
+                            >
+                              {employee.isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                             </Button>
                             <Button 
                               variant="ghost" 
