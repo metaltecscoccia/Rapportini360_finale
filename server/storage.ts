@@ -123,6 +123,7 @@ export interface IStorage {
   
   // Attendance Entries (Assenze)
   getAllAttendanceEntries(organizationId: string, year: string, month: string): Promise<AttendanceEntry[]>;
+  getAttendanceEntriesByDate(date: string, organizationId: string): Promise<AttendanceEntry[]>;
   getAttendanceEntry(userId: string, date: string, organizationId: string): Promise<AttendanceEntry | undefined>;
   createAttendanceEntry(entry: InsertAttendanceEntry, organizationId: string): Promise<AttendanceEntry>;
   updateAttendanceEntry(id: string, updates: UpdateAttendanceEntry): Promise<AttendanceEntry>;
@@ -740,6 +741,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(attendanceEntries.organizationId, organizationId));
     
     return allEntries.filter(entry => entry.date >= startDate && entry.date <= endDate);
+  }
+
+  async getAttendanceEntriesByDate(date: string, organizationId: string): Promise<AttendanceEntry[]> {
+    await this.ensureInitialized();
+    const entries = await db.select()
+      .from(attendanceEntries)
+      .where(
+        and(
+          eq(attendanceEntries.date, date),
+          eq(attendanceEntries.organizationId, organizationId)
+        )
+      );
+    return entries;
   }
 
   async getAttendanceEntry(userId: string, date: string, organizationId: string): Promise<AttendanceEntry | undefined> {
