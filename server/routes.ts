@@ -808,8 +808,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           reportsForDate.map((report) => report.employeeId),
         );
 
+        // Get attendance entries (absences, leaves, etc.) for this date
+        const attendanceForDate = await storage.getAttendanceEntriesByDate(
+          date,
+          organizationId,
+        );
+        const employeeIdsWithAttendance = new Set(
+          attendanceForDate.map((entry) => entry.userId),
+        );
+
+        // Exclude employees who have either a report OR an attendance entry
         const missingEmployees = employees
-          .filter((employee) => !employeeIdsWithReports.has(employee.id))
+          .filter((employee) => 
+            !employeeIdsWithReports.has(employee.id) && 
+            !employeeIdsWithAttendance.has(employee.id)
+          )
           .map((employee) => ({
             id: employee.id,
             fullName: employee.fullName,
