@@ -99,6 +99,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Credenziali non valide" });
       }
 
+      // Check if user is active
+      if (!user.isActive) {
+        return res.status(403).json({ error: "Account disabilitato. Contattare l'amministratore." });
+      }
+
       // Verify password for ALL users (including admin)
       const isValidPassword = await verifyPassword(password, user.password);
       if (!isValidPassword) {
