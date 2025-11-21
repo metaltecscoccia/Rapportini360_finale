@@ -289,6 +289,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user status (enable/disable account) - admin only
+  app.put("/api/users/:id/status", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ error: "isActive deve essere true o false" });
+      }
+
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ error: "Utente non trovato" });
+      }
+
+      // Prevent disabling admin users
+      if (existingUser.role === "admin") {
+        return res
+          .status(403)
+          .json({ error: "Non è possibile disabilitare utenti amministratori" });
+      }
+
+      const updatedUser = await storage.updateUserStatus(id, isActive);
+
+      res.json({
+        success: true,
+        message: isActive ? "Utente abilitato con successo" : "Utente disabilitato con successo",
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      res.status(500).json({ error: "Failed to update user status" });
+    }
+  });
 
   // Reset user password (admin only)
   app.post("/api/users/:id/reset-password", requireAdmin, async (req, res) => {

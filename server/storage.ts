@@ -50,10 +50,12 @@ import { hashPassword } from "./auth";
 export interface IStorage {
   // Users
   getAllUsers(organizationId: string): Promise<User[]>;
+  getActiveUsers(organizationId: string): Promise<User[]>;
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser, organizationId: string): Promise<User>;
   updateUser(id: string, updates: Partial<InsertUser>): Promise<User>;
+  updateUserStatus(id: string, isActive: boolean): Promise<User>;
   deleteUser(id: string): Promise<boolean>;
   
   // Clients
@@ -262,6 +264,30 @@ export class DatabaseStorage implements IStorage {
       .set(updatedData)
       .where(eq(users.id, id))
       .returning();
+    
+    return updatedUser;
+  }
+
+  async getActiveUsers(organizationId: string): Promise<User[]> {
+    await this.ensureInitialized();
+    return await db.select()
+      .from(users)
+      .where(and(
+        eq(users.organizationId, organizationId),
+        eq(users.isActive, true)
+      ));
+  }
+
+  async updateUserStatus(id: string, isActive: boolean): Promise<User> {
+    await this.ensureInitialized();
+    const [updatedUser] = await db.update(users)
+      .set({ isActive })
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error("Utente non trovato");
+    }
     
     return updatedUser;
   }
