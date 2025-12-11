@@ -1,0 +1,366 @@
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Building2,
+  Plus,
+  UserPlus,
+  Power,
+  PowerOff,
+  Loader2,
+} from "lucide-react";
+import { formatDateToItalian } from "@/lib/dateUtils";
+
+type Organization = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export default function SuperAdminDashboard() {
+  const { toast } = useToast();
+  const [createOrgOpen, setCreateOrgOpen] = useState(false);
+  const [createAdminOpen, setCreateAdminOpen] = useState(false);
+  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [newOrgName, setNewOrgName] = useState("");
+  const [newAdminUsername, setNewAdminUsername] = useState("");
+  const [newAdminPassword, setNewAdminPassword] = useState("");
+  const [newAdminFullName, setNewAdminFullName] = useState("");
+
+  const { data: organizations, isLoading } = useQuery<Organization[]>({
+    queryKey: ["/api/superadmin/organizations"],
+  });
+
+  const createOrgMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const response = await apiRequest("POST", "/api/superadmin/organizations", { name });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/organizations"] });
+      setCreateOrgOpen(false);
+      setNewOrgName("");
+      toast({
+        title: "Organizzazione creata",
+        description: "L'organizzazione è stata creata con successo.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile creare l'organizzazione.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleOrgStatusMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const response = await apiRequest("PUT", `/api/superadmin/organizations/${id}/status`, { isActive });
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/organizations"] });
+      toast({
+        title: variables.isActive ? "Organizzazione attivata" : "Organizzazione disattivata",
+        description: `L'organizzazione è stata ${variables.isActive ? "attivata" : "disattivata"} con successo.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Errore",
+        description: "Impossibile modificare lo stato dell'organizzazione.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createAdminMutation = useMutation({
+    mutationFn: async ({ orgId, username, password, fullName }: { orgId: string; username: string; password: string; fullName: string }) => {
+      const response = await apiRequest("POST", `/api/superadmin/organizations/${orgId}/admin`, { username, password, fullName });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/organizations"] });
+      setCreateAdminOpen(false);
+      setSelectedOrg(null);
+      setNewAdminUsername("");
+      setNewAdminPassword("");
+      setNewAdminFullName("");
+      toast({
+        title: "Admin creato",
+        description: "L'amministratore è stato creato con successo.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile creare l'amministratore.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateOrg = () => {
+    if (!newOrgName.trim()) {
+      toast({
+        title: "Errore",
+        description: "Inserisci un nome per l'organizzazione.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createOrgMutation.mutate(newOrgName.trim());
+  };
+
+  const handleCreateAdmin = () => {
+    if (!newAdminUsername.trim() || !newAdminPassword.trim() || !newAdminFullName.trim()) {
+      toast({
+        title: "Errore",
+        description: "Compila tutti i campi.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!selectedOrg) return;
+    
+    createAdminMutation.mutate({
+      orgId: selectedOrg.id,
+      username: newAdminUsername.trim(),
+      password: newAdminPassword.trim(),
+      fullName: newAdminFullName.trim(),
+    });
+  };
+
+  const openCreateAdminDialog = (org: Organization) => {
+    setSelectedOrg(org);
+    setNewAdminUsername("");
+    setNewAdminPassword("");
+    setNewAdminFullName("");
+    setCreateAdminOpen(true);
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold" data-testid="text-superadmin-title">
+            Gestione Organizzazioni
+          </h2>
+          <p className="text-muted-foreground">
+            Crea e gestisci le organizzazioni clienti
+          </p>
+        </div>
+
+        <Dialog open={createOrgOpen} onOpenChange={setCreateOrgOpen}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-create-org">
+              <Plus className="h-4 w-4 mr-2" />
+              Nuova Organizzazione
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Crea Nuova Organizzazione</DialogTitle>
+              <DialogDescription>
+                Inserisci il nome dell'organizzazione da creare.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="org-name">Nome Organizzazione</Label>
+                <Input
+                  id="org-name"
+                  placeholder="Es. Azienda SRL"
+                  value={newOrgName}
+                  onChange={(e) => setNewOrgName(e.target.value)}
+                  data-testid="input-org-name"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateOrgOpen(false)} data-testid="button-cancel-create-org">
+                Annulla
+              </Button>
+              <Button
+                onClick={handleCreateOrg}
+                disabled={createOrgMutation.isPending}
+                data-testid="button-confirm-create-org"
+              >
+                {createOrgMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Crea
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Organizzazioni
+          </CardTitle>
+          <CardDescription>
+            Elenco di tutte le organizzazioni registrate
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : !organizations || organizations.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nessuna organizzazione trovata. Crea la prima organizzazione.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Stato</TableHead>
+                  <TableHead>Data Creazione</TableHead>
+                  <TableHead className="text-right">Azioni</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {organizations.map((org) => (
+                  <TableRow key={org.id} data-testid={`row-org-${org.id}`}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <span data-testid={`text-org-name-${org.id}`}>{org.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={org.isActive ? "default" : "secondary"} data-testid={`badge-org-status-${org.id}`}>
+                        {org.isActive ? "Attiva" : "Disattivata"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell data-testid={`text-org-date-${org.id}`}>{formatDateToItalian(org.createdAt)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openCreateAdminDialog(org)}
+                          data-testid={`button-add-admin-${org.id}`}
+                        >
+                          <UserPlus className="h-4 w-4 mr-1" />
+                          Aggiungi Admin
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={org.isActive ? "destructive" : "default"}
+                          onClick={() => toggleOrgStatusMutation.mutate({ id: org.id, isActive: !org.isActive })}
+                          disabled={toggleOrgStatusMutation.isPending}
+                          data-testid={`button-toggle-status-${org.id}`}
+                        >
+                          {org.isActive ? (
+                            <>
+                              <PowerOff className="h-4 w-4 mr-1" />
+                              Disattiva
+                            </>
+                          ) : (
+                            <>
+                              <Power className="h-4 w-4 mr-1" />
+                              Attiva
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={createAdminOpen} onOpenChange={setCreateAdminOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Crea Amministratore</DialogTitle>
+            <DialogDescription>
+              {selectedOrg && (
+                <span>Crea un nuovo amministratore per <strong>{selectedOrg.name}</strong></span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin-fullname">Nome Completo</Label>
+              <Input
+                id="admin-fullname"
+                placeholder="Es. Mario Rossi"
+                value={newAdminFullName}
+                onChange={(e) => setNewAdminFullName(e.target.value)}
+                data-testid="input-admin-fullname"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin-username">Username</Label>
+              <Input
+                id="admin-username"
+                placeholder="Es. mario.rossi"
+                value={newAdminUsername}
+                onChange={(e) => setNewAdminUsername(e.target.value)}
+                data-testid="input-admin-username"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin-password">Password</Label>
+              <Input
+                id="admin-password"
+                type="password"
+                placeholder="Inserisci password"
+                value={newAdminPassword}
+                onChange={(e) => setNewAdminPassword(e.target.value)}
+                data-testid="input-admin-password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateAdminOpen(false)} data-testid="button-cancel-create-admin">
+              Annulla
+            </Button>
+            <Button
+              onClick={handleCreateAdmin}
+              disabled={createAdminMutation.isPending}
+              data-testid="button-confirm-create-admin"
+            >
+              {createAdminMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Crea Admin
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

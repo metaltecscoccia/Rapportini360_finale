@@ -15,6 +15,7 @@ import NotFound from "@/pages/not-found";
 import LoginForm from "@/components/LoginForm";
 import DailyReportForm from "@/components/DailyReportForm";
 import AdminDashboard from "@/components/AdminDashboard";
+import SuperAdminDashboard from "@/components/SuperAdminDashboard";
 import ThemeToggle from "@/components/ThemeToggle";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -22,7 +23,7 @@ import { formatDateToItalian } from "@/lib/dateUtils";
 
 type User = {
   username: string;
-  role: "employee" | "admin";
+  role: "employee" | "admin" | "superadmin";
   fullName: string;
 };
 
@@ -167,7 +168,9 @@ function AuthenticatedApp({
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-semibold">
-                {currentUser.role === "admin"
+                {currentUser.role === "superadmin"
+                  ? "Super Admin"
+                  : currentUser.role === "admin"
                   ? "Dashboard Amministratore"
                   : "Rapportini Giornalieri"}
               </h1>
@@ -193,7 +196,9 @@ function AuthenticatedApp({
 
       {/* Main Content */}
       <main className="container mx-auto">
-        {currentUser.role === "admin" ? (
+        {currentUser.role === "superadmin" ? (
+          <SuperAdminDashboard />
+        ) : currentUser.role === "admin" ? (
           <AdminDashboard />
         ) : (
           <div className="py-6">
