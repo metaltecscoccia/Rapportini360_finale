@@ -29,6 +29,7 @@ import {
   updateFuelRefillSchema,
   insertFuelTankLoadSchema,
   updateFuelTankLoadSchema,
+  insertOrganizationSchema,
 } from "@shared/schema";
 import { validatePassword, verifyPassword, hashPassword } from "./auth";
 
@@ -65,6 +66,18 @@ const requireAdmin = (req: any, res: any, next: any) => {
     return res
       .status(403)
       .json({ error: "Accesso riservato agli amministratori" });
+  }
+  next();
+};
+
+const requireSuperAdmin = (req: any, res: any, next: any) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Autenticazione richiesta" });
+  }
+  if (req.session.userRole !== "superadmin") {
+    return res
+      .status(403)
+      .json({ error: "Accesso riservato ai super amministratori" });
   }
   next();
 };
@@ -140,6 +153,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Applica rate limiting generale a tutte le altre API
   app.use("/api", apiLimiter);
+
+  // ============================================
+  // SUPER ADMIN - GESTIONE ORGANIZZAZIONI
+  // ============================================
+
+  // Get all organizations (super admin only)
+  app.get("/api/superadmin/organizations", requireSuperAdmin, async (req, res) => {
+    try {
+      const organizations = await storage.getAllOrganizations();
+      res.json(organizations);
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+      res.status(500).json({ error: "Failed to fetch organizations" });
+    }
+  });
+
+  // Create new organization (super admin only)
+  app.post("/api/superadmin/organizations", requireSuperAdmin, async (req, res) => {
+    try {
+      const result = insertOrganizationSchema.safeParse(req.body);
+
+      if (!result.success) {
+        return res.status(400).json({ error: "Invalid organization data", issues: result.error.issues });
+      }
+
+      // Check if organization name already exists
+      const existingOrg = await storage.getOrganizationByName(result.data.name);
+      if (existingOrg) {
+        return res.status(400).json({ error: "Un'organizzazione con questo nome esiste già" });
+      }
+
+      const organization = await storage.createOrganization(result.data);
+      res.status(201).json(organization);
+    } catch (error) {
+      console.error("Error creating organization:", error);
+      res.status(500).json({ error: "Failed to create organization" });
+    }
+  });
+
+  // Toggle organization active status (super admin only) - NO DELETE
+  app.put("/api/superadmin/organizations/:id/status", requireSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+
+      if (typeof isActive !== "boolean") {
+        return res.status(400).json({ error: "isActive deve essere true o false" });
+      }
+
+      const organization = await storage.updateOrganizationStatus(id, isActive);
+      if (!organization) {
+        return res.status(404).json({ error: "Organizzazione non trovata" });
+      }
+
+      res.json(organization);
+    } catch (error) {
+      console.error("Error updating organization status:", error);
+      res.status(500).json({ error: "Failed to update organization status" });
+    }
+  });
+
+  // Create admin for organization (super admin only)
+  app.post("/api/superadmin/organizations/:id/admin", requireSuperAdmin, async (req, res) => {
+    try {
+      const { id: organizationId } = req.params;
+      const { username, password, fullName } = req.body;
+
+      if (!username || !password || !fullName) {
+        return res.status(400).json({ error: "username, password e fullName sono richiesti" });
+      }
+
+      // Check if organization exists
+      const organization = await storage.getOrganization(organizationId);
+      if (!organization) {
+        return res.status(404).json({ error: "Organizzazione non trovata" });
+      }
+
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ error: "Username già in uso" });
+      }
+
+      // Hash password and create admin
+      const hashedPassword = await hashPassword(password);
+      const admin = await storage.createUser({
+        username,
+        password: hashedPassword,
+        fullName,
+        role: "admin",
+      }, organizationId);
+
+      const { password: _, ...adminWithoutPassword } = admin;
+      res.status(201).json(adminWithoutPassword);
+    } catch (error) {
+      console.error("Error creating admin:", error);
+      res.status(500).json({ error: "Failed to create admin" });
+    }
+  });
+
+  // Get organization details with admin count (super admin only)
+  app.get("/api/superadmin/organizations/:id", requireSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const organization = await storage.getOrganization(id);
+      
+      if (!organization) {
+        return res.status(404).json({ error: "Organizzazione non trovata" });
+      }
+
+      // Get admin and employee counts for this organization
+      const users = await storage.getAllUsers(id);
+      const adminCount = users.filter(u => u.role === "admin").length;
+      const employeeCount = users.filter(u => u.role === "employee" && u.isActive !== false).length;
+
+      res.json({
+        ...organization,
+        adminCount,
+        employeeCount,
+      });
+    } catch (error) {
+      console.error("Error fetching organization:", error);
+      res.status(500).json({ error: "Failed to fetch organization" });
+    }
+  });
 
   // ============================================
   // USER MANAGEMENT

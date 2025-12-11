@@ -11,6 +11,7 @@ import {
   vehicles,
   fuelRefills,
   fuelTankLoads,
+  organizations,
   type User, 
   type InsertUser,
   type Client,
@@ -41,13 +42,22 @@ import {
   type InsertFuelTankLoad,
   type UpdateFuelTankLoad,
   type UpdateDailyReport,
-  type UpdateOperation
+  type UpdateOperation,
+  type Organization,
+  type InsertOrganization
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
 import { hashPassword } from "./auth";
 
 export interface IStorage {
+  // Organizations (Super Admin)
+  getAllOrganizations(): Promise<Organization[]>;
+  getOrganization(id: string): Promise<Organization | undefined>;
+  getOrganizationByName(name: string): Promise<Organization | undefined>;
+  createOrganization(org: InsertOrganization): Promise<Organization>;
+  updateOrganizationStatus(id: string, isActive: boolean): Promise<Organization | undefined>;
+
   // Users
   getAllUsers(organizationId: string): Promise<User[]>;
   getActiveUsers(organizationId: string): Promise<User[]>;
@@ -209,6 +219,39 @@ export class DatabaseStorage implements IStorage {
         organizationId: defaultOrgId
       });
     }
+  }
+
+  // Organizations (Super Admin)
+  async getAllOrganizations(): Promise<Organization[]> {
+    await this.ensureInitialized();
+    return await db.select().from(organizations).orderBy(desc(organizations.createdAt));
+  }
+
+  async getOrganization(id: string): Promise<Organization | undefined> {
+    await this.ensureInitialized();
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+    return org || undefined;
+  }
+
+  async getOrganizationByName(name: string): Promise<Organization | undefined> {
+    await this.ensureInitialized();
+    const [org] = await db.select().from(organizations).where(eq(organizations.name, name));
+    return org || undefined;
+  }
+
+  async createOrganization(org: InsertOrganization): Promise<Organization> {
+    await this.ensureInitialized();
+    const [newOrg] = await db.insert(organizations).values(org).returning();
+    return newOrg;
+  }
+
+  async updateOrganizationStatus(id: string, isActive: boolean): Promise<Organization | undefined> {
+    await this.ensureInitialized();
+    const [updated] = await db.update(organizations)
+      .set({ isActive })
+      .where(eq(organizations.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   // Users
