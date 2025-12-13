@@ -1434,17 +1434,14 @@ export class DatabaseStorage implements IStorage {
       byDayOfWeek: stats.byDayOfWeek
     })).sort((a, b) => b.totalAbsences - a.totalAbsences);
     
-    // Build byMonth array sorted by date
+    // Build byMonth array sorted by date (month in YYYY-MM format for frontend charts)
     const byMonth = Array.from(byMonthMap.entries())
       .map(([key, count]) => ({
-        month: key.substring(5, 7),
+        month: key,  // Keep as YYYY-MM format for frontend charts
         year: key.substring(0, 4),
         count
       }))
-      .sort((a, b) => {
-        if (a.year !== b.year) return a.year.localeCompare(b.year);
-        return a.month.localeCompare(b.month);
-      });
+      .sort((a, b) => a.month.localeCompare(b.month));
     
     return {
       byEmployee,
