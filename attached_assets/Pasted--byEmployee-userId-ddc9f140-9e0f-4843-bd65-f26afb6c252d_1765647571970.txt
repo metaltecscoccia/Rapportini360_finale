@@ -1,0 +1,229 @@
+{
+    "byEmployee": [
+        {
+            "userId": "ddc9f140-9e0f-4843-bd65-f26afb6c252d",
+            "fullName": "Paris Francesco",
+            "totalAbsences": 13,
+            "byType": {
+                "CP": 12,
+                "A": 1
+            },
+            "byDayOfWeek": {
+                "0": 0,
+                "1": 4,
+                "2": 2,
+                "3": 3,
+                "4": 2,
+                "5": 2,
+                "6": 0
+            }
+        },
+        {
+            "userId": "5bd6eaa7-86ce-4504-8322-d81ea340487a",
+            "fullName": "De Benedictis Antonello",
+            "totalAbsences": 6,
+            "byType": {
+                "A": 6
+            },
+            "byDayOfWeek": {
+                "0": 0,
+                "1": 1,
+                "2": 1,
+                "3": 1,
+                "4": 1,
+                "5": 2,
+                "6": 0
+            }
+        },
+        {
+            "userId": "c29ff218-600f-4cab-a602-28dba100fa04",
+            "fullName": "Persia Cristian ",
+            "totalAbsences": 5,
+            "byType": {
+                "A": 1,
+                "F": 4
+            },
+            "byDayOfWeek": {
+                "0": 0,
+                "1": 0,
+                "2": 1,
+                "3": 2,
+                "4": 1,
+                "5": 1,
+                "6": 0
+            }
+        },
+        {
+            "userId": "94052e97-cc2a-473f-8f7a-a3ce2429e0f1",
+            "fullName": "Joita Florin",
+            "totalAbsences": 4,
+            "byType": {
+                "L104": 4
+            },
+            "byDayOfWeek": {
+                "0": 0,
+                "1": 2,
+                "2": 0,
+                "3": 2,
+                "4": 0,
+                "5": 0,
+                "6": 0
+            }
+        },
+        {
+            "userId": "afd14f3c-f5fa-4a8b-94a7-be34ddc0dc84",
+            "fullName": "Mora Bravo Henry",
+            "totalAbsences": 4,
+            "byType": {
+                "P": 2,
+                "A": 2
+            },
+            "byDayOfWeek": {
+                "0": 0,
+                "1": 1,
+                "2": 1,
+                "3": 0,
+                "4": 1,
+                "5": 1,
+                "6": 0
+            }
+        },
+        {
+            "userId": "cf51a175-162d-4f72-9642-87ad967dfc89",
+            "fullName": "Taccone Alessandra ",
+            "totalAbsences": 3,
+            "byType": {
+                "A": 2,
+                "P": 1
+            },
+            "byDayOfWeek": {
+                "0": 0,
+                "1": 1,
+                "2": 0,
+                "3": 1,
+                "4": 1,
+                "5": 0,
+                "6": 0
+            }
+        },
+        {
+            "userId": "925f152f-4441-42c1-bef9-3a732df546dd",
+            "fullName": "Nucci Celestino",
+            "totalAbsences": 2,
+            "byType": {
+                "F": 2
+            },
+            "byDayOfWeek": {
+                "0": 0,
+                "1": 0,
+                "2": 1,
+                "3": 0,
+                "4": 0,
+                "5": 1,
+                "6": 0
+            }
+        },
+        {
+            "userId": "423cedbc-ada3-44c4-95a8-80a96b461884",
+            "fullName": "Di Stefano Antonio",
+            "totalAbsences": 2,
+            "byType": {
+                "A": 2
+            },
+            "byDayOfWeek": {
+                "0": 0,
+                "1": 0,
+                "2": 2,
+                "3": 0,
+                "4": 0,
+                "5": 0,
+                "6": 0
+            }
+        },
+        {
+            "userId": "199c4a0a-8f4c-4d0b-a0f6-4efbefc15b78",
+            "fullName": "Mailat Roberto",
+            "totalAbsences": 2,
+            "byType": {
+                "A": 2
+            },
+            "byDayOfWeek": {
+                "0": 0,
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 1,
+                "5": 1,
+                "6": 0
+            }
+        },
+        {
+            "userId": "f1729aee-45bf-466d-891d-5d32f98d0dfe",
+            "fullName": "Scognamiglio Diego",
+            "totalAbsences": 1,
+            "byType": {
+                "A": 1
+            },
+            "byDayOfWeek": {
+                "0": 0,
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4": 0,
+                "5": 1,
+                "6": 0
+            }
+        },
+        {
+            "userId": "5323deb6-b68a-41fc-84a6-a3998d93fd80",
+            "fullName": "Mailat Aurel",
+            "totalAbsences": 1,
+            "byType": {
+                "F": 1
+            },
+            "byDayOfWeek": {
+                "0": 0,
+                "1": 0,
+                "2": 1,
+                "3": 0,
+                "4": 0,
+                "5": 0,
+                "6": 0
+            }
+        }
+    ],
+    "byType": {
+        "L104": 4,
+        "F": 7,
+        "CP": 12,
+        "P": 3,
+        "A": 17
+    },
+    "byDayOfWeek": {
+        "0": 0,
+        "1": 9,
+        "2": 9,
+        "3": 9,
+        "4": 7,
+        "5": 9,
+        "6": 0
+    },
+    "byMonth": [
+        {
+            "month": "2025-10",
+            "year": "2025",
+            "count": 4
+        },
+        {
+            "month": "2025-11",
+            "year": "2025",
+            "count": 22
+        },
+        {
+            "month": "2025-12",
+            "year": "2025",
+            "count": 17
+        }
+    ],
+    "totalAbsences": 43
+}
