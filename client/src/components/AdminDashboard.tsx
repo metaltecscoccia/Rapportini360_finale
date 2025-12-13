@@ -360,8 +360,9 @@ export default function AdminDashboard() {
   const { data: attendanceStats, isLoading: isLoadingAttendanceStats, isFetching: isFetchingAttendanceStats } = useQuery<any>({
     queryKey: ['/api/attendance/stats'],
     queryFn: async () => {
-      const res = await fetch('/api/attendance/stats?days=90', {
-        credentials: 'include'
+      const res = await fetch(`/api/attendance/stats?days=90&_t=${Date.now()}`, {
+        credentials: 'include',
+        cache: 'no-store'
       });
       if (!res.ok) throw new Error('Failed to fetch attendance stats');
       return res.json();
