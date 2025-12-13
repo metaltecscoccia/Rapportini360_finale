@@ -1913,6 +1913,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get attendance statistics (absences) for admin dashboard
+  app.get("/api/attendance/stats", requireAdmin, async (req, res) => {
+    try {
+      const { days } = req.query;
+      const organizationId = (req as any).session.organizationId;
+      
+      const daysNum = days ? parseInt(days as string, 10) : 90;
+      const stats = await storage.getAttendanceStats(organizationId, daysNum);
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching attendance stats:", error);
+      res.status(500).json({ error: "Failed to fetch attendance statistics" });
+    }
+  });
+
   // ============================================
   // PHOTO UPLOADS
   // ============================================

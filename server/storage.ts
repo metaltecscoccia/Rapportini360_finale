@@ -191,6 +191,25 @@ export interface IStorage {
   
   // Monthly Attendance (Foglio Presenze)
   getMonthlyAttendance(organizationId: string, year: string, month: string): Promise<any>;
+  
+  // Attendance Statistics (Statistiche Assenze)
+  getAttendanceStats(organizationId: string, days?: number): Promise<{
+    byEmployee: Array<{
+      userId: string;
+      fullName: string;
+      totalAbsences: number;
+      byType: Record<string, number>;
+      byDayOfWeek: Record<number, number>;
+    }>;
+    byType: Record<string, number>;
+    byDayOfWeek: Record<number, number>;
+    byMonth: Array<{
+      month: string;
+      year: string;
+      count: number;
+    }>;
+    totalAbsences: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1324,6 +1343,116 @@ export class DatabaseStorage implements IStorage {
     });
     
     return attendanceData;
+  }
+
+  // Attendance Statistics (Statistiche Assenze)
+  async getAttendanceStats(organizationId: string, days: number = 90): Promise<{
+    byEmployee: Array<{
+      userId: string;
+      fullName: string;
+      totalAbsences: number;
+      byType: Record<string, number>;
+      byDayOfWeek: Record<number, number>;
+    }>;
+    byType: Record<string, number>;
+    byDayOfWeek: Record<number, number>;
+    byMonth: Array<{
+      month: string;
+      year: string;
+      count: number;
+    }>;
+    totalAbsences: number;
+  }> {
+    await this.ensureInitialized();
+    
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    
+    // Get all attendance entries for the organization in the date range
+    const allEntries = await db.select()
+      .from(attendanceEntries)
+      .where(eq(attendanceEntries.organizationId, organizationId));
+    
+    // Filter entries by date range
+    const entries = allEntries.filter(entry => 
+      entry.date >= startDateStr && entry.date <= endDateStr
+    );
+    
+    // Get all active users for this organization
+    const allUsers = await this.getAllUsers(organizationId);
+    const userMap = new Map(allUsers.map(u => [u.id, u]));
+    
+    // Initialize aggregations
+    const byType: Record<string, number> = {};
+    const byDayOfWeek: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    const byMonthMap: Map<string, number> = new Map();
+    const byEmployeeMap: Map<string, {
+      totalAbsences: number;
+      byType: Record<string, number>;
+      byDayOfWeek: Record<number, number>;
+    }> = new Map();
+    
+    // Process each entry
+    for (const entry of entries) {
+      // By type
+      byType[entry.absenceType] = (byType[entry.absenceType] || 0) + 1;
+      
+      // By day of week
+      const entryDate = new Date(entry.date);
+      const dayOfWeek = entryDate.getDay();
+      byDayOfWeek[dayOfWeek]++;
+      
+      // By month
+      const monthKey = `${entry.date.substring(0, 7)}`; // YYYY-MM
+      byMonthMap.set(monthKey, (byMonthMap.get(monthKey) || 0) + 1);
+      
+      // By employee
+      if (!byEmployeeMap.has(entry.userId)) {
+        byEmployeeMap.set(entry.userId, {
+          totalAbsences: 0,
+          byType: {},
+          byDayOfWeek: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+        });
+      }
+      const empStats = byEmployeeMap.get(entry.userId)!;
+      empStats.totalAbsences++;
+      empStats.byType[entry.absenceType] = (empStats.byType[entry.absenceType] || 0) + 1;
+      empStats.byDayOfWeek[dayOfWeek]++;
+    }
+    
+    // Build byEmployee array
+    const byEmployee = Array.from(byEmployeeMap.entries()).map(([userId, stats]) => ({
+      userId,
+      fullName: userMap.get(userId)?.fullName || 'Utente sconosciuto',
+      totalAbsences: stats.totalAbsences,
+      byType: stats.byType,
+      byDayOfWeek: stats.byDayOfWeek
+    })).sort((a, b) => b.totalAbsences - a.totalAbsences);
+    
+    // Build byMonth array sorted by date
+    const byMonth = Array.from(byMonthMap.entries())
+      .map(([key, count]) => ({
+        month: key.substring(5, 7),
+        year: key.substring(0, 4),
+        count
+      }))
+      .sort((a, b) => {
+        if (a.year !== b.year) return a.year.localeCompare(b.year);
+        return a.month.localeCompare(b.month);
+      });
+    
+    return {
+      byEmployee,
+      byType,
+      byDayOfWeek,
+      byMonth,
+      totalAbsences: entries.length
+    };
   }
 }
 
