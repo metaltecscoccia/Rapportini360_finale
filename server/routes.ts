@@ -1922,6 +1922,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const daysNum = days ? parseInt(days as string, 10) : 90;
       const stats = await storage.getAttendanceStats(organizationId, daysNum);
       
+      // Disable caching to prevent 304 responses with empty body
+      res.removeHeader('ETag');
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json(stats);
     } catch (error) {
       console.error("Error fetching attendance stats:", error);
