@@ -221,12 +221,6 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Invalidate attendance stats cache when tab is selected to force refetch
-  useEffect(() => {
-    if (selectedTab === 'absence-stats') {
-      queryClient.invalidateQueries({ queryKey: ['/api/attendance/stats'] });
-    }
-  }, [selectedTab, queryClient]);
 
   // Form per aggiunta dipendente
   const form = useForm<AddEmployeeForm>({
@@ -363,7 +357,7 @@ export default function AdminDashboard() {
   });
 
   // Query per statistiche assenze (caricato solo quando la tab è selezionata)
-  const { data: attendanceStats, isLoading: isLoadingAttendanceStats } = useQuery<any>({
+  const { data: attendanceStats, isLoading: isLoadingAttendanceStats, refetch: refetchAttendanceStats } = useQuery<any>({
     queryKey: ['/api/attendance/stats'],
     queryFn: async () => {
       console.log('[DEBUG] Fetching attendance stats...');
@@ -377,8 +371,15 @@ export default function AdminDashboard() {
     },
     enabled: selectedTab === 'absence-stats',
     staleTime: 0,
-    refetchOnMount: 'always',
+    gcTime: 0,
   });
+
+  // Force refetch when tab is selected
+  useEffect(() => {
+    if (selectedTab === 'absence-stats') {
+      refetchAttendanceStats();
+    }
+  }, [selectedTab, refetchAttendanceStats]);
 
   // Debug log for attendanceStats
   console.log('[DEBUG] attendanceStats value:', attendanceStats, 'isLoading:', isLoadingAttendanceStats, 'selectedTab:', selectedTab);
