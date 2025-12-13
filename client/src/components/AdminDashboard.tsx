@@ -357,32 +357,17 @@ export default function AdminDashboard() {
   });
 
   // Query per statistiche assenze (caricato solo quando la tab è selezionata)
-  const { data: attendanceStats, isLoading: isLoadingAttendanceStats, refetch: refetchAttendanceStats } = useQuery<any>({
+  const { data: attendanceStats, isLoading: isLoadingAttendanceStats, isFetching: isFetchingAttendanceStats } = useQuery<any>({
     queryKey: ['/api/attendance/stats'],
     queryFn: async () => {
-      console.log('[DEBUG] Fetching attendance stats...');
       const res = await fetch('/api/attendance/stats?days=90', {
         credentials: 'include'
       });
       if (!res.ok) throw new Error('Failed to fetch attendance stats');
-      const data = await res.json();
-      console.log('[DEBUG] Attendance stats response:', data);
-      return data;
+      return res.json();
     },
     enabled: selectedTab === 'absence-stats',
-    staleTime: 0,
-    gcTime: 0,
   });
-
-  // Force refetch when tab is selected
-  useEffect(() => {
-    if (selectedTab === 'absence-stats') {
-      refetchAttendanceStats();
-    }
-  }, [selectedTab, refetchAttendanceStats]);
-
-  // Debug log for attendanceStats
-  console.log('[DEBUG] attendanceStats value:', attendanceStats, 'isLoading:', isLoadingAttendanceStats, 'selectedTab:', selectedTab);
 
   // Helper function to get work type name by ID
   const getWorkTypeName = (id: string) => {
@@ -4482,7 +4467,7 @@ export default function AdminDashboard() {
 
         {/* Absence Statistics Tab */}
         <TabsContent value="absence-stats" className="space-y-6">
-          {isLoadingAttendanceStats ? (
+          {(isLoadingAttendanceStats || isFetchingAttendanceStats) && !attendanceStats ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>

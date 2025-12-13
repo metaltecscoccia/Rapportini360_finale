@@ -1922,8 +1922,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const daysNum = days ? parseInt(days as string, 10) : 90;
       const stats = await storage.getAttendanceStats(organizationId, daysNum);
       
-      console.log("[DEBUG SERVER] Attendance stats response:", JSON.stringify(stats, null, 2));
-      
       res.json(stats);
     } catch (error) {
       console.error("Error fetching attendance stats:", error);
