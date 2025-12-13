@@ -48,8 +48,12 @@ import {
   Calculator,
   Bell,
   UserX,
-  UserCheck
+  UserCheck,
+  BarChart2,
+  TrendingUp,
+  AlertTriangle
 } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import StatusBadge from "./StatusBadge";
 import WorkOrderReport from "./WorkOrderReport";
 import DailyReportForm from "./DailyReportForm";
@@ -349,6 +353,19 @@ export default function AdminDashboard() {
   // Query per recuperare i materiali
   const { data: materials = [], isLoading: isLoadingMaterials } = useQuery<any[]>({
     queryKey: ['/api/materials'],
+  });
+
+  // Query per statistiche assenze (caricato solo quando la tab è selezionata)
+  const { data: attendanceStats, isLoading: isLoadingAttendanceStats } = useQuery<any>({
+    queryKey: ['/api/attendance/stats'],
+    queryFn: async () => {
+      const res = await fetch('/api/attendance/stats?days=90', {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Failed to fetch attendance stats');
+      return res.json();
+    },
+    enabled: selectedTab === 'absence-stats',
   });
 
   // Helper function to get work type name by ID
@@ -1777,6 +1794,10 @@ export default function AdminDashboard() {
           <TabsTrigger value="attendance" data-testid="tab-attendance">
             <ClipboardList className="h-4 w-4 mr-2" />
             Presenze
+          </TabsTrigger>
+          <TabsTrigger value="absence-stats" data-testid="tab-absence-stats">
+            <BarChart2 className="h-4 w-4 mr-2" />
+            Statistiche Assenze
           </TabsTrigger>
         </TabsList>
 
@@ -4442,6 +4463,297 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+        </TabsContent>
+
+        {/* Absence Statistics Tab */}
+        <TabsContent value="absence-stats" className="space-y-6">
+          {isLoadingAttendanceStats ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-muted-foreground">Caricamento statistiche assenze...</p>
+              </div>
+            </div>
+          ) : attendanceStats ? (
+            <>
+              {/* KPI Cards */}
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Totale Assenze (90gg)</p>
+                        <p className="text-2xl font-bold" data-testid="text-total-absences">{attendanceStats.totalAbsences || 0}</p>
+                      </div>
+                      <AlertTriangle className="h-8 w-8 text-warning" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Tipo Più Comune</p>
+                        <p className="text-2xl font-bold" data-testid="text-most-common-type">
+                          {attendanceStats.byType && Object.keys(attendanceStats.byType).length > 0 
+                            ? (() => {
+                                const typeMap: Record<string, string> = {
+                                  'A': 'Assenza',
+                                  'F': 'Ferie',
+                                  'P': 'Permesso',
+                                  'M': 'Malattia',
+                                  'CP': 'Congedo',
+                                  'L104': 'L.104'
+                                };
+                                const sortedTypes = Object.entries(attendanceStats.byType as Record<string, number>)
+                                  .sort((a, b) => b[1] - a[1]);
+                                return sortedTypes.length > 0 
+                                  ? (typeMap[sortedTypes[0][0]] || sortedTypes[0][0])
+                                  : '-';
+                              })()
+                            : '-'}
+                        </p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-primary" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Giorno Picco</p>
+                        <p className="text-2xl font-bold" data-testid="text-peak-day">
+                          {attendanceStats.byDayOfWeek && Object.keys(attendanceStats.byDayOfWeek).length > 0 
+                            ? (() => {
+                                const dayMap: Record<number, string> = {
+                                  0: 'Domenica',
+                                  1: 'Lunedì',
+                                  2: 'Martedì',
+                                  3: 'Mercoledì',
+                                  4: 'Giovedì',
+                                  5: 'Venerdì',
+                                  6: 'Sabato'
+                                };
+                                const sortedDays = Object.entries(attendanceStats.byDayOfWeek as Record<number, number>)
+                                  .sort((a, b) => b[1] - a[1]);
+                                return sortedDays.length > 0 
+                                  ? (dayMap[parseInt(sortedDays[0][0])] || '-')
+                                  : '-';
+                              })()
+                            : '-'}
+                        </p>
+                      </div>
+                      <Calendar className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Media per Dipendente</p>
+                        <p className="text-2xl font-bold" data-testid="text-average-per-employee">
+                          {attendanceStats.byEmployee && attendanceStats.byEmployee.length > 0 
+                            ? (attendanceStats.totalAbsences / attendanceStats.byEmployee.length).toFixed(1)
+                            : '0'}
+                        </p>
+                      </div>
+                      <Users className="h-8 w-8 text-success" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+                {/* Monthly Trend Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart2 className="h-5 w-5" />
+                      Trend Mensile Assenze
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {attendanceStats.byMonth && attendanceStats.byMonth.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={attendanceStats.byMonth.slice().reverse()}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis 
+                            dataKey="month" 
+                            tick={{ fontSize: 12 }}
+                            tickFormatter={(value) => {
+                              const [year, month] = value.split('-');
+                              const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                              return monthNames[parseInt(month) - 1] || value;
+                            }}
+                          />
+                          <YAxis tick={{ fontSize: 12 }} />
+                          <RechartsTooltip 
+                            labelFormatter={(value) => {
+                              const [year, month] = value.split('-');
+                              const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+                              return `${monthNames[parseInt(month) - 1]} ${year}`;
+                            }}
+                            formatter={(value: number) => [value, 'Assenze']}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="count" 
+                            stroke="hsl(var(--primary))" 
+                            strokeWidth={2}
+                            dot={{ fill: 'hsl(var(--primary))' }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                        Nessun dato disponibile
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Absence by Type Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Assenze per Tipo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {attendanceStats.byType && Object.keys(attendanceStats.byType).length > 0 ? (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={Object.entries(attendanceStats.byType as Record<string, number>).map(([type, count]) => {
+                          const typeMap: Record<string, string> = {
+                            'A': 'Assenza',
+                            'F': 'Ferie',
+                            'P': 'Permesso',
+                            'M': 'Malattia',
+                            'CP': 'Congedo',
+                            'L104': 'L.104'
+                          };
+                          return { type, count, typeName: typeMap[type] || type };
+                        }).sort((a, b) => b.count - a.count)}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis dataKey="typeName" tick={{ fontSize: 12 }} />
+                          <YAxis tick={{ fontSize: 12 }} />
+                          <RechartsTooltip formatter={(value: number) => [value, 'Assenze']} />
+                          <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                        Nessun dato disponibile
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Day of Week Distribution */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Distribuzione per Giorno della Settimana
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {attendanceStats.byDayOfWeek && Object.keys(attendanceStats.byDayOfWeek).length > 0 ? (
+                    <div className="grid grid-cols-7 gap-2">
+                      {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map((day, index) => {
+                        const dayIndex = index === 6 ? 0 : index + 1;
+                        const byDayRecord = attendanceStats.byDayOfWeek as Record<number, number>;
+                        const count = byDayRecord[dayIndex] || 0;
+                        const allCounts = Object.values(byDayRecord);
+                        const maxCount = allCounts.length > 0 ? Math.max(...allCounts) : 0;
+                        const intensity = maxCount > 0 ? (count / maxCount) : 0;
+                        
+                        return (
+                          <div 
+                            key={day}
+                            className="text-center p-4 rounded-md border"
+                            style={{
+                              backgroundColor: `hsl(var(--primary) / ${0.1 + intensity * 0.5})`,
+                            }}
+                            data-testid={`day-heatmap-${day.toLowerCase()}`}
+                          >
+                            <p className="text-sm font-medium">{day}</p>
+                            <p className="text-2xl font-bold">{count}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center py-8 text-muted-foreground">
+                      Nessun dato disponibile
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Employee Absence Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Dipendenti con Più Assenze
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {attendanceStats.byEmployee && attendanceStats.byEmployee.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Posizione</TableHead>
+                            <TableHead>Dipendente</TableHead>
+                            <TableHead className="text-right">Totale Assenze</TableHead>
+                            <TableHead className="text-right">% sul Totale</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {attendanceStats.byEmployee
+                            .slice()
+                            .sort((a: any, b: any) => b.totalAbsences - a.totalAbsences)
+                            .slice(0, 10)
+                            .map((emp: any, index: number) => (
+                            <TableRow key={emp.userId} data-testid={`row-employee-absence-${index}`}>
+                              <TableCell>
+                                <Badge variant={index < 3 ? "default" : "outline"}>
+                                  #{index + 1}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="font-medium">{emp.fullName}</TableCell>
+                              <TableCell className="text-right">{emp.totalAbsences}</TableCell>
+                              <TableCell className="text-right">
+                                {attendanceStats.totalAbsences > 0 
+                                  ? ((emp.totalAbsences / attendanceStats.totalAbsences) * 100).toFixed(1)
+                                  : '0'}%
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center py-8 text-muted-foreground">
+                      Nessun dato disponibile
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              Nessun dato disponibile per le statistiche assenze.
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="rifornimenti" className="space-y-6 mt-6">
