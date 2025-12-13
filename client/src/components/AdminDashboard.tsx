@@ -1,4 +1,4 @@
-import { useState, useRef, Fragment } from "react";
+import { useState, useRef, Fragment, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -220,6 +220,13 @@ export default function AdminDashboard() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Invalidate attendance stats cache when tab is selected to force refetch
+  useEffect(() => {
+    if (selectedTab === 'absence-stats') {
+      queryClient.invalidateQueries({ queryKey: ['/api/attendance/stats'] });
+    }
+  }, [selectedTab, queryClient]);
 
   // Form per aggiunta dipendente
   const form = useForm<AddEmployeeForm>({
