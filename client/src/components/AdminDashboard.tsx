@@ -366,16 +366,22 @@ export default function AdminDashboard() {
   const { data: attendanceStats, isLoading: isLoadingAttendanceStats } = useQuery<any>({
     queryKey: ['/api/attendance/stats'],
     queryFn: async () => {
+      console.log('[DEBUG] Fetching attendance stats...');
       const res = await fetch('/api/attendance/stats?days=90', {
         credentials: 'include'
       });
       if (!res.ok) throw new Error('Failed to fetch attendance stats');
-      return res.json();
+      const data = await res.json();
+      console.log('[DEBUG] Attendance stats response:', data);
+      return data;
     },
     enabled: selectedTab === 'absence-stats',
     staleTime: 0,
     refetchOnMount: 'always',
   });
+
+  // Debug log for attendanceStats
+  console.log('[DEBUG] attendanceStats value:', attendanceStats, 'isLoading:', isLoadingAttendanceStats, 'selectedTab:', selectedTab);
 
   // Helper function to get work type name by ID
   const getWorkTypeName = (id: string) => {
