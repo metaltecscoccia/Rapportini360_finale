@@ -366,8 +366,12 @@ export default function AdminDashboard() {
   }>({
     queryKey: ['/api/attendance/stats', selectedTab],
     queryFn: async () => {
-      const res = await fetch(`/api/attendance/stats?days=90`, {
-        credentials: 'include'
+      const res = await fetch(`/api/attendance/stats?days=90&_t=${Date.now()}`, {
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       });
       if (!res.ok) throw new Error('Failed to fetch attendance stats');
       const data = await res.json();
