@@ -6,6 +6,9 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
+// Disable ETag globally to prevent 304 responses with empty body
+app.set('etag', false);
+
 // ============================================
 // GLOBAL ERROR HANDLERS
 // ============================================

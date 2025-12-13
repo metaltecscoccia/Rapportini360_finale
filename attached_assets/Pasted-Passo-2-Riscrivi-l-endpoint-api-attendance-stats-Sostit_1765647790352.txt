@@ -1,0 +1,87 @@
+Passo 2: Riscrivi l'endpoint /api/attendance/stats
+Sostituisci l'intero blocco app.get("/api/attendance/stats", ...) con questo codice che forza gli header corretti e usa res.json direttamente:
+code
+TypeScript
+// server/routes.ts - Cerca e sostituisci questo endpoint
+
+app.get("/api/attendance/stats", async (req, res) => {
+  try {
+    // 1. Header Brutali anti-cache
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    
+    // 2. Calcolo dei giorni (Logica esistente)
+    const days = parseInt(req.query.days as string) || 30;
+    const today = new Date();
+    const startDate = new Date();
+    startDate.setDate(today.getDate() - days);
+    const startDateStr = startDate.toISOString().split('T')[0];
+
+    // 3. Recupero dati dal DB (Sostituisci con la tua logica di storage reale)
+    // NOTA: Assicurati che 'storage' sia importato correttamente all'inizio del file
+    const allEntries = await storage.getAttendanceEntries(); 
+    const users = await storage.getUsers();
+
+    // Filtra per data
+    const entries = allEntries.filter(e => e.date >= startDateStr);
+
+    // 4. Calcolo statistiche (Logica standard)
+    const byEmployeeMap = new Map();
+    const byType: Record<string, number> = {};
+    const byDayOfWeek: Record<number, number> = {};
+    const byMonthMap = new Map();
+
+    entries.forEach(entry => {
+      // By Type
+      byType[entry.absenceType] = (byType[entry.absenceType] || 0) + 1;
+
+      // By Day of Week
+      const date = new Date(entry.date);
+      const day = date.getDay();
+      byDayOfWeek[day] = (byDayOfWeek[day] || 0) + 1;
+
+      // By Month
+      const monthKey = entry.date.substring(0, 7); // YYYY-MM
+      byMonthMap.set(monthKey, (byMonthMap.get(monthKey) || 0) + 1);
+
+      // By Employee
+      if (!byEmployeeMap.has(entry.userId)) {
+        const user = users.find(u => u.id === entry.userId);
+        byEmployeeMap.set(entry.userId, {
+          userId: entry.userId,
+          fullName: user ? user.fullName : 'Utente sconosciuto',
+          totalAbsences: 0,
+          byType: {},
+          byDayOfWeek: {}
+        });
+      }
+      
+      const empStats = byEmployeeMap.get(entry.userId);
+      empStats.totalAbsences++;
+      empStats.byType[entry.absenceType] = (empStats.byType[entry.absenceType] || 0) + 1;
+      empStats.byDayOfWeek[day] = (empStats.byDayOfWeek[day] || 0) + 1;
+    });
+
+    // Formatta risultati
+    const byMonth = Array.from(byMonthMap.entries()).map(([month, count]) => {
+      return { month, year: month.split('-')[0], count };
+    }).sort((a, b) => a.month.localeCompare(b.month));
+
+    const stats = {
+      totalAbsences: entries.length,
+      byEmployee: Array.from(byEmployeeMap.values()),
+      byType,
+      byDayOfWeek,
+      byMonth
+    };
+
+    // 5. INVIO RISPOSTA
+    res.status(200).json(stats);
+    
+  } catch (error) {
+    console.error("Errore statistiche assenze:", error);
+    res.status(500).json({ error: "Errore interno server" });
+  }
+});
