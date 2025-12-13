@@ -357,15 +357,21 @@ export default function AdminDashboard() {
   });
 
   // Query per statistiche assenze (caricato solo quando la tab è selezionata)
-  const { data: attendanceStats, isLoading: isLoadingAttendanceStats, isFetching: isFetchingAttendanceStats } = useQuery<any>({
-    queryKey: ['/api/attendance/stats'],
+  const { data: attendanceStats, isLoading: isLoadingAttendanceStats, isFetching: isFetchingAttendanceStats } = useQuery<{
+    totalAbsences: number;
+    byEmployee: Array<{ userId: string; fullName: string; totalAbsences: number }>;
+    byType: Record<string, number>;
+    byDayOfWeek: Record<number, number>;
+    byMonth: Array<{ month: string; count: number }>;
+  }>({
+    queryKey: ['/api/attendance/stats', selectedTab],
     queryFn: async () => {
-      const res = await fetch(`/api/attendance/stats?days=90&_t=${Date.now()}`, {
-        credentials: 'include',
-        cache: 'no-store'
+      const res = await fetch(`/api/attendance/stats?days=90`, {
+        credentials: 'include'
       });
       if (!res.ok) throw new Error('Failed to fetch attendance stats');
-      return res.json();
+      const data = await res.json();
+      return data;
     },
     enabled: selectedTab === 'absence-stats',
   });
