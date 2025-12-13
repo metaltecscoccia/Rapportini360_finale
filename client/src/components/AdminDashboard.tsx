@@ -366,6 +366,8 @@ export default function AdminDashboard() {
       return res.json();
     },
     enabled: selectedTab === 'absence-stats',
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // Helper function to get work type name by ID
