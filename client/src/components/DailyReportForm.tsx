@@ -12,7 +12,6 @@ import { Client, WorkOrder } from "@shared/schema";
 import StatusBadge from "./StatusBadge";
 import { useQuery } from "@tanstack/react-query";
 import { ObjectUploader } from "./ObjectUploader";
-import type { UploadResult } from "@uppy/core";
 import { useToast } from "@/hooks/use-toast";
 
 interface Operation {
@@ -341,27 +340,7 @@ function OperationCard({
               maxFileSize={10485760}
               buttonVariant="outline"
               buttonClassName="w-20 h-20"
-              onGetUploadParameters={async () => {
-                const response = await fetch('/api/operations/photos/upload', {
-                  method: 'POST',
-                  credentials: 'include',
-                });
-                
-                if (!response.ok) {
-                  throw new Error(`Impossibile ottenere URL upload: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                if (!data.uploadURL) {
-                  throw new Error("URL upload non disponibile");
-                }
-                
-                return {
-                  method: 'PUT' as const,
-                  url: data.uploadURL,
-                };
-              }}
-              onComplete={async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>, uppy) => {
+              onComplete={async (result: any, uppy) => {
                 try {
                   if (result.failed && result.failed.length > 0) {
                     toast({
@@ -373,32 +352,15 @@ function OperationCard({
                   }
                   
                   if (result.successful && result.successful.length > 0) {
-                    const uploadURL = result.successful[0].response?.uploadURL;
+                    const photoUrl = result.successful[0].response?.body?.url;
                     
-                    if (!uploadURL) {
-                      throw new Error("Upload URL non disponibile");
-                    }
-                    
-                    const metadataResponse = await fetch('/api/operations/photos', {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      credentials: 'include',
-                      body: JSON.stringify({ photoURL: uploadURL }),
-                    });
-                    
-                    if (!metadataResponse.ok) {
-                      const errorText = await metadataResponse.text();
-                      throw new Error(`Impossibile salvare i metadati: ${errorText || metadataResponse.status}`);
-                    }
-                    
-                    const metadataData = await metadataResponse.json();
-                    if (!metadataData.objectPath) {
-                      throw new Error("Object path non ricevuto dal server");
+                    if (!photoUrl) {
+                      throw new Error("URL foto non disponibile");
                     }
                     
                     setOperations(prevOps => prevOps.map(op =>
                       op.id === operation.id
-                        ? { ...op, photos: [...(op.photos || []), metadataData.objectPath] }
+                        ? { ...op, photos: [...(op.photos || []), photoUrl] }
                         : op
                     ));
                     

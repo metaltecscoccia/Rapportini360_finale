@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import Uppy from "@uppy/core";
 import { DashboardModal } from "@uppy/react";
-import AwsS3 from "@uppy/aws-s3";
+import XHRUpload from "@uppy/xhr-upload";
 import Webcam from "@uppy/webcam";
 import type { UploadResult } from "@uppy/core";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,6 @@ import { Button } from "@/components/ui/button";
 interface ObjectUploaderProps {
   maxNumberOfFiles?: number;
   maxFileSize?: number;
-  onGetUploadParameters: () => Promise<{
-    method: "PUT";
-    url: string;
-  }>;
   onComplete?: (
     result: UploadResult<Record<string, unknown>, Record<string, unknown>>,
     uppy: Uppy
@@ -26,7 +22,6 @@ interface ObjectUploaderProps {
 export function ObjectUploader({
   maxNumberOfFiles = 1,
   maxFileSize = 10485760, // 10MB default
-  onGetUploadParameters,
   onComplete,
   buttonClassName,
   buttonVariant = "default",
@@ -38,27 +33,31 @@ export function ObjectUploader({
       restrictions: {
         maxNumberOfFiles,
         maxFileSize,
-        allowedFileTypes: ['image/*'], // Only images
+        allowedFileTypes: ['image/*'],
       },
       autoProceed: false,
     })
       .use(Webcam, {
-        modes: ['picture'], // Solo foto, non video
-        mirror: true, // Rifletti l'anteprima della fotocamera frontale
+        modes: ['picture'],
+        mirror: true,
         // @ts-ignore - facingMode is a valid webcam option but missing from types
-        facingMode: 'environment', // Usa fotocamera posteriore su mobile di default
+        facingMode: 'environment',
       })
-      .use(AwsS3, {
-        shouldUseMultipart: false,
-        getUploadParameters: onGetUploadParameters,
+      .use(XHRUpload, {
+        endpoint: '/api/upload',
+        formData: true,
+        fieldName: 'file',
+        getResponseData: (xhr: XMLHttpRequest) => {
+          const response = JSON.parse(xhr.responseText);
+          return { url: response.url };
+        },
       })
-      .on("complete", (result) => {
+      .on("complete", (result: any) => {
         onComplete?.(result, uppy);
         setShowModal(false);
       })
   );
 
-  // Cleanup: close Uppy instance and release camera stream on unmount
   useEffect(() => {
     return () => {
       try {
