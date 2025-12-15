@@ -44,7 +44,29 @@ if (process.env.NODE_ENV === "production") {
     process.exit(1);
   }
 }
+if (process.env.NODE_ENV === "production") {
+  // Validate critical environment variables
+  const requiredEnvVars = [
+    "DATABASE_URL",
+    "SESSION_SECRET",
+  ];
 
+  const missingVars = requiredEnvVars.filter(
+    (varName) => !process.env[varName],
+  );
+
+  if (missingVars.length > 0) {
+    console.error("❌ FATAL: Missing required environment variables:");
+    missingVars.forEach((varName) => console.error(`  - ${varName}`));
+    process.exit(1);
+  }
+
+  // ADD THIS DEBUG LOG
+  console.log('🔍 DATABASE_URL check:', {
+    host: process.env.DATABASE_URL?.match(/@([^/]+)/)?.[1] || 'unknown',
+    database: process.env.DATABASE_URL?.match(/\/([^?]+)/)?.[1] || 'unknown'
+  });
+}
 // ============================================
 // PROXY CONFIGURATION
 // ============================================
