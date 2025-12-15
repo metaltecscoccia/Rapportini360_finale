@@ -5,8 +5,9 @@ import { storage } from "./storage";
 import { WordService } from "./wordService";
 import { txtService } from "./txtService";
 import { generateAttendanceExcel } from "./excelService";
-import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
-import { ObjectPermission, ObjectAccessGroupType } from "./objectAcl";
+import { v2 as cloudinary } from 'cloudinary';
+import multer from 'multer';
+import streamifier from 'streamifier';
 import { getTodayISO } from "@shared/dateUtils";
 import {
   insertUserSchema,
@@ -32,6 +33,18 @@ import {
   insertOrganizationSchema,
 } from "@shared/schema";
 import { validatePassword, verifyPassword, hashPassword } from "./auth";
+
+// ============================================
+// CLOUDINARY & MULTER CONFIGURATION
+// ============================================
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 // ============================================
 // RATE LIMITING - Protezione contro brute force
@@ -1936,82 +1949,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================
-  // PHOTO UPLOADS
+  // PHOTO UPLOADS (Cloudinary)
   // ============================================
 
-  app.post("/api/operations/photos/upload", requireAuth, async (req, res) => {
+  app.post("/api/upload", requireAuth, upload.single("file"), async (req, res) => {
     try {
-      const objectStorageService = new ObjectStorageService();
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      res.json({ uploadURL });
-    } catch (error) {
-      console.error("Error getting upload URL:", error);
-      res.status(500).json({ error: "Failed to get upload URL" });
-    }
-  });
-
-  app.put("/api/operations/photos", requireAuth, async (req, res) => {
-    try {
-      if (!req.body.photoURL) {
-        return res.status(400).json({ error: "photoURL is required" });
+      if (!req.file) {
+        return res.status(400).json({ error: "Nessun file caricato" });
       }
 
-      const userId = (req as any).session.userId;
-      const organizationId = (req as any).session.organizationId;
-
-      const objectStorageService = new ObjectStorageService();
-      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
-        req.body.photoURL,
-        {
-          owner: userId,
-          organizationId: organizationId,
-          visibility: "private",
-          aclRules: [
+      const uploadFromBuffer = (buffer: Buffer): Promise<any> => {
+        return new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
             {
-              group: {
-                type: ObjectAccessGroupType.ORGANIZATION,
-                id: organizationId,
-              },
-              permission: ObjectPermission.READ,
+              folder: "operation-photos",
+              resource_type: "image",
             },
-          ],
-        },
-      );
+            (error, result) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(result);
+              }
+            }
+          );
+          streamifier.createReadStream(buffer).pipe(uploadStream);
+        });
+      };
 
-      res.status(200).json({ objectPath });
+      const result = await uploadFromBuffer(req.file.buffer);
+      res.json({ url: result.secure_url });
     } catch (error) {
-      console.error("Error setting photo metadata:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
-  app.get("/objects/:objectPath(*)", requireAuth, async (req, res) => {
-    const userId = (req as any).session.userId;
-    const organizationId = (req as any).session.organizationId;
-    const objectStorageService = new ObjectStorageService();
-
-    try {
-      const objectFile = await objectStorageService.getObjectEntityFile(
-        req.path,
-      );
-      const canAccess = await objectStorageService.canAccessObjectEntity({
-        objectFile,
-        userId: userId,
-        organizationId: organizationId,
-        requestedPermission: ObjectPermission.READ,
-      });
-
-      if (!canAccess) {
-        return res.sendStatus(401);
-      }
-
-      objectStorageService.downloadObject(objectFile, res);
-    } catch (error) {
-      console.error("Error checking object access:", error);
-      if (error instanceof ObjectNotFoundError) {
-        return res.sendStatus(404);
-      }
-      return res.sendStatus(500);
+      console.error("Error uploading to Cloudinary:", error);
+      res.status(500).json({ error: "Errore durante il caricamento dell'immagine" });
     }
   });
 

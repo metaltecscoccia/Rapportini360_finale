@@ -2187,7 +2187,7 @@ export default function AdminDashboard() {
                                                       {operation.photos.map((photoPath: string, idx: number) => (
                                                         <img 
                                                           key={idx}
-                                                          src={`/objects/${encodeURIComponent(photoPath)}`}
+                                                          src={photoPath.startsWith('http') ? photoPath : `/objects/${encodeURIComponent(photoPath)}`}
                                                           alt={`Foto ${idx + 1}`} 
                                                           className="w-20 h-20 object-cover rounded-md border"
                                                           data-testid={`operation-photo-${index}-${idx}`}
