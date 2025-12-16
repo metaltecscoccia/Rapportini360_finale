@@ -68,3 +68,37 @@ Date format: DD/MM/YYYY (Italian format) for all date displays in the applicatio
 
 ### Development Tools
 - TSX, ESBuild, PostCSS.
+
+## Data Migration & Backup
+
+### Export Script
+Per esportare tutti i dati dal database in formato SQL:
+```bash
+npx tsx scripts/export-data.ts > backup_$(date +%Y%m%d).sql
+```
+
+### Import su altro database
+```bash
+psql "postgresql://user:password@host:5432/database?sslmode=require" < backup.sql
+```
+
+### Tabelle gestite (in ordine di export/import)
+1. organizations
+2. clients
+3. users
+4. work_types
+5. materials
+6. work_orders
+7. vehicles
+8. daily_reports
+9. operations
+10. attendance_entries
+11. hours_adjustments
+12. fuel_refills
+13. fuel_tank_loads
+
+### Note sulla migrazione
+- Lo script rispetta le foreign key constraints
+- I caratteri speciali (apostrofi, newline) sono gestiti correttamente
+- L'import è transazionale (BEGIN/COMMIT)
+- Prima dell'import vengono cancellati i dati esistenti
