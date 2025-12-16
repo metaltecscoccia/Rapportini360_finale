@@ -223,12 +223,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   private async initializeAdmin() {
-    const existingAdmin = await db.select().from(users).where(eq(users.username, "admin"));
+    // Use default organization ID
+    const defaultOrgId = "b578579d-c664-4382-8504-bd7740dbfd9b";
     
+    // First, ensure the default organization exists
+    const existingOrg = await db.select().from(organizations).where(eq(organizations.id, defaultOrgId));
+    if (existingOrg.length === 0) {
+      await db.insert(organizations).values({
+        id: defaultOrgId,
+        name: "Metaltec",
+        subdomain: "default",
+        isActive: true
+      });
+      console.log("✓ Organizzazione predefinita 'Metaltec' creata");
+    }
+    
+    // Then, ensure the admin user exists
+    const existingAdmin = await db.select().from(users).where(eq(users.username, "admin"));
     if (existingAdmin.length === 0) {
       const hashedPassword = await hashPassword("Metaltec11");
-      // Use default organization ID
-      const defaultOrgId = "b578579d-c664-4382-8504-bd7740dbfd9b";
       await db.insert(users).values({
         username: "admin",
         password: hashedPassword,
@@ -237,6 +250,7 @@ export class DatabaseStorage implements IStorage {
         fullName: "Amministratore",
         organizationId: defaultOrgId
       });
+      console.log("✓ Utente admin predefinito creato");
     }
   }
 

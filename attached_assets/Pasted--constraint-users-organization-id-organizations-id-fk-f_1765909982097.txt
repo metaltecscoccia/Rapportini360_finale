@@ -1,0 +1,52 @@
+  constraint: 'users_organization_id_organizations_id_fk',
+  file: 'ri_triggers.c',
+  line: '2599',
+  routine: 'ri_ReportViolation'
+Error during login: error: insert or update on table "users" violates foreign key constraint "users_organization_id_organizations_id_fk"
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async DatabaseStorage.initializeAdmin (file:///app/dist/index.js:423:7)
+    at async DatabaseStorage.ensureInitialized (file:///app/dist/index.js:414:7)
+    at async DatabaseStorage.getUserByUsername (file:///app/dist/index.js:469:5)
+    at async file:///app/dist/index.js:2497:20 {
+  length: 339,
+  severity: 'ERROR',
+  code: '23503',
+  detail: 'Key (organization_id)=(b578579d-c664-4382-8504-bd7740dbfd9b) is not present in table "organizations".',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'users',
+  column: undefined,
+  dataType: undefined,
+}
+❌ POST /api/login 500 in 809ms
+}
+❌ POST /api/login 500 in 373ms
+Error during login: error: insert or update on table "users" violates foreign key constraint "users_organization_id_organizations_id_fk"
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async DatabaseStorage.initializeAdmin (file:///app/dist/index.js:423:7)
+    at async DatabaseStorage.ensureInitialized (file:///app/dist/index.js:414:7)
+    at async DatabaseStorage.getUserByUsername (file:///app/dist/index.js:469:5)
+    at async file:///app/dist/index.js:2497:20 {
+  length: 339,
+  severity: 'ERROR',
+  code: '23503',
+  detail: 'Key (organization_id)=(b578579d-c664-4382-8504-bd7740dbfd9b) is not present in table "organizations".',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'users',
+  column: undefined,
+  dataType: undefined,
+  constraint: 'users_organization_id_organizations_id_fk',
+  file: 'ri_triggers.c',
+  line: '2599',
+  routine: 'ri_ReportViolation'
