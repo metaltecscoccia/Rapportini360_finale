@@ -18,7 +18,6 @@ function escapeValue(val) {
     return "'" + val.toISOString().replace('T', ' ').replace('Z', '') + "'";
   }
   if (typeof val === 'string') {
-    // Escape single quotes and handle newlines
     return "E'" + val.replace(/\\/g, '\\\\').replace(/'/g, "''").replace(/\n/g, '\\n').replace(/\r/g, '\\r') + "'";
   }
   return "'" + String(val).replace(/'/g, "''") + "'";
@@ -41,14 +40,14 @@ async function main() {
     { name: 'organizations', cols: ['id', 'name', 'subdomain', 'logo', 'is_active', 'created_at'] },
     { name: 'clients', cols: ['id', 'name', 'description', 'organization_id'] },
     { name: 'users', cols: ['id', 'username', 'password', 'plain_password', 'role', 'full_name', 'is_active', 'organization_id'] },
-    { name: 'work_types', cols: ['id', 'name', 'description', 'organization_id'] },
-    { name: 'materials', cols: ['id', 'name', 'description', 'organization_id'] },
-    { name: 'work_orders', cols: ['id', 'code', 'description', 'client_id', 'is_active', 'organization_id'] },
+    { name: 'work_types', cols: ['id', 'name', 'description', 'is_active', 'organization_id'] },
+    { name: 'materials', cols: ['id', 'name', 'description', 'is_active', 'organization_id'] },
+    { name: 'work_orders', cols: ['id', 'name', 'description', 'client_id', 'is_active', 'organization_id', 'available_work_types', 'available_materials'] },
     { name: 'daily_reports', cols: ['id', 'employee_id', 'date', 'status', 'created_at', 'updated_at', 'organization_id'] },
     { name: 'operations', cols: ['id', 'daily_report_id', 'client_id', 'work_order_id', 'work_types', 'hours', 'notes', 'materials', 'photos'] }
   ];
   
-  let output = '-- Metaltec Data Export - Generated with proper escaping\n-- Use: First DELETE all data, then run this file\n\n';
+  let output = '-- Metaltec Data Export v4 - Complete schema mapping\n-- Use: First DELETE all data, then run this file\n\n';
   
   for (const table of tables) {
     console.error(`Exporting ${table.name}...`);
