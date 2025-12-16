@@ -5,8 +5,7 @@ import * as schema from "@shared/schema";
 // Build DATABASE_URL from PG* variables if not set
 let connectionString = process.env.DATABASE_URL;
 if (!connectionString && process.env.PGHOST && process.env.PGUSER && process.env.PGPASSWORD && process.env.PGDATABASE) {
-  const sslMode = process.env.NODE_ENV === 'production' ? '?sslmode=require' : '';
-  connectionString = `postgresql://${process.env.PGUSER}:${process.env.PGPASSWORD}@${process.env.PGHOST}:${process.env.PGPORT || 5432}/${process.env.PGDATABASE}${sslMode}`;
+  connectionString = `postgresql://${process.env.PGUSER}:${process.env.PGPASSWORD}@${process.env.PGHOST}:${process.env.PGPORT || 5432}/${process.env.PGDATABASE}?sslmode=require`;
 }
 
 if (!connectionString) {
@@ -15,12 +14,13 @@ if (!connectionString) {
   );
 }
 
+// Neon database requires SSL
 export const pool = new Pool({ 
   connectionString,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: { rejectUnauthorized: false },
 });
 
 pool.on('error', (err) => {
