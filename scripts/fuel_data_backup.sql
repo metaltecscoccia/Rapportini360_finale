@@ -5,10 +5,15 @@
 BEGIN;
 
 -- ==========================================
--- VEHICLES (10 records)
+-- STEP 1: DELETE in reverse order (rispetta foreign keys)
 -- ==========================================
+DELETE FROM fuel_refills WHERE organization_id = 'b578579d-c664-4382-8504-bd7740dbfd9b';
+DELETE FROM fuel_tank_loads WHERE organization_id = 'b578579d-c664-4382-8504-bd7740dbfd9b';
 DELETE FROM vehicles WHERE organization_id = 'b578579d-c664-4382-8504-bd7740dbfd9b';
 
+-- ==========================================
+-- STEP 2: INSERT VEHICLES (10 records)
+-- ==========================================
 INSERT INTO vehicles (id, organization_id, name, license_plate, fuel_type, current_km, current_engine_hours, is_active, created_at) VALUES
 ('545b0d16-f125-470c-881e-17b0a71615e1', 'b578579d-c664-4382-8504-bd7740dbfd9b', 'Range Rover Evoque', 'FR740KT', 'diesel', NULL, NULL, TRUE, '2025-11-21 13:36:47.077315'),
 ('3ff88ab3-2d8d-4df8-bf91-4e1f137d4de9', 'b578579d-c664-4382-8504-bd7740dbfd9b', 'Alfa Romeo Stelvio', 'FX518RF', 'diesel', NULL, NULL, TRUE, '2025-11-21 13:37:04.343471'),
@@ -22,10 +27,8 @@ INSERT INTO vehicles (id, organization_id, name, license_plate, fuel_type, curre
 ('b4dc0f35-9758-48e6-a6ee-12c13634d753', 'b578579d-c664-4382-8504-bd7740dbfd9b', 'Piattaforma SkySjack', 'XXXXXXXX', 'diesel', NULL, NULL, TRUE, '2025-11-21 13:39:23.749515');
 
 -- ==========================================
--- FUEL REFILLS (11 records)
+-- STEP 3: INSERT FUEL REFILLS (11 records)
 -- ==========================================
-DELETE FROM fuel_refills WHERE organization_id = 'b578579d-c664-4382-8504-bd7740dbfd9b';
-
 INSERT INTO fuel_refills (id, organization_id, vehicle_id, refill_date, operator_id, liters_before, liters_after, liters_refilled, km_reading, engine_hours_reading, total_cost, notes, created_at) VALUES
 ('3470ca10-07d5-4f83-a2f5-4c4d35509964', 'b578579d-c664-4382-8504-bd7740dbfd9b', '38d25404-9602-4f2d-b1f9-4557b3876e36', '2025-11-24 19:43:00', '212a75a7-14eb-4c29-8c9c-69aaa946a475', 0, 100, 100, NULL, NULL, NULL, NULL, '2025-11-24 18:43:28.967735'),
 ('bc40e2dc-0c0e-4781-8cbb-b7008e96ca72', 'b578579d-c664-4382-8504-bd7740dbfd9b', 'b4dc0f35-9758-48e6-a6ee-12c13634d753', '2025-11-26 09:35:00', '212a75a7-14eb-4c29-8c9c-69aaa946a475', 100, 125, 25, NULL, 1809, NULL, 'Cantiere Alberto di Pietro', '2025-11-26 07:36:21.091938'),
@@ -40,10 +43,8 @@ INSERT INTO fuel_refills (id, organization_id, vehicle_id, refill_date, operator
 ('5fdaa8d7-2723-4143-97c1-83801cbdd5f1', 'b578579d-c664-4382-8504-bd7740dbfd9b', '545b0d16-f125-470c-881e-17b0a71615e1', '2025-12-12 12:24:00', '212a75a7-14eb-4c29-8c9c-69aaa946a475', 555, 600, 45, 106368, NULL, NULL, NULL, '2025-12-12 11:25:28.071175');
 
 -- ==========================================
--- FUEL TANK LOADS (1 record)
+-- STEP 4: INSERT FUEL TANK LOADS (1 record)
 -- ==========================================
-DELETE FROM fuel_tank_loads WHERE organization_id = 'b578579d-c664-4382-8504-bd7740dbfd9b';
-
 INSERT INTO fuel_tank_loads (id, organization_id, load_date, liters, total_cost, supplier, notes, created_at) VALUES
 ('33477cd4-79fd-4da2-bc9d-3f4859eefe70', 'b578579d-c664-4382-8504-bd7740dbfd9b', '2025-11-21 14:13:00', 2000, NULL, 'MEROLLI Srl', NULL, '2025-11-21 13:14:02.362468');
 
