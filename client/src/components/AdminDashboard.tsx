@@ -2821,6 +2821,11 @@ export default function AdminDashboard() {
                         if (employeeStatusFilter === "inactive") return emp.isActive === false;
                         return true;
                       })
+                      .sort((a: any, b: any) => {
+                        // Dipendenti attivi prima, licenziati alla fine
+                        if (a.isActive === b.isActive) return 0;
+                        return a.isActive ? -1 : 1;
+                      })
                       .map((employee: any) => (
                       <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.fullName}</TableCell>
