@@ -2190,22 +2190,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       refillsSheet.columns = [
         { header: "Data/Ora", key: "date", width: 18 },
         { header: "Mezzo", key: "vehicle", width: 30 },
-        { header: "Litri Prima", key: "litersBefore", width: 12 },
-        { header: "Litri Dopo", key: "litersAfter", width: 12 },
+        { header: "Litri Prima", key: "litersBefore", width: 14 },
+        { header: "Litri Dopo", key: "litersAfter", width: 14 },
         { header: "Litri Erogati", key: "litersRefilled", width: 14 },
-        { header: "Km", key: "km", width: 10 },
-        { header: "Ore Motore", key: "hours", width: 12 },
-        { header: "Note", key: "notes", width: 30 },
+        { header: "Km", key: "km", width: 12 },
+        { header: "Ore Motore", key: "hours", width: 14 },
+        { header: "Note", key: "notes", width: 35 },
       ];
 
-      refillsSheet.getRow(1).font = { bold: true };
-      refillsSheet.getRow(1).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFE0E0E0" },
+      const headerStyle = {
+        font: { bold: true, color: { argb: "FFFFFFFF" }, size: 11 },
+        fill: { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FF2E7D32" } },
+        alignment: { horizontal: "center" as const, vertical: "middle" as const },
+        border: {
+          top: { style: "thin" as const, color: { argb: "FF1B5E20" } },
+          bottom: { style: "thin" as const, color: { argb: "FF1B5E20" } },
+          left: { style: "thin" as const, color: { argb: "FF1B5E20" } },
+          right: { style: "thin" as const, color: { argb: "FF1B5E20" } },
+        },
       };
 
-      filteredRefills.forEach((refill: any) => {
+      const thinBorder = {
+        top: { style: "thin" as const, color: { argb: "FFB0BEC5" } },
+        bottom: { style: "thin" as const, color: { argb: "FFB0BEC5" } },
+        left: { style: "thin" as const, color: { argb: "FFB0BEC5" } },
+        right: { style: "thin" as const, color: { argb: "FFB0BEC5" } },
+      };
+
+      refillsSheet.getRow(1).height = 22;
+      refillsSheet.getRow(1).eachCell((cell: any) => {
+        cell.font = headerStyle.font;
+        cell.fill = headerStyle.fill;
+        cell.alignment = headerStyle.alignment;
+        cell.border = headerStyle.border;
+      });
+
+      let totalLitersRefilled = 0;
+      filteredRefills.forEach((refill: any, index: number) => {
         const vehicle = allVehicles.find((v: any) => v.id === refill.vehicleId);
         const vehicleName = vehicle
           ? `${vehicle.name} (${vehicle.licensePlate})`
@@ -2221,7 +2242,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           minute: "2-digit",
         });
 
-        refillsSheet.addRow({
+        const litersRefilled = refill.litersRefilled != null ? parseFloat(refill.litersRefilled) : 0;
+        totalLitersRefilled += litersRefilled;
+
+        const row = refillsSheet.addRow({
           date: `${dateStr} ${timeStr}`,
           vehicle: vehicleName,
           litersBefore: refill.litersBefore != null ? parseFloat(refill.litersBefore).toFixed(2) : "-",
@@ -2231,26 +2255,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hours: refill.engineHoursReading != null ? parseFloat(refill.engineHoursReading).toFixed(1) : "-",
           notes: refill.notes || "",
         });
+
+        const rowFill = index % 2 === 0 
+          ? { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FFF5F5F5" } }
+          : { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FFFFFFFF" } };
+
+        row.eachCell((cell: any, colNumber: number) => {
+          cell.border = thinBorder;
+          cell.fill = rowFill;
+          if (colNumber >= 3 && colNumber <= 7) {
+            cell.alignment = { horizontal: "center" as const };
+          }
+        });
       });
+
+      if (filteredRefills.length > 0) {
+        const totalRow = refillsSheet.addRow({
+          date: "",
+          vehicle: "TOTALE",
+          litersBefore: "",
+          litersAfter: "",
+          litersRefilled: totalLitersRefilled.toFixed(2),
+          km: "",
+          hours: "",
+          notes: "",
+        });
+        totalRow.font = { bold: true };
+        totalRow.eachCell((cell: any) => {
+          cell.fill = { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FFE8F5E9" } };
+          cell.border = thinBorder;
+        });
+        totalRow.getCell(5).alignment = { horizontal: "center" as const };
+      }
 
       const loadsSheet = workbook.addWorksheet("Carichi Cisterna");
 
       loadsSheet.columns = [
         { header: "Data/Ora", key: "date", width: 18 },
-        { header: "Litri Caricati", key: "liters", width: 15 },
-        { header: "Costo Totale", key: "cost", width: 12 },
+        { header: "Litri Caricati", key: "liters", width: 16 },
+        { header: "Costo Totale", key: "cost", width: 14 },
         { header: "Fornitore", key: "supplier", width: 30 },
         { header: "Note", key: "notes", width: 40 },
       ];
 
-      loadsSheet.getRow(1).font = { bold: true };
-      loadsSheet.getRow(1).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFE0E0E0" },
+      const loadsHeaderStyle = {
+        font: { bold: true, color: { argb: "FFFFFFFF" }, size: 11 },
+        fill: { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FF1565C0" } },
+        alignment: { horizontal: "center" as const, vertical: "middle" as const },
+        border: {
+          top: { style: "thin" as const, color: { argb: "FF0D47A1" } },
+          bottom: { style: "thin" as const, color: { argb: "FF0D47A1" } },
+          left: { style: "thin" as const, color: { argb: "FF0D47A1" } },
+          right: { style: "thin" as const, color: { argb: "FF0D47A1" } },
+        },
       };
 
-      filteredTankLoads.forEach((load: any) => {
+      loadsSheet.getRow(1).height = 22;
+      loadsSheet.getRow(1).eachCell((cell: any) => {
+        cell.font = loadsHeaderStyle.font;
+        cell.fill = loadsHeaderStyle.fill;
+        cell.alignment = loadsHeaderStyle.alignment;
+        cell.border = loadsHeaderStyle.border;
+      });
+
+      let totalLitersLoaded = 0;
+      let totalCost = 0;
+      filteredTankLoads.forEach((load: any, index: number) => {
         const loadDate = new Date(load.loadDate);
         const dateStr = loadDate.toLocaleDateString("it-IT", {
           day: "2-digit",
@@ -2262,14 +2332,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
           minute: "2-digit",
         });
 
-        loadsSheet.addRow({
+        const liters = load.liters != null ? parseFloat(load.liters) : 0;
+        const cost = load.totalCost ? parseFloat(load.totalCost) : 0;
+        totalLitersLoaded += liters;
+        totalCost += cost;
+
+        const row = loadsSheet.addRow({
           date: `${dateStr} ${timeStr}`,
           liters: load.liters != null ? parseFloat(load.liters).toFixed(2) : "-",
           cost: load.totalCost ? `€${parseFloat(load.totalCost).toFixed(2)}` : "-",
           supplier: load.supplier || "",
           notes: load.notes || "",
         });
+
+        const rowFill = index % 2 === 0 
+          ? { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FFF5F5F5" } }
+          : { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FFFFFFFF" } };
+
+        row.eachCell((cell: any, colNumber: number) => {
+          cell.border = thinBorder;
+          cell.fill = rowFill;
+          if (colNumber === 2 || colNumber === 3) {
+            cell.alignment = { horizontal: "center" as const };
+          }
+        });
       });
+
+      if (filteredTankLoads.length > 0) {
+        const totalRow = loadsSheet.addRow({
+          date: "TOTALE",
+          liters: totalLitersLoaded.toFixed(2),
+          cost: `€${totalCost.toFixed(2)}`,
+          supplier: "",
+          notes: "",
+        });
+        totalRow.font = { bold: true };
+        totalRow.eachCell((cell: any) => {
+          cell.fill = { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FFE3F2FD" } };
+          cell.border = thinBorder;
+        });
+        totalRow.getCell(2).alignment = { horizontal: "center" as const };
+        totalRow.getCell(3).alignment = { horizontal: "center" as const };
+      }
 
       const buffer = await workbook.xlsx.writeBuffer();
 
