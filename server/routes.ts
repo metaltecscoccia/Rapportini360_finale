@@ -2182,8 +2182,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return true;
       });
 
-      const ExcelJS = require("exceljs");
-      const workbook = new ExcelJS.Workbook();
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.default.Workbook();
 
       const refillsSheet = workbook.addWorksheet("Rifornimenti (Scarichi)");
 
