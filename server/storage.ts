@@ -210,6 +210,20 @@ export interface IStorage {
     }>;
     totalAbsences: number;
   }>;
+  
+  // Employee-specific Attendance Statistics
+  getEmployeeAttendanceStats(organizationId: string, userId: string, days?: number): Promise<{
+    userId: string;
+    fullName: string;
+    byType: Record<string, number>;
+    byDayOfWeek: Record<number, number>;
+    byMonth: Array<{
+      month: string;
+      year: string;
+      count: number;
+    }>;
+    totalAbsences: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1459,6 +1473,84 @@ export class DatabaseStorage implements IStorage {
     
     return {
       byEmployee,
+      byType,
+      byDayOfWeek,
+      byMonth,
+      totalAbsences: entries.length
+    };
+  }
+
+  async getEmployeeAttendanceStats(organizationId: string, userId: string, days: number = 90): Promise<{
+    userId: string;
+    fullName: string;
+    byType: Record<string, number>;
+    byDayOfWeek: Record<number, number>;
+    byMonth: Array<{
+      month: string;
+      year: string;
+      count: number;
+    }>;
+    totalAbsences: number;
+  }> {
+    await this.ensureInitialized();
+    
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    
+    // Get user info
+    const user = await this.getUser(userId);
+    const fullName = user?.fullName || 'Utente sconosciuto';
+    
+    // Get attendance entries for this specific user
+    const allEntries = await db.select()
+      .from(attendanceEntries)
+      .where(and(
+        eq(attendanceEntries.organizationId, organizationId),
+        eq(attendanceEntries.userId, userId)
+      ));
+    
+    // Filter entries by date range
+    const entries = allEntries.filter(entry => 
+      entry.date >= startDateStr && entry.date <= endDateStr
+    );
+    
+    // Initialize aggregations
+    const byType: Record<string, number> = {};
+    const byDayOfWeek: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    const byMonthMap: Map<string, number> = new Map();
+    
+    // Process each entry
+    for (const entry of entries) {
+      // By type
+      byType[entry.absenceType] = (byType[entry.absenceType] || 0) + 1;
+      
+      // By day of week
+      const entryDate = new Date(entry.date);
+      const dayOfWeek = entryDate.getDay();
+      byDayOfWeek[dayOfWeek]++;
+      
+      // By month
+      const monthKey = `${entry.date.substring(0, 7)}`; // YYYY-MM
+      byMonthMap.set(monthKey, (byMonthMap.get(monthKey) || 0) + 1);
+    }
+    
+    // Build byMonth array sorted by date
+    const byMonth = Array.from(byMonthMap.entries())
+      .map(([key, count]) => ({
+        month: key,
+        year: key.substring(0, 4),
+        count
+      }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+    
+    return {
+      userId,
+      fullName,
       byType,
       byDayOfWeek,
       byMonth,

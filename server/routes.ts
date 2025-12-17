@@ -1955,6 +1955,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get attendance statistics for a specific employee
+  app.get("/api/attendance/stats/:userId", requireAdmin, async (req, res) => {
+    try {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      const { userId } = req.params;
+      const { days } = req.query;
+      const organizationId = (req as any).session.organizationId;
+      
+      const daysNum = days ? parseInt(days as string, 10) : 90;
+      const stats = await storage.getEmployeeAttendanceStats(organizationId, userId, daysNum);
+      
+      res.status(200).json(stats);
+    } catch (error) {
+      console.error("Error fetching employee attendance stats:", error);
+      res.status(500).json({ error: "Failed to fetch employee attendance statistics" });
+    }
+  });
+
   // ============================================
   // PHOTO UPLOADS (Cloudinary)
   // ============================================

@@ -148,6 +148,8 @@ export default function AdminDashboard() {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
   const [newPassword, setNewPassword] = useState<string>("");
+  const [employeeStatsDialogOpen, setEmployeeStatsDialogOpen] = useState(false);
+  const [selectedEmployeeForStats, setSelectedEmployeeForStats] = useState<any>(null);
   const [editReportDialogOpen, setEditReportDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [reportOperations, setReportOperations] = useState<any[]>([]);
@@ -383,6 +385,26 @@ export default function AdminDashboard() {
       return data;
     },
     enabled: selectedTab === 'absence-stats',
+  });
+
+  // Query per statistiche assenze singolo dipendente
+  const { data: employeeStats, isLoading: isLoadingEmployeeStats } = useQuery<{
+    userId: string;
+    fullName: string;
+    totalAbsences: number;
+    byType: Record<string, number>;
+    byDayOfWeek: Record<number, number>;
+    byMonth: Array<{ month: string; count: number }>;
+  }>({
+    queryKey: ['/api/attendance/stats', selectedEmployeeForStats?.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/attendance/stats/${selectedEmployeeForStats?.id}?days=90`, {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Failed to fetch employee attendance stats');
+      return res.json();
+    },
+    enabled: employeeStatsDialogOpen && !!selectedEmployeeForStats?.id,
   });
 
   // Helper function to get work type name by ID
@@ -2818,6 +2840,23 @@ export default function AdminDashboard() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => {
+                                    setSelectedEmployeeForStats(employee);
+                                    setEmployeeStatsDialogOpen(true);
+                                  }}
+                                  data-testid={`button-employee-stats-${employee.id}`}
+                                  className="text-purple-600 hover:text-purple-700"
+                                >
+                                  <BarChart2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Statistiche Assenze</TooltipContent>
+                            </Tooltip>
                             <Button 
                               variant="ghost" 
                               size="sm" 
@@ -4753,6 +4792,228 @@ export default function AdminDashboard() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Statistiche Assenze Dipendente */}
+      <Dialog open={employeeStatsDialogOpen} onOpenChange={setEmployeeStatsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart2 className="h-5 w-5" />
+              Statistiche Assenze - {selectedEmployeeForStats?.fullName}
+            </DialogTitle>
+            <DialogDescription>
+              Statistiche delle assenze negli ultimi 90 giorni
+            </DialogDescription>
+          </DialogHeader>
+          
+          {isLoadingEmployeeStats ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-muted-foreground">Caricamento statistiche...</p>
+              </div>
+            </div>
+          ) : employeeStats ? (
+            <div className="space-y-6">
+              {/* KPI Cards */}
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Totale Assenze (90gg)</p>
+                        <p className="text-2xl font-bold">{employeeStats.totalAbsences || 0}</p>
+                      </div>
+                      <AlertTriangle className="h-6 w-6 text-warning" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Tipo Più Comune</p>
+                        <p className="text-2xl font-bold">
+                          {employeeStats.byType && Object.keys(employeeStats.byType).length > 0 
+                            ? (() => {
+                                const typeMap: Record<string, string> = {
+                                  'A': 'Assenza',
+                                  'F': 'Ferie',
+                                  'P': 'Permesso',
+                                  'M': 'Malattia',
+                                  'CP': 'Congedo',
+                                  'L104': 'L.104'
+                                };
+                                const sortedTypes = Object.entries(employeeStats.byType as Record<string, number>)
+                                  .sort((a, b) => b[1] - a[1]);
+                                return sortedTypes.length > 0 
+                                  ? (typeMap[sortedTypes[0][0]] || sortedTypes[0][0])
+                                  : '-';
+                              })()
+                            : '-'}
+                        </p>
+                      </div>
+                      <TrendingUp className="h-6 w-6 text-primary" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Giorno Picco</p>
+                        <p className="text-2xl font-bold">
+                          {employeeStats.byDayOfWeek && Object.keys(employeeStats.byDayOfWeek).length > 0 
+                            ? (() => {
+                                const dayMap: Record<number, string> = {
+                                  0: 'Dom',
+                                  1: 'Lun',
+                                  2: 'Mar',
+                                  3: 'Mer',
+                                  4: 'Gio',
+                                  5: 'Ven',
+                                  6: 'Sab'
+                                };
+                                const sortedDays = Object.entries(employeeStats.byDayOfWeek as Record<number, number>)
+                                  .filter(([_, count]) => count > 0)
+                                  .sort((a, b) => b[1] - a[1]);
+                                return sortedDays.length > 0 
+                                  ? (dayMap[parseInt(sortedDays[0][0])] || '-')
+                                  : '-';
+                              })()
+                            : '-'}
+                        </p>
+                      </div>
+                      <Calendar className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Charts Row */}
+              <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+                {/* Monthly Trend Chart */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Trend Mensile
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {employeeStats.byMonth && employeeStats.byMonth.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={200}>
+                        <LineChart data={employeeStats.byMonth.slice().reverse()}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="month" 
+                            tickFormatter={(value) => {
+                              const [year, month] = value.split('-');
+                              const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                              return monthNames[parseInt(month) - 1] || value;
+                            }}
+                          />
+                          <YAxis />
+                          <RechartsTooltip 
+                            formatter={(value: number) => [value, 'Assenze']}
+                            labelFormatter={(label) => {
+                              const [year, month] = label.split('-');
+                              const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+                              return `${monthNames[parseInt(month) - 1]} ${year}`;
+                            }}
+                          />
+                          <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center py-8 text-muted-foreground">
+                        Nessun dato disponibile
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Absence by Type Chart */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <BarChart2 className="h-4 w-4" />
+                      Assenze per Tipo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {employeeStats.byType && Object.keys(employeeStats.byType).length > 0 ? (
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={Object.entries(employeeStats.byType as Record<string, number>).map(([type, count]) => {
+                          const typeMap: Record<string, string> = {
+                            'A': 'Assenza',
+                            'F': 'Ferie',
+                            'P': 'Permesso',
+                            'M': 'Malattia',
+                            'CP': 'Congedo',
+                            'L104': 'L.104'
+                          };
+                          return { type: typeMap[type] || type, count };
+                        })}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="type" />
+                          <YAxis />
+                          <RechartsTooltip formatter={(value: number) => [value, 'Assenze']} />
+                          <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center py-8 text-muted-foreground">
+                        Nessun dato disponibile
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Absence by Day of Week */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Assenze per Giorno della Settimana
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {employeeStats.byDayOfWeek && Object.values(employeeStats.byDayOfWeek).some(v => v > 0) ? (
+                    <ResponsiveContainer width="100%" height={150}>
+                      <BarChart data={(() => {
+                        const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+                        const byDayRecord = employeeStats.byDayOfWeek as Record<number, number>;
+                        return [1, 2, 3, 4, 5, 6, 0].map(dayNum => ({
+                          day: dayNames[dayNum],
+                          count: byDayRecord[dayNum] || 0
+                        }));
+                      })()}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="day" />
+                        <YAxis />
+                        <RechartsTooltip formatter={(value: number) => [value, 'Assenze']} />
+                        <Bar dataKey="count" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center py-8 text-muted-foreground">
+                      Nessun dato disponibile
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              Nessun dato disponibile per questo dipendente.
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
