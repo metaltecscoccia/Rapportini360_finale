@@ -1941,6 +1941,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const daysNum = days ? parseInt(days as string, 10) : 90;
       const stats = await storage.getAttendanceStats(organizationId, daysNum);
       
+      console.log("[DEBUG] Attendance stats for org", organizationId, ":", JSON.stringify({
+        totalAbsences: stats.totalAbsences,
+        byEmployeeCount: stats.byEmployee?.length,
+        byTypeKeys: Object.keys(stats.byType || {}),
+        byMonthCount: stats.byMonth?.length
+      }));
+      
       res.status(200).json(stats);
     } catch (error) {
       console.error("Error fetching attendance stats:", error);
