@@ -2224,11 +2224,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         refillsSheet.addRow({
           date: `${dateStr} ${timeStr}`,
           vehicle: vehicleName,
-          litersBefore: refill.litersBefore?.toFixed(2) || "-",
-          litersAfter: refill.litersAfter?.toFixed(2) || "-",
-          litersRefilled: refill.litersRefilled?.toFixed(2) || "-",
-          km: refill.kmReading?.toFixed(0) || "-",
-          hours: refill.engineHoursReading?.toFixed(1) || "-",
+          litersBefore: refill.litersBefore != null ? parseFloat(refill.litersBefore).toFixed(2) : "-",
+          litersAfter: refill.litersAfter != null ? parseFloat(refill.litersAfter).toFixed(2) : "-",
+          litersRefilled: refill.litersRefilled != null ? parseFloat(refill.litersRefilled).toFixed(2) : "-",
+          km: refill.kmReading != null ? parseFloat(refill.kmReading).toFixed(0) : "-",
+          hours: refill.engineHoursReading != null ? parseFloat(refill.engineHoursReading).toFixed(1) : "-",
           notes: refill.notes || "",
         });
       });
@@ -2264,8 +2264,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         loadsSheet.addRow({
           date: `${dateStr} ${timeStr}`,
-          liters: load.liters?.toFixed(2) || "-",
-          cost: load.totalCost ? `€${load.totalCost}` : "-",
+          liters: load.liters != null ? parseFloat(load.liters).toFixed(2) : "-",
+          cost: load.totalCost ? `€${parseFloat(load.totalCost).toFixed(2)}` : "-",
           supplier: load.supplier || "",
           notes: load.notes || "",
         });
