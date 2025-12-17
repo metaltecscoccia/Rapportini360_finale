@@ -366,6 +366,7 @@ export default function AdminDashboard() {
   }>({
     queryKey: ['/api/attendance/stats', selectedTab],
     queryFn: async () => {
+      console.log('[DEBUG] Fetching attendance stats...');
       const res = await fetch(`/api/attendance/stats?days=90&_t=${Date.now()}`, {
         credentials: 'include',
         headers: {
@@ -373,8 +374,12 @@ export default function AdminDashboard() {
           'Pragma': 'no-cache'
         }
       });
-      if (!res.ok) throw new Error('Failed to fetch attendance stats');
+      if (!res.ok) {
+        console.error('[DEBUG] Failed to fetch attendance stats:', res.status);
+        throw new Error('Failed to fetch attendance stats');
+      }
       const data = await res.json();
+      console.log('[DEBUG] Attendance stats received:', JSON.stringify(data));
       return data;
     },
     enabled: selectedTab === 'absence-stats',
