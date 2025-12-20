@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LogIn, Loader2, AlertCircle, Shield } from "lucide-react";
-import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_1766249194109.png";
+import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
 
 interface LoginFormProps {
   onLogin: (
@@ -95,7 +95,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             <img
               src={logoPath}
               alt="Rapportini360"
-              className="h-32 w-auto object-contain"
+              className="h-48 w-auto object-contain"
             />
           </div>
         </CardHeader>
