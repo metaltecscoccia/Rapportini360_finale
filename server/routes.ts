@@ -1976,6 +1976,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export strategic absences report as text
+  app.get("/api/attendance/strategic-report", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const { days } = req.query;
+      const daysNum = days ? parseInt(days as string, 10) : 90;
+      
+      const report = await storage.getStrategicAbsencesReport(organizationId, daysNum);
+      
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="report_assenze_strategiche_${new Date().toISOString().split('T')[0]}.txt"`);
+      res.send(report);
+    } catch (error) {
+      console.error("Error generating strategic absences report:", error);
+      res.status(500).json({ error: "Failed to generate strategic absences report" });
+    }
+  });
+
   // ============================================
   // PHOTO UPLOADS (Cloudinary)
   // ============================================

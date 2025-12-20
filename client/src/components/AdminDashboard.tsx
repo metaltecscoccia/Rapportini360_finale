@@ -51,7 +51,8 @@ import {
   UserCheck,
   BarChart2,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Download
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import StatusBadge from "./StatusBadge";
@@ -3214,10 +3215,23 @@ export default function AdminDashboard() {
               {/* Strategic Absences Card */}
               <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30">
                 <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
-                    <AlertTriangle className="h-5 w-5" />
-                    Assenze Strategiche
-                  </CardTitle>
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+                      <AlertTriangle className="h-5 w-5" />
+                      Assenze Strategiche
+                    </CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        window.open('/api/attendance/strategic-report?days=90', '_blank');
+                      }}
+                      data-testid="button-export-strategic-absences"
+                    >
+                      <Download className="h-4 w-4 mr-1" />
+                      Export
+                    </Button>
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Assenze (escluse Ferie) registrate il giorno prima o dopo weekend/festività
                   </p>

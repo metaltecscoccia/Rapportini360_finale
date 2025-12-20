@@ -315,6 +315,9 @@ export interface IStorage {
     totalStrategicAbsences: number;
   }>;
   
+  // Strategic Absences Report (text format)
+  getStrategicAbsencesReport(organizationId: string, days?: number): Promise<string>;
+  
   // Employee-specific Attendance Statistics
   getEmployeeAttendanceStats(organizationId: string, userId: string, days?: number): Promise<{
     userId: string;
@@ -1694,6 +1697,181 @@ export class DatabaseStorage implements IStorage {
       strategicAbsences,
       strategicPercentage
     };
+  }
+
+  async getStrategicAbsencesReport(organizationId: string, days: number = 90): Promise<string> {
+    await this.ensureInitialized();
+    
+    const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+    const absenceTypeNames: Record<string, string> = {
+      'A': 'Assenza',
+      'P': 'Permesso',
+      'M': 'Malattia',
+      'CP': 'Cassa Integrazione/Permesso',
+      'L104': 'Legge 104',
+      'F': 'Ferie'
+    };
+    
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    
+    // Get all users for this organization
+    const allUsers = await db.select().from(users).where(eq(users.organizationId, organizationId));
+    const userMap = new Map(allUsers.map(u => [u.id, u.fullName]));
+    
+    // Get all attendance entries (excluding Ferie)
+    const allEntries = await db.select()
+      .from(attendanceEntries)
+      .where(eq(attendanceEntries.organizationId, organizationId));
+    
+    const entries = allEntries.filter(entry => 
+      entry.date >= startDateStr && 
+      entry.date <= endDateStr && 
+      entry.absenceType !== 'F'
+    );
+    
+    // Find strategic absences
+    const strategicAbsences: Array<{
+      date: string;
+      dayOfWeek: string;
+      employee: string;
+      type: string;
+      typeName: string;
+      reason: string;
+    }> = [];
+    
+    for (const entry of entries) {
+      const info = this.getAdjacentInfo(entry.date);
+      if (info.isStrategic) {
+        const date = new Date(entry.date + 'T12:00:00');
+        strategicAbsences.push({
+          date: entry.date,
+          dayOfWeek: dayNames[date.getDay()],
+          employee: userMap.get(entry.userId) || 'Utente sconosciuto',
+          type: entry.absenceType,
+          typeName: absenceTypeNames[entry.absenceType] || entry.absenceType,
+          reason: info.reason
+        });
+      }
+    }
+    
+    // Sort by date descending
+    strategicAbsences.sort((a, b) => b.date.localeCompare(a.date));
+    
+    // Generate report
+    const lines: string[] = [];
+    lines.push('='.repeat(80));
+    lines.push('REPORT ASSENZE STRATEGICHE');
+    lines.push('Assenze (escluse Ferie) registrate il giorno prima o dopo weekend/festività');
+    lines.push('='.repeat(80));
+    lines.push(`Generato il: ${new Date().toLocaleString('it-IT')}`);
+    lines.push(`Periodo: ultimi ${days} giorni`);
+    lines.push(`Totale assenze strategiche: ${strategicAbsences.length}`);
+    lines.push('');
+    lines.push('-'.repeat(80));
+    lines.push('');
+    
+    // Group by employee
+    const byEmployee = new Map<string, typeof strategicAbsences>();
+    for (const absence of strategicAbsences) {
+      if (!byEmployee.has(absence.employee)) {
+        byEmployee.set(absence.employee, []);
+      }
+      byEmployee.get(absence.employee)!.push(absence);
+    }
+    
+    // Sort employees by count descending
+    const sortedEmployees = Array.from(byEmployee.entries()).sort((a, b) => b[1].length - a[1].length);
+    
+    lines.push('RIEPILOGO PER DIPENDENTE:');
+    lines.push('');
+    for (let i = 0; i < sortedEmployees.length; i++) {
+      const [employee, absences] = sortedEmployees[i];
+      lines.push(`  ${employee}: ${absences.length} assenze strategiche`);
+    }
+    lines.push('');
+    lines.push('-'.repeat(80));
+    lines.push('');
+    lines.push('DETTAGLIO ASSENZE STRATEGICHE:');
+    lines.push('');
+    
+    for (let i = 0; i < sortedEmployees.length; i++) {
+      const [employee, absences] = sortedEmployees[i];
+      lines.push(`\n${employee} (${absences.length} assenze):`);
+      lines.push('-'.repeat(40));
+      for (let j = 0; j < absences.length; j++) {
+        const absence = absences[j];
+        const dateFormatted = absence.date.split('-').reverse().join('/');
+        lines.push(`  ${dateFormatted} (${absence.dayOfWeek}) - ${absence.typeName}`);
+        lines.push(`    Motivo: ${absence.reason}`);
+      }
+    }
+    
+    lines.push('');
+    lines.push('='.repeat(80));
+    lines.push('LEGENDA TIPI ASSENZA:');
+    lines.push('  A  = Assenza');
+    lines.push('  P  = Permesso');
+    lines.push('  M  = Malattia');
+    lines.push('  CP = Cassa Integrazione/Permesso');
+    lines.push('  L104 = Legge 104');
+    lines.push('='.repeat(80));
+    
+    return lines.join('\n');
+  }
+  
+  private getAdjacentInfo(dateStr: string): { isStrategic: boolean; reason: string } {
+    const date = new Date(dateStr + 'T12:00:00');
+    const holidays = this.getAllHolidaysForDate(dateStr);
+    
+    const dayBefore = new Date(date);
+    dayBefore.setDate(dayBefore.getDate() - 1);
+    const dayBeforeStr = formatDateToString(dayBefore);
+    const beforeDayOfWeek = dayBefore.getDay();
+    const beforeIsWeekend = beforeDayOfWeek === 0 || beforeDayOfWeek === 6;
+    const beforeIsHoliday = holidays.has(dayBeforeStr);
+    
+    const dayAfter = new Date(date);
+    dayAfter.setDate(dayAfter.getDate() + 1);
+    const dayAfterStr = formatDateToString(dayAfter);
+    const afterDayOfWeek = dayAfter.getDay();
+    const afterIsWeekend = afterDayOfWeek === 0 || afterDayOfWeek === 6;
+    const afterIsHoliday = holidays.has(dayAfterStr);
+    
+    const reasons: string[] = [];
+    
+    if (beforeIsWeekend) {
+      reasons.push(`giorno prima (${dayBeforeStr}) è weekend`);
+    } else if (beforeIsHoliday) {
+      reasons.push(`giorno prima (${dayBeforeStr}) è festività`);
+    }
+    
+    if (afterIsWeekend) {
+      reasons.push(`giorno dopo (${dayAfterStr}) è weekend`);
+    } else if (afterIsHoliday) {
+      reasons.push(`giorno dopo (${dayAfterStr}) è festività`);
+    }
+    
+    return {
+      isStrategic: reasons.length > 0,
+      reason: reasons.join('; ')
+    };
+  }
+  
+  private getAllHolidaysForDate(dateStr: string): Set<string> {
+    const date = new Date(dateStr + 'T12:00:00');
+    const year = date.getFullYear();
+    const allHolidays = new Set<string>();
+    
+    [year - 1, year, year + 1].forEach(y => {
+      getItalianHolidays(y).forEach(h => allHolidays.add(h));
+    });
+    
+    return allHolidays;
   }
 }
 
