@@ -31,6 +31,8 @@ import {
   Power,
   PowerOff,
   Loader2,
+  Users,
+  Edit,
 } from "lucide-react";
 import { formatDateToItalian } from "@/lib/dateUtils";
 
@@ -41,18 +43,42 @@ type Organization = {
   createdAt: string;
 };
 
+type Admin = {
+  id: string;
+  username: string;
+  fullName: string;
+  role: string;
+  isActive: boolean;
+};
+
 export default function SuperAdminDashboard() {
   const { toast } = useToast();
   const [createOrgOpen, setCreateOrgOpen] = useState(false);
   const [createAdminOpen, setCreateAdminOpen] = useState(false);
+  const [manageAdminsOpen, setManageAdminsOpen] = useState(false);
+  const [editAdminOpen, setEditAdminOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [newOrgName, setNewOrgName] = useState("");
   const [newAdminUsername, setNewAdminUsername] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
   const [newAdminFullName, setNewAdminFullName] = useState("");
+  const [editAdminUsername, setEditAdminUsername] = useState("");
+  const [editAdminPassword, setEditAdminPassword] = useState("");
+  const [editAdminFullName, setEditAdminFullName] = useState("");
 
   const { data: organizations, isLoading } = useQuery<Organization[]>({
     queryKey: ["/api/superadmin/organizations"],
+  });
+
+  const { data: admins, isLoading: isLoadingAdmins } = useQuery<Admin[]>({
+    queryKey: ["/api/superadmin/organizations", selectedOrg?.id, "admins"],
+    queryFn: async () => {
+      if (!selectedOrg) return [];
+      const res = await apiRequest("GET", `/api/superadmin/organizations/${selectedOrg.id}/admins`);
+      return res.json();
+    },
+    enabled: !!selectedOrg && manageAdminsOpen,
   });
 
   const createOrgMutation = useMutation({
@@ -104,10 +130,10 @@ export default function SuperAdminDashboard() {
       const response = await apiRequest("POST", `/api/superadmin/organizations/${orgId}/admin`, { username, password, fullName });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/superadmin/organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/organizations", variables.orgId, "admins"] });
       setCreateAdminOpen(false);
-      setSelectedOrg(null);
       setNewAdminUsername("");
       setNewAdminPassword("");
       setNewAdminFullName("");
@@ -120,6 +146,34 @@ export default function SuperAdminDashboard() {
       toast({
         title: "Errore",
         description: error.message || "Impossibile creare l'amministratore.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateAdminMutation = useMutation({
+    mutationFn: async ({ orgId, adminId, username, password, fullName }: { orgId: string; adminId: string; username: string; password?: string; fullName: string }) => {
+      const data: { username: string; fullName: string; password?: string } = { username, fullName };
+      if (password) data.password = password;
+      const response = await apiRequest("PUT", `/api/superadmin/organizations/${orgId}/admin/${adminId}`, data);
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/organizations", variables.orgId, "admins"] });
+      setEditAdminOpen(false);
+      setSelectedAdmin(null);
+      setEditAdminUsername("");
+      setEditAdminPassword("");
+      setEditAdminFullName("");
+      toast({
+        title: "Admin aggiornato",
+        description: "L'amministratore è stato modificato con successo.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile modificare l'amministratore.",
         variant: "destructive",
       });
     },
@@ -156,12 +210,45 @@ export default function SuperAdminDashboard() {
     });
   };
 
+  const handleUpdateAdmin = () => {
+    if (!editAdminUsername.trim() || !editAdminFullName.trim()) {
+      toast({
+        title: "Errore",
+        description: "Username e Nome completo sono obbligatori.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!selectedOrg || !selectedAdmin) return;
+    
+    updateAdminMutation.mutate({
+      orgId: selectedOrg.id,
+      adminId: selectedAdmin.id,
+      username: editAdminUsername.trim(),
+      password: editAdminPassword.trim() || undefined,
+      fullName: editAdminFullName.trim(),
+    });
+  };
+
   const openCreateAdminDialog = (org: Organization) => {
     setSelectedOrg(org);
     setNewAdminUsername("");
     setNewAdminPassword("");
     setNewAdminFullName("");
     setCreateAdminOpen(true);
+  };
+
+  const openManageAdminsDialog = (org: Organization) => {
+    setSelectedOrg(org);
+    setManageAdminsOpen(true);
+  };
+
+  const openEditAdminDialog = (admin: Admin) => {
+    setSelectedAdmin(admin);
+    setEditAdminUsername(admin.username);
+    setEditAdminFullName(admin.fullName);
+    setEditAdminPassword("");
+    setEditAdminOpen(true);
   };
 
   return (
@@ -264,7 +351,16 @@ export default function SuperAdminDashboard() {
                     </TableCell>
                     <TableCell data-testid={`text-org-date-${org.id}`}>{formatDateToItalian(org.createdAt)}</TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-2 flex-wrap">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openManageAdminsDialog(org)}
+                          data-testid={`button-manage-admins-${org.id}`}
+                        >
+                          <Users className="h-4 w-4 mr-1" />
+                          Gestisci Admin
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
@@ -303,6 +399,7 @@ export default function SuperAdminDashboard() {
         </CardContent>
       </Card>
 
+      {/* Dialog Crea Admin */}
       <Dialog open={createAdminOpen} onOpenChange={setCreateAdminOpen}>
         <DialogContent>
           <DialogHeader>
@@ -357,6 +454,142 @@ export default function SuperAdminDashboard() {
             >
               {createAdminMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Crea Admin
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Gestisci Admin */}
+      <Dialog open={manageAdminsOpen} onOpenChange={setManageAdminsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Amministratori</DialogTitle>
+            <DialogDescription>
+              {selectedOrg && (
+                <span>Gestisci gli amministratori di <strong>{selectedOrg.name}</strong></span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {isLoadingAdmins ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : !admins || admins.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nessun amministratore trovato per questa organizzazione.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Username</TableHead>
+                    <TableHead>Stato</TableHead>
+                    <TableHead className="text-right">Azioni</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {admins.map((admin) => (
+                    <TableRow key={admin.id} data-testid={`row-admin-${admin.id}`}>
+                      <TableCell className="font-medium" data-testid={`text-admin-name-${admin.id}`}>
+                        {admin.fullName}
+                      </TableCell>
+                      <TableCell data-testid={`text-admin-username-${admin.id}`}>
+                        {admin.username}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={admin.isActive !== false ? "default" : "secondary"}>
+                          {admin.isActive !== false ? "Attivo" : "Disattivato"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEditAdminDialog(admin)}
+                          data-testid={`button-edit-admin-${admin.id}`}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Modifica
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManageAdminsOpen(false)}>
+              Chiudi
+            </Button>
+            <Button onClick={() => {
+              setManageAdminsOpen(false);
+              if (selectedOrg) openCreateAdminDialog(selectedOrg);
+            }}>
+              <UserPlus className="h-4 w-4 mr-1" />
+              Aggiungi Admin
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Modifica Admin */}
+      <Dialog open={editAdminOpen} onOpenChange={setEditAdminOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifica Amministratore</DialogTitle>
+            <DialogDescription>
+              {selectedAdmin && (
+                <span>Modifica i dati di <strong>{selectedAdmin.fullName}</strong></span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-admin-fullname">Nome Completo</Label>
+              <Input
+                id="edit-admin-fullname"
+                placeholder="Es. Mario Rossi"
+                value={editAdminFullName}
+                onChange={(e) => setEditAdminFullName(e.target.value)}
+                data-testid="input-edit-admin-fullname"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-admin-username">Username</Label>
+              <Input
+                id="edit-admin-username"
+                placeholder="Es. mario.rossi"
+                value={editAdminUsername}
+                onChange={(e) => setEditAdminUsername(e.target.value)}
+                data-testid="input-edit-admin-username"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-admin-password">Nuova Password (lascia vuoto per non modificare)</Label>
+              <Input
+                id="edit-admin-password"
+                type="password"
+                placeholder="Inserisci nuova password"
+                value={editAdminPassword}
+                onChange={(e) => setEditAdminPassword(e.target.value)}
+                data-testid="input-edit-admin-password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditAdminOpen(false)} data-testid="button-cancel-edit-admin">
+              Annulla
+            </Button>
+            <Button
+              onClick={handleUpdateAdmin}
+              disabled={updateAdminMutation.isPending}
+              data-testid="button-confirm-edit-admin"
+            >
+              {updateAdminMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Salva Modifiche
             </Button>
           </DialogFooter>
         </DialogContent>

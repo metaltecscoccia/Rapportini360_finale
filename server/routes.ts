@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import rateLimit from "express-rate-limit";
+import { z } from "zod";
 import { storage } from "./storage";
 import { WordService } from "./wordService";
 import { txtService } from "./txtService";
@@ -263,6 +264,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating admin:", error);
       res.status(500).json({ error: "Failed to create admin" });
+    }
+  });
+
+  // Get admins for an organization (super admin only)
+  app.get("/api/superadmin/organizations/:id/admins", requireSuperAdmin, async (req, res) => {
+    try {
+      const { id: organizationId } = req.params;
+      
+      const organization = await storage.getOrganization(organizationId);
+      if (!organization) {
+        return res.status(404).json({ error: "Organizzazione non trovata" });
+      }
+
+      const users = await storage.getAllUsers(organizationId);
+      const admins = users.filter(u => u.role === "admin").map(({ password, ...admin }) => admin);
+      
+      res.json(admins);
+    } catch (error) {
+      console.error("Error fetching admins:", error);
+      res.status(500).json({ error: "Failed to fetch admins" });
+    }
+  });
+
+  // Update admin for an organization (super admin only)
+  app.put("/api/superadmin/organizations/:id/admin/:adminId", requireSuperAdmin, async (req, res) => {
+    try {
+      const { id: organizationId, adminId } = req.params;
+      
+      // Validate request body
+      const updateAdminSchema = z.object({
+        username: z.string().min(3, "Username deve avere almeno 3 caratteri"),
+        fullName: z.string().min(2, "Nome deve avere almeno 2 caratteri"),
+        password: z.string().min(1).optional(),
+      });
+      
+      const parsed = updateAdminSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Dati non validi", details: parsed.error });
+      }
+      
+      const { username, password, fullName } = parsed.data;
+
+      // Check if organization exists
+      const organization = await storage.getOrganization(organizationId);
+      if (!organization) {
+        return res.status(404).json({ error: "Organizzazione non trovata" });
+      }
+
+      // Check if admin exists and belongs to this organization
+      const existingAdmin = await storage.getUser(adminId);
+      if (!existingAdmin || existingAdmin.organizationId !== organizationId || existingAdmin.role !== "admin") {
+        return res.status(404).json({ error: "Admin non trovato" });
+      }
+
+      // Check if username is already taken by another user
+      if (username !== existingAdmin.username) {
+        const userWithUsername = await storage.getUserByUsername(username);
+        if (userWithUsername && userWithUsername.id !== adminId) {
+          return res.status(400).json({ error: "Username già in uso" });
+        }
+      }
+
+      // Build update data
+      const updateData: { username: string; password?: string; fullName: string } = { username, fullName };
+      if (password) updateData.password = await hashPassword(password);
+
+      const updatedAdmin = await storage.updateUser(adminId, updateData);
+      const { password: _, ...adminWithoutPassword } = updatedAdmin;
+      
+      res.json(adminWithoutPassword);
+    } catch (error) {
+      console.error("Error updating admin:", error);
+      res.status(500).json({ error: "Failed to update admin" });
     }
   });
 
