@@ -1,0 +1,107 @@
+================================================================================
+REPORT ASSENZE STRATEGICHE
+Assenze (escluse Ferie) registrate il giorno prima o dopo weekend/festività
+================================================================================
+Generato il: 20/12/2025, 16:04:49
+Totale assenze strategiche: 23
+
+--------------------------------------------------------------------------------
+
+RIEPILOGO PER DIPENDENTE:
+
+  Paris Francesco: 7 assenze strategiche
+  Persia Cristian : 4 assenze strategiche
+  Joita Florin: 3 assenze strategiche
+  De Benedictis Antonello: 3 assenze strategiche
+  Mora Bravo Henry: 2 assenze strategiche
+  Mailat Roberto: 1 assenze strategiche
+  Di Stefano Antonio: 1 assenze strategiche
+  Taccone Alessandra : 1 assenze strategiche
+  Scognamiglio Diego: 1 assenze strategiche
+
+--------------------------------------------------------------------------------
+
+DETTAGLIO ASSENZE STRATEGICHE:
+
+
+Paris Francesco (7 assenze):
+----------------------------------------
+  15/12/2025 (Lunedì) - Cassa Integrazione/Permesso
+    Motivo: giorno prima (2025-12-14) è weekend
+  05/12/2025 (Venerdì) - Cassa Integrazione/Permesso
+    Motivo: giorno dopo (2025-12-06) è weekend
+  01/12/2025 (Lunedì) - Cassa Integrazione/Permesso
+    Motivo: giorno prima (2025-11-30) è weekend
+  28/11/2025 (Venerdì) - Cassa Integrazione/Permesso
+    Motivo: giorno dopo (2025-11-29) è weekend
+  24/11/2025 (Lunedì) - Cassa Integrazione/Permesso
+    Motivo: giorno prima (2025-11-23) è weekend
+  17/11/2025 (Lunedì) - Cassa Integrazione/Permesso
+    Motivo: giorno prima (2025-11-16) è weekend
+  20/10/2025 (Lunedì) - Cassa Integrazione/Permesso
+    Motivo: giorno prima (2025-10-19) è weekend
+
+Persia Cristian  (4 assenze):
+----------------------------------------
+  24/12/2025 (Mercoledì) - Assenza
+    Motivo: giorno dopo (2025-12-25) è festività
+  22/12/2025 (Lunedì) - Assenza
+    Motivo: giorno prima (2025-12-21) è weekend
+  19/12/2025 (Venerdì) - Assenza
+    Motivo: giorno dopo (2025-12-20) è weekend
+  15/12/2025 (Lunedì) - Assenza
+    Motivo: giorno prima (2025-12-14) è weekend
+
+Joita Florin (3 assenze):
+----------------------------------------
+  19/12/2025 (Venerdì) - Legge 104
+    Motivo: giorno dopo (2025-12-20) è weekend
+  20/10/2025 (Lunedì) - Legge 104
+    Motivo: giorno prima (2025-10-19) è weekend
+  13/10/2025 (Lunedì) - Legge 104
+    Motivo: giorno prima (2025-10-12) è weekend
+
+De Benedictis Antonello (3 assenze):
+----------------------------------------
+  28/11/2025 (Venerdì) - Assenza
+    Motivo: giorno dopo (2025-11-29) è weekend
+  24/11/2025 (Lunedì) - Assenza
+    Motivo: giorno prima (2025-11-23) è weekend
+  21/11/2025 (Venerdì) - Assenza
+    Motivo: giorno dopo (2025-11-22) è weekend
+
+Mora Bravo Henry (2 assenze):
+----------------------------------------
+  12/12/2025 (Venerdì) - Assenza
+    Motivo: giorno dopo (2025-12-13) è weekend
+  03/11/2025 (Lunedì) - Permesso
+    Motivo: giorno prima (2025-11-02) è weekend
+
+Mailat Roberto (1 assenze):
+----------------------------------------
+  12/12/2025 (Venerdì) - Assenza
+    Motivo: giorno dopo (2025-12-13) è weekend
+
+Di Stefano Antonio (1 assenze):
+----------------------------------------
+  09/12/2025 (Martedì) - Assenza
+    Motivo: giorno prima (2025-12-08) è festività
+
+Taccone Alessandra  (1 assenze):
+----------------------------------------
+  01/12/2025 (Lunedì) - Permesso
+    Motivo: giorno prima (2025-11-30) è weekend
+
+Scognamiglio Diego (1 assenze):
+----------------------------------------
+  14/11/2025 (Venerdì) - Assenza
+    Motivo: giorno dopo (2025-11-15) è weekend
+
+================================================================================
+LEGENDA TIPI ASSENZA:
+  A  = Assenza
+  P  = Permesso
+  M  = Malattia
+  CP = Cassa Integrazione/Permesso
+  L104 = Legge 104
+================================================================================
