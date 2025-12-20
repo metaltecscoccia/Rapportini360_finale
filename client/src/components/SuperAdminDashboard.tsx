@@ -33,6 +33,8 @@ import {
   Loader2,
   Users,
   Edit,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { formatDateToItalian } from "@/lib/dateUtils";
 
@@ -66,6 +68,9 @@ export default function SuperAdminDashboard() {
   const [editAdminUsername, setEditAdminUsername] = useState("");
   const [editAdminPassword, setEditAdminPassword] = useState("");
   const [editAdminFullName, setEditAdminFullName] = useState("");
+  const [deleteAdminOpen, setDeleteAdminOpen] = useState(false);
+  const [deleteAdminConfirmOpen, setDeleteAdminConfirmOpen] = useState(false);
+  const [adminToDelete, setAdminToDelete] = useState<Admin | null>(null);
 
   const { data: organizations, isLoading } = useQuery<Organization[]>({
     queryKey: ["/api/superadmin/organizations"],
@@ -179,6 +184,30 @@ export default function SuperAdminDashboard() {
     },
   });
 
+  const deleteAdminMutation = useMutation({
+    mutationFn: async ({ orgId, adminId }: { orgId: string; adminId: string }) => {
+      const response = await apiRequest("DELETE", `/api/superadmin/organizations/${orgId}/admin/${adminId}`);
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/organizations", variables.orgId, "admins"] });
+      setDeleteAdminOpen(false);
+      setDeleteAdminConfirmOpen(false);
+      setAdminToDelete(null);
+      toast({
+        title: "Admin eliminato",
+        description: "L'amministratore è stato eliminato definitivamente.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile eliminare l'amministratore.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateOrg = () => {
     if (!newOrgName.trim()) {
       toast({
@@ -249,6 +278,30 @@ export default function SuperAdminDashboard() {
     setEditAdminFullName(admin.fullName);
     setEditAdminPassword("");
     setEditAdminOpen(true);
+  };
+
+  const openDeleteAdminDialog = (admin: Admin) => {
+    setAdminToDelete(admin);
+    setDeleteAdminOpen(true);
+  };
+
+  const handleFirstDeleteConfirm = () => {
+    setDeleteAdminOpen(false);
+    setDeleteAdminConfirmOpen(true);
+  };
+
+  const handleFinalDelete = () => {
+    if (!selectedOrg || !adminToDelete) return;
+    deleteAdminMutation.mutate({
+      orgId: selectedOrg.id,
+      adminId: adminToDelete.id,
+    });
+  };
+
+  const cancelDelete = () => {
+    setDeleteAdminOpen(false);
+    setDeleteAdminConfirmOpen(false);
+    setAdminToDelete(null);
   };
 
   return (
@@ -504,15 +557,26 @@ export default function SuperAdminDashboard() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEditAdminDialog(admin)}
-                          data-testid={`button-edit-admin-${admin.id}`}
-                        >
-                          <Edit className="h-4 w-4 mr-1" />
-                          Modifica
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditAdminDialog(admin)}
+                            data-testid={`button-edit-admin-${admin.id}`}
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Modifica
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => openDeleteAdminDialog(admin)}
+                            data-testid={`button-delete-admin-${admin.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Elimina
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -590,6 +654,76 @@ export default function SuperAdminDashboard() {
             >
               {updateAdminMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Salva Modifiche
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Prima Conferma Eliminazione Admin */}
+      <Dialog open={deleteAdminOpen} onOpenChange={(open) => !open && cancelDelete()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Conferma Eliminazione
+            </DialogTitle>
+            <DialogDescription>
+              {adminToDelete && (
+                <span>
+                  Stai per eliminare l'amministratore <strong>{adminToDelete.fullName}</strong> ({adminToDelete.username}).
+                  <br /><br />
+                  Questa azione è <strong>irreversibile</strong>. Tutti i dati associati a questo admin verranno persi.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={cancelDelete} data-testid="button-cancel-delete-admin">
+              Annulla
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleFirstDeleteConfirm}
+              data-testid="button-first-confirm-delete-admin"
+            >
+              Sì, voglio eliminare
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Seconda Conferma Eliminazione Admin */}
+      <Dialog open={deleteAdminConfirmOpen} onOpenChange={(open) => !open && cancelDelete()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Conferma Definitiva
+            </DialogTitle>
+            <DialogDescription>
+              {adminToDelete && (
+                <span>
+                  <strong>ATTENZIONE!</strong> Questa è l'ultima conferma.
+                  <br /><br />
+                  L'amministratore <strong>{adminToDelete.fullName}</strong> sarà eliminato <strong>definitivamente</strong>.
+                  <br /><br />
+                  Sei assolutamente sicuro di voler procedere?
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={cancelDelete} data-testid="button-cancel-final-delete-admin">
+              No, annulla
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleFinalDelete}
+              disabled={deleteAdminMutation.isPending}
+              data-testid="button-final-confirm-delete-admin"
+            >
+              {deleteAdminMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Elimina Definitivamente
             </Button>
           </DialogFooter>
         </DialogContent>

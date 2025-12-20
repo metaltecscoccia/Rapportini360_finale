@@ -339,6 +339,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete admin for an organization (super admin only)
+  app.delete("/api/superadmin/organizations/:id/admin/:adminId", requireSuperAdmin, async (req, res) => {
+    try {
+      const { id: organizationId, adminId } = req.params;
+
+      // Check if organization exists
+      const organization = await storage.getOrganization(organizationId);
+      if (!organization) {
+        return res.status(404).json({ error: "Organizzazione non trovata" });
+      }
+
+      // Check if admin exists and belongs to this organization
+      const existingAdmin = await storage.getUser(adminId);
+      if (!existingAdmin || existingAdmin.organizationId !== organizationId || existingAdmin.role !== "admin") {
+        return res.status(404).json({ error: "Admin non trovato" });
+      }
+
+      // Delete the admin
+      await storage.deleteUser(adminId);
+      
+      res.json({ success: true, message: "Admin eliminato con successo" });
+    } catch (error) {
+      console.error("Error deleting admin:", error);
+      res.status(500).json({ error: "Failed to delete admin" });
+    }
+  });
+
   // Get organization details with admin count (super admin only)
   app.get("/api/superadmin/organizations/:id", requireSuperAdmin, async (req, res) => {
     try {
