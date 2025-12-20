@@ -95,7 +95,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             <img
               src={logoPath}
               alt="Rapportini360"
-              className="h-48 w-auto object-contain"
+              className="h-72 w-auto object-contain"
             />
           </div>
         </CardHeader>
