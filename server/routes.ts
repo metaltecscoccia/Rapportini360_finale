@@ -250,11 +250,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Username già in uso" });
       }
 
-      // Hash password and create admin
-      const hashedPassword = await hashPassword(password);
+      // Create admin - password will be hashed by storage.createUser
       const admin = await storage.createUser({
         username,
-        password: hashedPassword,
+        password,
         fullName,
         role: "admin",
       }, organizationId);
@@ -326,9 +325,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Build update data
+      // Build update data - password will be hashed by storage.updateUser
       const updateData: { username: string; password?: string; fullName: string } = { username, fullName };
-      if (password) updateData.password = await hashPassword(password);
+      if (password) updateData.password = password;
 
       const updatedAdmin = await storage.updateUser(adminId, updateData);
       const { password: _, ...adminWithoutPassword } = updatedAdmin;
