@@ -50,6 +50,108 @@ import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
 import { hashPassword } from "./auth";
 
+// Helper functions for strategic absences detection
+// Cache holidays by year to avoid recomputation
+const holidaysCache = new Map<number, Set<string>>();
+
+function getItalianHolidays(year: number): Set<string> {
+  if (holidaysCache.has(year)) {
+    return holidaysCache.get(year)!;
+  }
+  
+  const holidays = new Set<string>();
+  
+  // Fixed Italian national holidays
+  holidays.add(`${year}-01-01`); // Capodanno
+  holidays.add(`${year}-01-06`); // Epifania
+  holidays.add(`${year}-04-25`); // Liberazione
+  holidays.add(`${year}-05-01`); // Festa del Lavoro
+  holidays.add(`${year}-06-02`); // Festa della Repubblica
+  holidays.add(`${year}-08-15`); // Ferragosto
+  holidays.add(`${year}-11-01`); // Ognissanti
+  holidays.add(`${year}-12-08`); // Immacolata
+  holidays.add(`${year}-12-25`); // Natale
+  holidays.add(`${year}-12-26`); // Santo Stefano
+  
+  // Easter and Easter Monday (calculated)
+  const easter = calculateEaster(year);
+  const easterMonday = new Date(easter);
+  easterMonday.setDate(easterMonday.getDate() + 1);
+  holidays.add(formatDateToString(easter));
+  holidays.add(formatDateToString(easterMonday));
+  
+  holidaysCache.set(year, holidays);
+  return holidays;
+}
+
+function formatDateToString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function calculateEaster(year: number): Date {
+  // Anonymous Gregorian algorithm
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+}
+
+function getAllHolidaysForDateRange(dateStr: string): Set<string> {
+  // Get holidays for current year and adjacent years to handle year boundaries
+  const date = new Date(dateStr + 'T12:00:00'); // Use noon to avoid timezone issues
+  const year = date.getFullYear();
+  const allHolidays = new Set<string>();
+  
+  // Always include current year and adjacent years for boundary cases
+  [year - 1, year, year + 1].forEach(y => {
+    getItalianHolidays(y).forEach(h => allHolidays.add(h));
+  });
+  
+  return allHolidays;
+}
+
+function isNonWorkingDay(date: Date, holidays: Set<string>): boolean {
+  const dayOfWeek = date.getDay();
+  // Weekend (Saturday = 6, Sunday = 0)
+  if (dayOfWeek === 0 || dayOfWeek === 6) return true;
+  // Holiday
+  const dateStr = formatDateToString(date);
+  return holidays.has(dateStr);
+}
+
+function isStrategicAbsence(dateStr: string): boolean {
+  // Parse date at noon to avoid timezone issues
+  const date = new Date(dateStr + 'T12:00:00');
+  const holidays = getAllHolidaysForDateRange(dateStr);
+  
+  // Check if the day before is non-working
+  const dayBefore = new Date(date);
+  dayBefore.setDate(dayBefore.getDate() - 1);
+  const beforeIsNonWorking = isNonWorkingDay(dayBefore, holidays);
+  
+  // Check if the day after is non-working
+  const dayAfter = new Date(date);
+  dayAfter.setDate(dayAfter.getDate() + 1);
+  const afterIsNonWorking = isNonWorkingDay(dayAfter, holidays);
+  
+  // Strategic if adjacent to non-working day
+  return beforeIsNonWorking || afterIsNonWorking;
+}
+
 export interface IStorage {
   // Organizations (Super Admin)
   getAllOrganizations(): Promise<Organization[]>;
@@ -198,6 +300,7 @@ export interface IStorage {
       userId: string;
       fullName: string;
       totalAbsences: number;
+      strategicAbsences: number;
       byType: Record<string, number>;
       byDayOfWeek: Record<number, number>;
     }>;
@@ -209,6 +312,7 @@ export interface IStorage {
       count: number;
     }>;
     totalAbsences: number;
+    totalStrategicAbsences: number;
   }>;
   
   // Employee-specific Attendance Statistics
@@ -223,6 +327,8 @@ export interface IStorage {
       count: number;
     }>;
     totalAbsences: number;
+    strategicAbsences: number;
+    strategicPercentage: number;
   }>;
 }
 
@@ -1379,6 +1485,7 @@ export class DatabaseStorage implements IStorage {
       userId: string;
       fullName: string;
       totalAbsences: number;
+      strategicAbsences: number;
       byType: Record<string, number>;
       byDayOfWeek: Record<number, number>;
     }>;
@@ -1390,6 +1497,7 @@ export class DatabaseStorage implements IStorage {
       count: number;
     }>;
     totalAbsences: number;
+    totalStrategicAbsences: number;
   }> {
     await this.ensureInitialized();
     
@@ -1421,9 +1529,11 @@ export class DatabaseStorage implements IStorage {
     const byMonthMap: Map<string, number> = new Map();
     const byEmployeeMap: Map<string, {
       totalAbsences: number;
+      strategicAbsences: number;
       byType: Record<string, number>;
       byDayOfWeek: Record<number, number>;
     }> = new Map();
+    let totalStrategicAbsences = 0;
     
     // Process each entry
     for (const entry of entries) {
@@ -1439,16 +1549,26 @@ export class DatabaseStorage implements IStorage {
       const monthKey = `${entry.date.substring(0, 7)}`; // YYYY-MM
       byMonthMap.set(monthKey, (byMonthMap.get(monthKey) || 0) + 1);
       
+      // Check if strategic absence (exclude Ferie 'F')
+      const isStrategic = entry.absenceType !== 'F' && isStrategicAbsence(entry.date);
+      if (isStrategic) {
+        totalStrategicAbsences++;
+      }
+      
       // By employee
       if (!byEmployeeMap.has(entry.userId)) {
         byEmployeeMap.set(entry.userId, {
           totalAbsences: 0,
+          strategicAbsences: 0,
           byType: {},
           byDayOfWeek: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
         });
       }
       const empStats = byEmployeeMap.get(entry.userId)!;
       empStats.totalAbsences++;
+      if (isStrategic) {
+        empStats.strategicAbsences++;
+      }
       empStats.byType[entry.absenceType] = (empStats.byType[entry.absenceType] || 0) + 1;
       empStats.byDayOfWeek[dayOfWeek]++;
     }
@@ -1458,6 +1578,7 @@ export class DatabaseStorage implements IStorage {
       userId,
       fullName: userMap.get(userId)?.fullName || 'Utente sconosciuto',
       totalAbsences: stats.totalAbsences,
+      strategicAbsences: stats.strategicAbsences,
       byType: stats.byType,
       byDayOfWeek: stats.byDayOfWeek
     })).sort((a, b) => b.totalAbsences - a.totalAbsences);
@@ -1476,7 +1597,8 @@ export class DatabaseStorage implements IStorage {
       byType,
       byDayOfWeek,
       byMonth,
-      totalAbsences: entries.length
+      totalAbsences: entries.length,
+      totalStrategicAbsences
     };
   }
 
@@ -1491,6 +1613,8 @@ export class DatabaseStorage implements IStorage {
       count: number;
     }>;
     totalAbsences: number;
+    strategicAbsences: number;
+    strategicPercentage: number;
   }> {
     await this.ensureInitialized();
     
@@ -1523,6 +1647,7 @@ export class DatabaseStorage implements IStorage {
     const byType: Record<string, number> = {};
     const byDayOfWeek: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
     const byMonthMap: Map<string, number> = new Map();
+    let strategicAbsences = 0;
     
     // Process each entry
     for (const entry of entries) {
@@ -1537,6 +1662,11 @@ export class DatabaseStorage implements IStorage {
       // By month
       const monthKey = `${entry.date.substring(0, 7)}`; // YYYY-MM
       byMonthMap.set(monthKey, (byMonthMap.get(monthKey) || 0) + 1);
+      
+      // Check if strategic absence (exclude Ferie 'F')
+      if (entry.absenceType !== 'F' && isStrategicAbsence(entry.date)) {
+        strategicAbsences++;
+      }
     }
     
     // Build byMonth array sorted by date
@@ -1548,13 +1678,21 @@ export class DatabaseStorage implements IStorage {
       }))
       .sort((a, b) => a.month.localeCompare(b.month));
     
+    // Calculate strategic percentage (excluding Ferie from total for percentage calculation)
+    const absencesExcludingFerie = entries.filter(e => e.absenceType !== 'F').length;
+    const strategicPercentage = absencesExcludingFerie > 0 
+      ? Math.round((strategicAbsences / absencesExcludingFerie) * 100) 
+      : 0;
+    
     return {
       userId,
       fullName,
       byType,
       byDayOfWeek,
       byMonth,
-      totalAbsences: entries.length
+      totalAbsences: entries.length,
+      strategicAbsences,
+      strategicPercentage
     };
   }
 }

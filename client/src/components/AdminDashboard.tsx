@@ -361,7 +361,8 @@ export default function AdminDashboard() {
   // Query per statistiche assenze (caricato solo quando la tab è selezionata)
   const { data: attendanceStats, isLoading: isLoadingAttendanceStats, isFetching: isFetchingAttendanceStats } = useQuery<{
     totalAbsences: number;
-    byEmployee: Array<{ userId: string; fullName: string; totalAbsences: number }>;
+    totalStrategicAbsences: number;
+    byEmployee: Array<{ userId: string; fullName: string; totalAbsences: number; strategicAbsences: number }>;
     byType: Record<string, number>;
     byDayOfWeek: Record<number, number>;
     byMonth: Array<{ month: string; count: number }>;
@@ -392,6 +393,8 @@ export default function AdminDashboard() {
     userId: string;
     fullName: string;
     totalAbsences: number;
+    strategicAbsences: number;
+    strategicPercentage: number;
     byType: Record<string, number>;
     byDayOfWeek: Record<number, number>;
     byMonth: Array<{ month: string; count: number }>;
@@ -3208,6 +3211,65 @@ export default function AdminDashboard() {
                 </Card>
               </div>
 
+              {/* Strategic Absences Card */}
+              <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+                    <AlertTriangle className="h-5 w-5" />
+                    Assenze Strategiche
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Assenze (escluse Ferie) registrate il giorno prima o dopo weekend/festività
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+                      {attendanceStats.totalStrategicAbsences || 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      su {attendanceStats.totalAbsences - (attendanceStats.byType?.['F'] || 0)} assenze non-ferie
+                    </div>
+                  </div>
+                  
+                  {/* Strategic absences by employee ranking */}
+                  {attendanceStats.byEmployee && attendanceStats.byEmployee.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Classifica per assenze strategiche:</p>
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {attendanceStats.byEmployee
+                          .filter(emp => emp.strategicAbsences > 0)
+                          .sort((a, b) => b.strategicAbsences - a.strategicAbsences)
+                          .slice(0, 10)
+                          .map((emp, index) => (
+                            <div key={emp.userId} className="flex items-center justify-between py-1 px-2 rounded bg-background">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center ${
+                                  index === 0 ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' :
+                                  index === 1 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' :
+                                  index === 2 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
+                                  'bg-muted text-muted-foreground'
+                                }`}>
+                                  {index + 1}
+                                </span>
+                                <span className="text-sm">{emp.fullName}</span>
+                              </div>
+                              <Badge variant={emp.strategicAbsences >= 5 ? "destructive" : emp.strategicAbsences >= 3 ? "secondary" : "outline"}>
+                                {emp.strategicAbsences}
+                              </Badge>
+                            </div>
+                          ))}
+                        {attendanceStats.byEmployee.filter(emp => emp.strategicAbsences > 0).length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            Nessuna assenza strategica rilevata
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Charts Row */}
               <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
                 {/* Monthly Trend Chart */}
@@ -4823,7 +4885,7 @@ export default function AdminDashboard() {
           ) : employeeStats ? (
             <div className="space-y-6">
               {/* KPI Cards */}
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between gap-2">
@@ -4832,6 +4894,27 @@ export default function AdminDashboard() {
                         <p className="text-2xl font-bold">{employeeStats.totalAbsences || 0}</p>
                       </div>
                       <AlertTriangle className="h-6 w-6 text-warning" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className={employeeStats.strategicAbsences > 0 ? "border-orange-200 dark:border-orange-800" : ""}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Assenze Strategiche</p>
+                        <p className={`text-2xl font-bold ${employeeStats.strategicAbsences >= 5 ? 'text-red-600' : employeeStats.strategicAbsences >= 3 ? 'text-orange-600' : ''}`}>
+                          {employeeStats.strategicAbsences || 0}
+                        </p>
+                        {employeeStats.strategicPercentage > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            {employeeStats.strategicPercentage}% delle assenze
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant={employeeStats.strategicAbsences >= 5 ? "destructive" : employeeStats.strategicAbsences >= 3 ? "secondary" : "outline"} className="h-8 w-8 rounded-full p-0 flex items-center justify-center">
+                        <AlertTriangle className="h-4 w-4" />
+                      </Badge>
                     </div>
                   </CardContent>
                 </Card>
