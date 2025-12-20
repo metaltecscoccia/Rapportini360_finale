@@ -4,15 +4,13 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LogIn, Loader2, AlertCircle, Shield } from "lucide-react";
-import logoPath from "@assets/3F8AF681-7737-41D8-A852-3AEB802C183F_1759092829478.png";
+import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_1766249194109.png";
 
 interface LoginFormProps {
   onLogin: (
@@ -96,18 +94,9 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           <div className="flex justify-center">
             <img
               src={logoPath}
-              alt="METALTEC Scoccia S.R.L."
-              className="h-20 w-auto object-contain"
+              alt="Rapportini360"
+              className="h-32 w-auto object-contain"
             />
-          </div>
-          <div>
-            <CardTitle className="flex items-center justify-center gap-2 text-xl">
-              <LogIn className="h-5 w-5" />
-              Gestione Rapportini
-            </CardTitle>
-            <CardDescription className="mt-2">
-              Accedi per gestire i rapportini giornalieri
-            </CardDescription>
           </div>
         </CardHeader>
 
