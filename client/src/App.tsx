@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Switch, Route } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
 import { queryClient } from "./lib/queryClient";
 import {
   QueryClientProvider,
@@ -161,12 +162,26 @@ function AuthenticatedApp({
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <motion.div 
+      className="min-h-screen bg-background"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
       {/* Header */}
-      <header className="border-b bg-card">
+      <motion.header 
+        className="border-b bg-card"
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+      >
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div>
+            <motion.div
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
               <h1 className="text-xl font-semibold">
                 {currentUser.role === "superadmin"
                   ? "Super Admin"
@@ -177,22 +192,32 @@ function AuthenticatedApp({
               <p className="text-sm text-muted-foreground">
                 Benvenuto, {currentUser.fullName}
               </p>
-            </div>
+            </motion.div>
 
-            <div className="flex items-center gap-2">
+            <motion.div 
+              className="flex items-center gap-2"
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
               <ThemeToggle />
-              <Button
-                variant="outline"
-                onClick={handleLogout}
-                data-testid="button-logout"
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <LogOut className="h-4 w-4 mr-2" />
-                Esci
-              </Button>
-            </div>
+                <Button
+                  variant="outline"
+                  onClick={handleLogout}
+                  data-testid="button-logout"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Esci
+                </Button>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Main Content */}
       <main className="container mx-auto">
@@ -236,7 +261,7 @@ function AuthenticatedApp({
           </div>
         )}
       </main>
-    </div>
+    </motion.div>
   );
 }
 

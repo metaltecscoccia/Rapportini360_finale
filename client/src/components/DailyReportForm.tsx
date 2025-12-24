@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Send, Camera, X } from "lucide-react";
+import { Plus, Trash2, Send, Camera, X, Loader2, Check } from "lucide-react";
 import { Client, WorkOrder } from "@shared/schema";
 import StatusBadge from "./StatusBadge";
 import { useQuery } from "@tanstack/react-query";
@@ -568,58 +569,102 @@ export default function DailyReportForm({
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Operazioni</h3>
               
-              {operations.map((operation, index) => (
-                <OperationCard
-                  key={operation.id}
-                  operation={operation}
-                  index={index}
-                  operationsLength={operations.length}
-                  clients={clientsWithWorkOrders}
-                  clientsLoading={clientsLoading}
-                  allWorkOrders={allWorkOrders}
-                  workOrdersLoading={workOrdersLoading}
-                  allWorkTypes={allWorkTypes}
-                  allMaterials={allMaterials}
-                  onRemove={removeOperation}
-                  setOperations={setOperations}
-                  onToggleWorkType={toggleWorkType}
-                  onToggleMaterial={toggleMaterial}
-                />
-              ))}
+              <AnimatePresence mode="popLayout">
+                {operations.map((operation, index) => (
+                  <motion.div
+                    key={operation.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    transition={{ 
+                      type: "spring", 
+                      stiffness: 300, 
+                      damping: 25
+                    }}
+                    layout
+                  >
+                    <OperationCard
+                      operation={operation}
+                      index={index}
+                      operationsLength={operations.length}
+                      clients={clientsWithWorkOrders}
+                      clientsLoading={clientsLoading}
+                      allWorkOrders={allWorkOrders}
+                      workOrdersLoading={workOrdersLoading}
+                      allWorkTypes={allWorkTypes}
+                      allMaterials={allMaterials}
+                      onRemove={removeOperation}
+                      setOperations={setOperations}
+                      onToggleWorkType={toggleWorkType}
+                      onToggleMaterial={toggleMaterial}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
             
-            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
-              <div className="text-sm text-muted-foreground">
+            <motion.div 
+              className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <motion.div 
+                className="text-sm text-muted-foreground"
+                key={getTotalHours()}
+                initial={{ scale: 1 }}
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ duration: 0.3 }}
+              >
                 <strong>Ore totali: {getTotalHours()}h</strong>
                 <span className="ml-2 text-xs">
                   {getTotalHours() === 8 ? "(✓ Standard)" : getTotalHours() < 8 ? "(⚠ Sotto standard)" : "(⚠ Sopra standard)"}
                 </span>
-              </div>
+              </motion.div>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addOperation}
-                  data-testid="button-add-operation"
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   className="w-full sm:w-auto"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Aggiungi Operazione
-                </Button>
-                <Button 
-                  type="submit" 
-                  data-testid="button-submit-report" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addOperation}
+                    data-testid="button-add-operation"
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Aggiungi Operazione
+                  </Button>
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   className="w-full sm:w-auto"
-                  disabled={isSubmitting}
                 >
-                  <Send className="h-4 w-4 mr-2" />
-                  {isSubmitting 
-                    ? "Invio in corso..." 
-                    : isEditing ? "Aggiorna Rapportino" : "Invia Rapportino"
-                  }
-                </Button>
+                  <Button 
+                    type="submit" 
+                    data-testid="button-submit-report" 
+                    className="w-full"
+                    disabled={isSubmitting}
+                    aria-live="polite"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Invio in corso...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        {isEditing ? "Aggiorna Rapportino" : "Invia Rapportino"}
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
               </div>
-            </div>
+            </motion.div>
           </form>
         </CardContent>
       </Card>
