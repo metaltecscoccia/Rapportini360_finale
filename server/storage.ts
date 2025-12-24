@@ -1487,6 +1487,7 @@ export class DatabaseStorage implements IStorage {
     byEmployee: Array<{
       userId: string;
       fullName: string;
+      isActive: boolean;
       totalAbsences: number;
       strategicAbsences: number;
       byType: Record<string, number>;
@@ -1580,6 +1581,7 @@ export class DatabaseStorage implements IStorage {
     const byEmployee = Array.from(byEmployeeMap.entries()).map(([userId, stats]) => ({
       userId,
       fullName: userMap.get(userId)?.fullName || 'Utente sconosciuto',
+      isActive: userMap.get(userId)?.isActive ?? false,
       totalAbsences: stats.totalAbsences,
       strategicAbsences: stats.strategicAbsences,
       byType: stats.byType,
