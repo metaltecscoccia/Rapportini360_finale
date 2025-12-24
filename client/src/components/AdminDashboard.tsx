@@ -363,7 +363,7 @@ export default function AdminDashboard() {
   const { data: attendanceStats, isLoading: isLoadingAttendanceStats, isFetching: isFetchingAttendanceStats } = useQuery<{
     totalAbsences: number;
     totalStrategicAbsences: number;
-    byEmployee: Array<{ userId: string; fullName: string; totalAbsences: number; strategicAbsences: number }>;
+    byEmployee: Array<{ userId: string; fullName: string; isActive: boolean; totalAbsences: number; strategicAbsences: number }>;
     byType: Record<string, number>;
     byDayOfWeek: Record<number, number>;
     byMonth: Array<{ month: string; count: number }>;
@@ -3249,10 +3249,10 @@ export default function AdminDashboard() {
                   {/* Strategic absences by employee ranking */}
                   {attendanceStats.byEmployee && attendanceStats.byEmployee.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground mb-2">Classifica per assenze strategiche:</p>
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Classifica per assenze strategiche (solo dipendenti attivi):</p>
                       <div className="space-y-1 max-h-48 overflow-y-auto">
                         {attendanceStats.byEmployee
-                          .filter(emp => emp.strategicAbsences > 0)
+                          .filter(emp => emp.strategicAbsences > 0 && emp.isActive)
                           .sort((a, b) => b.strategicAbsences - a.strategicAbsences)
                           .slice(0, 10)
                           .map((emp, index) => (
@@ -3273,7 +3273,7 @@ export default function AdminDashboard() {
                               </Badge>
                             </div>
                           ))}
-                        {attendanceStats.byEmployee.filter(emp => emp.strategicAbsences > 0).length === 0 && (
+                        {attendanceStats.byEmployee.filter(emp => emp.strategicAbsences > 0 && emp.isActive).length === 0 && (
                           <p className="text-sm text-muted-foreground text-center py-4">
                             Nessuna assenza strategica rilevata
                           </p>
