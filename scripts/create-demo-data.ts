@@ -3,7 +3,6 @@ import {
   organizations, clients, users, workOrders, workTypes, materials,
   dailyReports, operations, attendanceEntries
 } from '../shared/schema';
-import { eq } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 
 // Configuration
@@ -29,9 +28,9 @@ const employeeNames = [
 ];
 
 const clientNames = [
-  { name: "Edilizia Rossi S.r.l.", address: "Via Roma 123, Milano" },
-  { name: "Costruzioni Verdi S.p.A.", address: "Corso Italia 45, Torino" },
-  { name: "Impresa Bianchi & C.", address: "Viale Europa 78, Bologna" }
+  { name: "Edilizia Rossi S.r.l." },
+  { name: "Costruzioni Verdi S.p.A." },
+  { name: "Impresa Bianchi & C." }
 ];
 
 const workOrderDescriptions = [
@@ -40,20 +39,21 @@ const workOrderDescriptions = [
   ["Realizzazione struttura metallica", "Montaggio scaffalature"]
 ];
 
+// Use unique names for demo org to avoid constraint conflicts
 const workTypesList = [
-  { name: "Saldatura", hourlyRate: 45 },
-  { name: "Montaggio", hourlyRate: 40 },
-  { name: "Carpenteria", hourlyRate: 42 },
-  { name: "Manutenzione", hourlyRate: 38 },
-  { name: "Installazione", hourlyRate: 44 }
+  { name: "Saldatura TIG industriale" },
+  { name: "Montaggio componenti" },
+  { name: "Carpenteria metallica" },
+  { name: "Manutenzione preventiva" },
+  { name: "Installazione linee" }
 ];
 
 const materialsList = [
-  { name: "Acciaio inox", unit: "kg" },
-  { name: "Tubolari", unit: "m" },
-  { name: "Bulloneria", unit: "pz" },
-  { name: "Lamiere", unit: "mq" },
-  { name: "Profili", unit: "m" }
+  { name: "Acciaio AISI 304" },
+  { name: "Tubolari quadri" },
+  { name: "Bulloneria M10" },
+  { name: "Lamiere zincate" },
+  { name: "Profili HEA" }
 ];
 
 const absenceTypes = ['I', 'O', 'S', 'CP', 'M', 'A'];
@@ -87,6 +87,11 @@ function formatDate(date: Date): string {
 
 function randomElement<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function randomElements<T>(arr: T[], count: number): T[] {
+  const shuffled = [...arr].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, count);
 }
 
 function randomInt(min: number, max: number): number {
@@ -132,6 +137,7 @@ async function createDemoData() {
       id: empId,
       username: username,
       password: await bcrypt.hash("dipendente1", 10),
+      plainPassword: "dipendente1",
       fullName: `${emp.firstName} ${emp.lastName}`,
       role: "employee",
       organizationId: orgId,
@@ -153,7 +159,6 @@ async function createDemoData() {
     await db.insert(clients).values({
       id: clientId,
       name: client.name,
-      address: client.address,
       organizationId: orgId
     });
     
@@ -170,7 +175,6 @@ async function createDemoData() {
     await db.insert(workTypes).values({
       id: wtId,
       name: wt.name,
-      hourlyRate: wt.hourlyRate,
       organizationId: orgId
     });
     workTypeIds.push(wtId);
@@ -186,7 +190,6 @@ async function createDemoData() {
     await db.insert(materials).values({
       id: matId,
       name: mat.name,
-      unit: mat.unit,
       organizationId: orgId
     });
     materialIds.push(matId);
@@ -196,23 +199,25 @@ async function createDemoData() {
 
   // 7. Create work orders
   console.log("📋 Creating work orders...");
-  const workOrderIds: string[] = [];
+  const workOrderData: Array<{ id: string; clientId: string }> = [];
   for (let i = 0; i < NUM_CLIENTS; i++) {
     for (let j = 0; j < WORK_ORDERS_PER_CLIENT; j++) {
       const woId = generateUUID();
-      const orderNumber = `WO-${2024}-${String(i * WORK_ORDERS_PER_CLIENT + j + 1).padStart(3, '0')}`;
+      const orderName = `WO-2024-${String(i * WORK_ORDERS_PER_CLIENT + j + 1).padStart(3, '0')}`;
       
       await db.insert(workOrders).values({
         id: woId,
-        orderNumber: orderNumber,
+        name: orderName,
         description: workOrderDescriptions[i][j],
         clientId: clientIds[i],
-        status: "active",
-        organizationId: orgId
+        isActive: true,
+        organizationId: orgId,
+        availableWorkTypes: workTypeIds,
+        availableMaterials: materialIds
       });
       
-      workOrderIds.push(woId);
-      console.log(`   ✓ ${orderNumber}: ${workOrderDescriptions[i][j]}`);
+      workOrderData.push({ id: woId, clientId: clientIds[i] });
+      console.log(`   ✓ ${orderName}: ${workOrderDescriptions[i][j]}`);
     }
   }
   console.log("");
@@ -228,62 +233,69 @@ async function createDemoData() {
   console.log(`📅 Generating data for ${workingDays.length} working days`);
   console.log(`   From: ${formatDate(workingDays[0])} To: ${lastWorkingDay}\n`);
 
-  // 9. Generate daily reports and operations
-  console.log("📝 Creating daily reports and operations...");
+  // 9. Generate absences and daily reports
+  console.log("📝 Creating daily reports, operations, and absences...");
   let reportCount = 0;
   let operationCount = 0;
+  let absenceCount = 0;
 
-  // Track absences by week
-  const weekAbsences: Map<string, Set<string>> = new Map();
-
+  // Pre-calculate weekly absences (2 employees per week, random day)
+  const weeklyAbsences: Map<string, Array<{ empId: string; day: number; type: string }>> = new Map();
+  
   for (const day of workingDays) {
-    const dateStr = formatDate(day);
-    const isLastDay = dateStr === lastWorkingDay;
-    
-    // Determine week key for absence tracking
     const weekStart = new Date(day);
     weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Monday
     const weekKey = formatDate(weekStart);
     
-    if (!weekAbsences.has(weekKey)) {
-      weekAbsences.set(weekKey, new Set());
+    if (!weeklyAbsences.has(weekKey)) {
+      // Select 2 random employees and assign them random absence days and types
+      const selectedEmps = randomElements(employeeIds, ABSENCES_PER_WEEK);
+      const absences = selectedEmps.map(empId => ({
+        empId,
+        day: randomInt(1, 5), // Monday to Friday
+        type: randomElement(absenceTypes)
+      }));
+      weeklyAbsences.set(weekKey, absences);
     }
+  }
+
+  for (const day of workingDays) {
+    const dateStr = formatDate(day);
+    const isLastDay = dateStr === lastWorkingDay;
+    const dayOfWeek = day.getDay(); // 1-5 for Mon-Fri
     
-    // Select 2 random employees for absence this week (if not already selected)
-    const weekAbsentees = weekAbsences.get(weekKey)!;
-    while (weekAbsentees.size < ABSENCES_PER_WEEK) {
-      const randomEmpId = randomElement(employeeIds);
-      weekAbsentees.add(randomEmpId);
-    }
+    // Get week absences
+    const weekStart = new Date(day);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+    const weekKey = formatDate(weekStart);
+    const weekAbsences = weeklyAbsences.get(weekKey) || [];
     
     for (const empId of employeeIds) {
       // Check if employee is absent today
-      if (weekAbsentees.has(empId) && day.getDay() === randomInt(1, 5)) {
-        // Create absence entry
-        const absenceType = randomElement(absenceTypes);
+      const isAbsent = weekAbsences.some(a => a.empId === empId && a.day === dayOfWeek);
+      
+      if (isAbsent) {
+        const absenceInfo = weekAbsences.find(a => a.empId === empId && a.day === dayOfWeek)!;
         await db.insert(attendanceEntries).values({
           id: generateUUID(),
           userId: empId,
           date: dateStr,
-          absenceType: absenceType,
-          notes: "",
+          absenceType: absenceInfo.type,
           organizationId: orgId
         });
+        absenceCount++;
         continue; // Skip daily report for this employee
       }
       
       // Create daily report
       const reportId = generateUUID();
-      const approved = !isLastDay; // Last day reports are not approved
+      const status = isLastDay ? "In attesa" : "Approvato";
       
       await db.insert(dailyReports).values({
         id: reportId,
-        userId: empId,
+        employeeId: empId,
         date: dateStr,
-        approved: approved,
-        approvedAt: approved ? new Date().toISOString() : null,
-        approvedBy: approved ? adminId : null,
-        notes: "",
+        status: status,
         organizationId: orgId
       });
       reportCount++;
@@ -291,31 +303,33 @@ async function createDemoData() {
       // Create 1-3 operations per report
       const numOperations = randomInt(1, 3);
       for (let op = 0; op < numOperations; op++) {
-        const startHour = 8 + op * 3;
-        const endHour = startHour + randomInt(2, 3);
+        const selectedWO = randomElement(workOrderData);
+        const selectedWorkTypes = randomElements(workTypeIds, randomInt(1, 2));
+        const selectedMaterials = randomElements(materialIds, randomInt(0, 2));
+        const hours = randomInt(2, 4);
         
         await db.insert(operations).values({
           id: generateUUID(),
-          reportId: reportId,
-          workOrderId: randomElement(workOrderIds),
-          workTypeId: randomElement(workTypeIds),
-          startTime: `${String(startHour).padStart(2, '0')}:00`,
-          endTime: `${String(Math.min(endHour, 18)).padStart(2, '0')}:00`,
-          description: `Lavoro ${workTypesList[randomInt(0, workTypesList.length - 1)].name.toLowerCase()}`,
-          notes: "",
-          organizationId: orgId
+          dailyReportId: reportId,
+          clientId: selectedWO.clientId,
+          workOrderId: selectedWO.id,
+          workTypes: selectedWorkTypes,
+          materials: selectedMaterials,
+          hours: String(hours),
+          notes: ""
         });
         operationCount++;
       }
     }
     
-    if (reportCount % 50 === 0) {
+    if (reportCount % 100 === 0) {
       process.stdout.write(`   ${reportCount} reports created...\r`);
     }
   }
   
   console.log(`   ✓ Created ${reportCount} daily reports`);
-  console.log(`   ✓ Created ${operationCount} operations\n`);
+  console.log(`   ✓ Created ${operationCount} operations`);
+  console.log(`   ✓ Created ${absenceCount} absences\n`);
 
   // 10. Summary
   console.log("═══════════════════════════════════════════════════════");
@@ -326,11 +340,12 @@ async function createDemoData() {
   console.log(`Admin: admin_esempio / admin123`);
   console.log(`Employees: ${NUM_EMPLOYEES}`);
   console.log(`Clients: ${NUM_CLIENTS}`);
-  console.log(`Work Orders: ${workOrderIds.length}`);
+  console.log(`Work Orders: ${workOrderData.length}`);
   console.log(`Daily Reports: ${reportCount}`);
   console.log(`Operations: ${operationCount}`);
+  console.log(`Absences: ${absenceCount}`);
   console.log(`Working Days: ${workingDays.length}`);
-  console.log(`Last day reports: NOT APPROVED`);
+  console.log(`Last day reports: NOT APPROVED (In attesa)`);
   console.log("═══════════════════════════════════════════════════════\n");
 
   return orgId;
