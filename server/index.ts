@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -8,6 +9,21 @@ const app = express();
 
 // Disable ETag globally to prevent 304 responses with empty body
 app.set('etag', false);
+
+// ============================================
+// CORS CONFIGURATION FOR MOBILE APP
+// ============================================
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'capacitor://localhost',
+    'ionic://localhost',
+    'http://localhost',
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // ============================================
 // GLOBAL ERROR HANDLERS
