@@ -35,8 +35,8 @@ export class PDFService {
     const employeeReports: Content[] = [];
     
     for (const report of reports) {
-      const user = await storage.getUser(report.employeeId);
-      const operations = await storage.getOperationsByReportId(report.id);
+      const user = await storage.getUser(report.employeeId, organizationId);
+      const operations = await storage.getOperationsByReportId(report.id, organizationId);
       
       if (user && operations.length > 0) {
         const employeeSection = await this.createEmployeeSection(

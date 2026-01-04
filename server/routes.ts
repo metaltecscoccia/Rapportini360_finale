@@ -329,7 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData: { username: string; password?: string; fullName: string } = { username, fullName };
       if (password) updateData.password = password;
 
-      const updatedAdmin = await storage.updateUser(adminId, updateData);
+      const updatedAdmin = await storage.updateUser(adminId, updateData, existingAdmin.organizationId);
       const { password: _, ...adminWithoutPassword } = updatedAdmin;
       
       res.json(adminWithoutPassword);
@@ -357,7 +357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Delete the admin
-      await storage.deleteUser(adminId);
+      await storage.deleteUser(adminId, existingAdmin.organizationId);
       
       res.json({ success: true, message: "Admin eliminato con successo" });
     } catch (error) {
@@ -470,6 +470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/users/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const organizationId = (req as any).session.organizationId;
       const result = updateUserSchema.safeParse(req.body);
 
       if (!result.success) {
@@ -478,7 +479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ error: "Invalid user data", issues: result.error.issues });
       }
 
-      const existingUser = await storage.getUser(id);
+      const existingUser = await storage.getUser(id, organizationId);
       if (!existingUser) {
         return res.status(404).json({ error: "Utente non trovato" });
       }
@@ -491,12 +492,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const existingUserWithUsername = await storage.getUserByUsername(
           result.data.username,
         );
-        if (existingUserWithUsername) {
+        if (existingUserWithUsername && existingUserWithUsername.organizationId === organizationId) {
           return res.status(400).json({ error: "Username già esistente" });
         }
       }
 
-      const updatedUser = await storage.updateUser(id, result.data);
+      const updatedUser = await storage.updateUser(id, result.data, organizationId);
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating user:", error);
@@ -524,8 +525,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/users/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const organizationId = (req as any).session.organizationId;
 
-      const existingUser = await storage.getUser(id);
+      const existingUser = await storage.getUser(id, organizationId);
       if (!existingUser) {
         return res.status(404).json({ error: "Utente non trovato" });
       }
@@ -537,8 +539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ error: "Non è possibile eliminare utenti amministratori" });
       }
 
-      await storage.deleteDailyReportsByEmployeeId(id);
-      const deleted = await storage.deleteUser(id);
+      const deleted = await storage.deleteUser(id, organizationId);
 
       if (deleted) {
         res.json({ success: true, message: "Utente eliminato con successo" });
@@ -556,12 +557,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { isActive } = req.body;
+      const organizationId = (req as any).session.organizationId;
 
       if (typeof isActive !== 'boolean') {
         return res.status(400).json({ error: "isActive deve essere true o false" });
       }
 
-      const existingUser = await storage.getUser(id);
+      const existingUser = await storage.getUser(id, organizationId);
       if (!existingUser) {
         return res.status(404).json({ error: "Utente non trovato" });
       }
@@ -573,7 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ error: "Non è possibile disabilitare utenti amministratori" });
       }
 
-      const updatedUser = await storage.updateUserStatus(id, isActive);
+      const updatedUser = await storage.updateUserStatus(id, isActive, organizationId);
 
       res.json({
         success: true,
@@ -591,12 +593,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { newPassword } = req.body;
+      const organizationId = (req as any).session.organizationId;
 
       if (!newPassword || newPassword.trim().length === 0) {
         return res.status(400).json({ error: "Password non può essere vuota" });
       }
 
-      const existingUser = await storage.getUser(id);
+      const existingUser = await storage.getUser(id, organizationId);
       if (!existingUser) {
         return res.status(404).json({ error: "Utente non trovato" });
       }
@@ -612,7 +615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedUser = await storage.updateUser(id, {
         password: newPassword.trim(),
-      });
+      }, organizationId);
 
       res.json({
         success: true,
@@ -696,10 +699,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/clients/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const organizationId = (req as any).session.organizationId;
 
-      await storage.deleteOperationsByClientId(id);
-      await storage.deleteWorkOrdersByClientId(id);
-      const deleted = await storage.deleteClient(id);
+      // deleteClient now handles cascading deletes internally with org validation
+      const deleted = await storage.deleteClient(id, organizationId);
 
       if (!deleted) {
         return res.status(404).json({ error: "Cliente non trovato" });
@@ -757,7 +760,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/work-types/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const updatedWorkType = await storage.updateWorkType(id, req.body);
+      const organizationId = (req as any).session.organizationId;
+      const updatedWorkType = await storage.updateWorkType(id, req.body, organizationId);
       res.json(updatedWorkType);
     } catch (error: any) {
       console.error("Error updating work type:", error);
@@ -768,7 +772,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/work-types/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const deleted = await storage.deleteWorkType(id);
+      const organizationId = (req as any).session.organizationId;
+      const deleted = await storage.deleteWorkType(id, organizationId);
 
       if (!deleted) {
         return res.status(404).json({ error: "Lavorazione non trovata" });
@@ -827,7 +832,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/materials/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const updatedMaterial = await storage.updateMaterial(id, req.body);
+      const organizationId = (req as any).session.organizationId;
+      const updatedMaterial = await storage.updateMaterial(id, req.body, organizationId);
       res.json(updatedMaterial);
     } catch (error: any) {
       console.error("Error updating material:", error);
@@ -838,7 +844,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/materials/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const deleted = await storage.deleteMaterial(id);
+      const organizationId = (req as any).session.organizationId;
+      const deleted = await storage.deleteMaterial(id, organizationId);
 
       if (!deleted) {
         return res.status(404).json({ error: "Materiale non trovato" });
@@ -942,6 +949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/work-orders/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const organizationId = (req as any).session.organizationId;
       const result = insertWorkOrderSchema.safeParse(req.body);
 
       if (!result.success) {
@@ -953,7 +961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
       }
 
-      const updatedWorkOrder = await storage.updateWorkOrder(id, result.data);
+      const updatedWorkOrder = await storage.updateWorkOrder(id, result.data, organizationId);
       res.json(updatedWorkOrder);
     } catch (error: any) {
       console.error("Error updating work order:", error);
@@ -965,6 +973,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { isActive } = req.body;
+      const organizationId = (req as any).session.organizationId;
 
       if (typeof isActive !== "boolean") {
         return res
@@ -975,6 +984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedWorkOrder = await storage.updateWorkOrderStatus(
         id,
         isActive,
+        organizationId
       );
       res.json(updatedWorkOrder);
     } catch (error: any) {
@@ -986,9 +996,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/work-orders/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const organizationId = (req as any).session.organizationId;
 
-      await storage.deleteOperationsByWorkOrderId(id);
-      const deleted = await storage.deleteWorkOrder(id);
+      // deleteWorkOrder now handles cascading deletes internally with org validation
+      const deleted = await storage.deleteWorkOrder(id, organizationId);
       if (deleted) {
         res.json({ success: true });
       } else {
@@ -1022,7 +1033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ error: "Nessun rapportino trovato per oggi" });
       }
 
-      const operations = await storage.getOperationsByReportId(report.id);
+      const operations = await storage.getOperationsByReportId(report.id, organizationId);
 
       res.json({
         ...report,
@@ -1068,7 +1079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enrichedReports = await Promise.all(
         reports.map(async (report) => {
           const employee = await storage.getUser(report.employeeId);
-          const operations = await storage.getOperationsByReportId(report.id);
+          const operations = await storage.getOperationsByReportId(report.id, organizationId);
 
           const totalHours = operations.reduce((total, op) => {
             return total + (Number(op.hours) || 0);
@@ -1203,13 +1214,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             insertOperationSchema.safeParse(operationData);
 
           if (operationResult.success) {
-            await storage.createOperation(operationResult.data);
+            await storage.createOperation(operationResult.data, organizationId);
           }
         }
       }
 
       const finalOperations = await storage.getOperationsByReportId(
         newReport.id,
+        organizationId
       );
 
       res.status(201).json({
@@ -1225,6 +1237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/operations", requireAuth, async (req, res) => {
     try {
       const operationData = req.body;
+      const organizationId = (req as any).session.organizationId;
 
       const operationResult = insertOperationSchema.safeParse(operationData);
       if (!operationResult.success) {
@@ -1234,7 +1247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const newOperation = await storage.createOperation(operationResult.data);
+      const newOperation = await storage.createOperation(operationResult.data, organizationId);
 
       res.status(201).json(newOperation);
     } catch (error) {
@@ -1465,12 +1478,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const organizationId = (req as any).session.organizationId;
 
-      const report = await storage.getDailyReport(id);
+      const report = await storage.getDailyReport(id, organizationId);
       if (!report) {
         return res.status(404).json({ error: "Rapportino non trovato" });
       }
 
-      const operations = await storage.getOperationsByReportId(id);
+      const operations = await storage.getOperationsByReportId(id, organizationId);
 
       const enrichedOperations = await Promise.all(
         operations.map(async (op) => {
@@ -1503,8 +1516,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { operations } = req.body;
+      const organizationId = (req as any).session.organizationId;
 
-      const existingReport = await storage.getDailyReport(id);
+      const existingReport = await storage.getDailyReport(id, organizationId);
       if (!existingReport) {
         return res.status(404).json({ error: "Rapportino non trovato" });
       }
@@ -1519,7 +1533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (operations && Array.isArray(operations)) {
-        await storage.deleteOperationsByReportId(id);
+        await storage.deleteOperationsByReportId(id, organizationId);
 
         for (const operation of operations) {
           const operationResult = insertOperationSchema.safeParse({
@@ -1528,12 +1542,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           if (operationResult.success) {
-            await storage.createOperation(operationResult.data);
+            await storage.createOperation(operationResult.data, organizationId);
           }
         }
       }
 
-      const finalOperations = await storage.getOperationsByReportId(id);
+      const finalOperations = await storage.getOperationsByReportId(id, organizationId);
       res.json({
         ...existingReport,
         operations: finalOperations,
@@ -1574,7 +1588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "Data non valida" });
         }
 
-        const existingReport = await storage.getDailyReport(id);
+        const existingReport = await storage.getDailyReport(id, organizationId);
         if (!existingReport) {
           return res.status(404).json({ error: "Rapportino non trovato" });
         }
@@ -1635,7 +1649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
       }
 
-      const operations = await storage.getOperationsByReportId(report.id);
+      const operations = await storage.getOperationsByReportId(report.id, organizationId);
       if (operations.length === 0) {
         return res
           .status(400)
@@ -1649,22 +1663,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const targetTotal = Number(ordinary) + Number(overtime || 0);
 
       if (operations.length === 1) {
-        await storage.updateOperation(operations[0].id, {
-          hours: String(targetTotal),
-        });
+        await storage.updateOperation(
+          operations[0].id,
+          { hours: String(targetTotal) },
+          organizationId
+        );
       } else {
         if (currentTotal > 0) {
           const scaleFactor = targetTotal / currentTotal;
           for (const op of operations) {
             const newHours = Number(op.hours) * scaleFactor;
-            await storage.updateOperation(op.id, { hours: String(newHours) });
+            await storage.updateOperation(
+              op.id,
+              { hours: String(newHours) },
+              organizationId
+            );
           }
         } else {
-          await storage.updateOperation(operations[0].id, {
-            hours: String(targetTotal),
-          });
+          await storage.updateOperation(
+            operations[0].id,
+            { hours: String(targetTotal) },
+            organizationId
+          );
           for (let i = 1; i < operations.length; i++) {
-            await storage.updateOperation(operations[i].id, { hours: "0" });
+            await storage.updateOperation(
+              operations[i].id,
+              { hours: "0" },
+              organizationId
+            );
           }
         }
       }
@@ -1679,14 +1705,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/daily-reports/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const organizationId = (req as any).session.organizationId;
 
-      const existingReport = await storage.getDailyReport(id);
+      const existingReport = await storage.getDailyReport(id, organizationId);
       if (!existingReport) {
         return res.status(404).json({ error: "Rapportino non trovato" });
       }
 
-      await storage.deleteOperationsByReportId(id);
-      const deleted = await storage.deleteDailyReport(id);
+      await storage.deleteOperationsByReportId(id, organizationId);
+      const deleted = await storage.deleteDailyReport(id, organizationId);
 
       if (deleted) {
         res.json({ success: true });
@@ -1705,8 +1732,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const { workOrderId } = req.params;
+        const organizationId = (req as any).session.organizationId;
         const count =
-          await storage.getOperationsCountByWorkOrderId(workOrderId);
+          await storage.getOperationsCountByWorkOrderId(workOrderId, organizationId);
         res.json({ count });
       } catch (error) {
         console.error("Error fetching work order operations count:", error);
@@ -1835,6 +1863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/attendance-entries/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const organizationId = (req as any).session.organizationId;
       const result = updateAttendanceEntrySchema.safeParse(req.body);
 
       if (!result.success) {
@@ -1844,7 +1873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const entry = await storage.updateAttendanceEntry(id, result.data);
+      const entry = await storage.updateAttendanceEntry(id, result.data, organizationId);
       res.json(entry);
     } catch (error) {
       console.error("Error updating attendance entry:", error);
@@ -1855,7 +1884,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/attendance-entries/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const deleted = await storage.deleteAttendanceEntry(id);
+      const organizationId = (req as any).session.organizationId;
+      const deleted = await storage.deleteAttendanceEntry(id, organizationId);
 
       if (deleted) {
         res.json({ success: true });
@@ -1936,6 +1966,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/hours-adjustment/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const organizationId = (req as any).session.organizationId;
       const result = updateHoursAdjustmentSchema.safeParse(req.body);
 
       if (!result.success) {
@@ -1945,7 +1976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const adjustment = await storage.updateHoursAdjustment(id, result.data);
+      const adjustment = await storage.updateHoursAdjustment(id, result.data, organizationId);
       res.json(adjustment);
     } catch (error) {
       console.error("Error updating hours adjustment:", error);
@@ -1956,7 +1987,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/hours-adjustment/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const deleted = await storage.deleteHoursAdjustment(id);
+      const organizationId = (req as any).session.organizationId;
+      const deleted = await storage.deleteHoursAdjustment(id, organizationId);
 
       if (deleted) {
         res.json({ success: true });

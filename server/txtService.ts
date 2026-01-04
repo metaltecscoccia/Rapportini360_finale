@@ -46,8 +46,8 @@ export class TxtService {
     // Build content for each employee
     for (let i = 0; i < reports.length; i++) {
       const report = reports[i];
-      const user = await storage.getUser(report.employeeId);
-      const operations = await storage.getOperationsByReportId(report.id);
+      const user = await storage.getUser(report.employeeId, organizationId);
+      const operations = await storage.getOperationsByReportId(report.id, organizationId);
       const adjustment = adjustmentsMap.get(report.id);
       
       if (user && operations.length > 0) {
@@ -290,8 +290,8 @@ export class TxtService {
     // Build content for each employee
     for (let i = 0; i < sortedReports.length; i++) {
       const report = sortedReports[i];
-      const user = await storage.getUser(report.employeeId);
-      const operations = await storage.getOperationsByReportId(report.id);
+      const user = await storage.getUser(report.employeeId, organizationId);
+      const operations = await storage.getOperationsByReportId(report.id, organizationId);
       const adjustment = adjustmentsMap.get(report.id);
       
       if (user && operations.length > 0) {

@@ -61,8 +61,8 @@ export class WordService {
     // Build content for each employee
     for (let i = 0; i < reports.length; i++) {
       const report = reports[i];
-      const user = await storage.getUser(report.employeeId);
-      const operations = await storage.getOperationsByReportId(report.id);
+      const user = await storage.getUser(report.employeeId, organizationId);
+      const operations = await storage.getOperationsByReportId(report.id, organizationId);
       const adjustment = adjustmentsMap.get(report.id);
       
       if (user && operations.length > 0) {
@@ -693,8 +693,8 @@ export class WordService {
     // Build content for each report
     for (let i = 0; i < filteredReports.length; i++) {
       const report = filteredReports[i];
-      const user = await storage.getUser(report.employeeId);
-      const operations = await storage.getOperationsByReportId(report.id);
+      const user = await storage.getUser(report.employeeId, organizationId);
+      const operations = await storage.getOperationsByReportId(report.id, organizationId);
       const adjustment = adjustmentsMap.get(report.id);
       
       if (user && operations.length > 0) {

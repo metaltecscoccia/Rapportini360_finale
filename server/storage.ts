@@ -163,69 +163,69 @@ export interface IStorage {
   // Users
   getAllUsers(organizationId: string): Promise<User[]>;
   getActiveUsers(organizationId: string): Promise<User[]>;
-  getUser(id: string): Promise<User | undefined>;
+  getUser(id: string, organizationId?: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser, organizationId: string): Promise<User>;
-  updateUser(id: string, updates: Partial<InsertUser>): Promise<User>;
-  updateUserStatus(id: string, isActive: boolean): Promise<User>;
-  deleteUser(id: string): Promise<boolean>;
+  updateUser(id: string, updates: Partial<InsertUser>, organizationId: string): Promise<User>;
+  updateUserStatus(id: string, isActive: boolean, organizationId: string): Promise<User>;
+  deleteUser(id: string, organizationId: string): Promise<boolean>;
   
   // Clients
   getAllClients(organizationId: string): Promise<Client[]>;
   createClient(client: InsertClient, organizationId: string): Promise<Client>;
-  deleteClient(id: string): Promise<boolean>;
-  
+  deleteClient(id: string, organizationId: string): Promise<boolean>;
+
   // Work Types (Lavorazioni)
   getAllWorkTypes(organizationId: string): Promise<WorkType[]>;
-  getWorkType(id: string): Promise<WorkType | undefined>;
+  getWorkType(id: string, organizationId: string): Promise<WorkType | undefined>;
   createWorkType(workType: InsertWorkType, organizationId: string): Promise<WorkType>;
-  updateWorkType(id: string, updates: Partial<InsertWorkType>): Promise<WorkType>;
-  deleteWorkType(id: string): Promise<boolean>;
-  
+  updateWorkType(id: string, updates: Partial<InsertWorkType>, organizationId: string): Promise<WorkType>;
+  deleteWorkType(id: string, organizationId: string): Promise<boolean>;
+
   // Materials (Materiali)
   getAllMaterials(organizationId: string): Promise<Material[]>;
-  getMaterial(id: string): Promise<Material | undefined>;
+  getMaterial(id: string, organizationId: string): Promise<Material | undefined>;
   createMaterial(material: InsertMaterial, organizationId: string): Promise<Material>;
-  updateMaterial(id: string, updates: Partial<InsertMaterial>): Promise<Material>;
-  deleteMaterial(id: string): Promise<boolean>;
-  
+  updateMaterial(id: string, updates: Partial<InsertMaterial>, organizationId: string): Promise<Material>;
+  deleteMaterial(id: string, organizationId: string): Promise<boolean>;
+
   // Work Orders
   getAllWorkOrders(organizationId: string): Promise<WorkOrder[]>;
   getWorkOrdersByClient(clientId: string, organizationId: string): Promise<WorkOrder[]>;
   getWorkOrder(id: string, organizationId: string): Promise<WorkOrder | undefined>;
   createWorkOrder(workOrder: InsertWorkOrder, organizationId: string): Promise<WorkOrder>;
-  updateWorkOrder(id: string, updates: Partial<InsertWorkOrder>): Promise<WorkOrder>;
-  updateWorkOrderStatus(id: string, isActive: boolean): Promise<WorkOrder>;
-  deleteWorkOrder(id: string): Promise<boolean>;
+  updateWorkOrder(id: string, updates: Partial<InsertWorkOrder>, organizationId: string): Promise<WorkOrder>;
+  updateWorkOrderStatus(id: string, isActive: boolean, organizationId: string): Promise<WorkOrder>;
+  deleteWorkOrder(id: string, organizationId: string): Promise<boolean>;
   
   // Daily Reports
   getAllDailyReports(organizationId: string): Promise<DailyReport[]>;
   getDailyReportsByDate(date: string, organizationId: string): Promise<DailyReport[]>;
-  getDailyReport(id: string): Promise<DailyReport | undefined>;
+  getDailyReport(id: string, organizationId: string): Promise<DailyReport | undefined>;
   getDailyReportByEmployeeAndDate(employeeId: string, date: string, organizationId: string): Promise<DailyReport | undefined>;
   createDailyReport(report: InsertDailyReport, organizationId: string): Promise<DailyReport>;
   updateDailyReport(id: string, updates: UpdateDailyReport): Promise<DailyReport>;
   updateDailyReportStatus(id: string, status: string): Promise<DailyReport>;
-  deleteDailyReport(id: string): Promise<boolean>;
-  
+  deleteDailyReport(id: string, organizationId: string): Promise<boolean>;
+
   // Operations
-  getOperationsByReportId(reportId: string): Promise<Operation[]>;
+  getOperationsByReportId(reportId: string, organizationId: string): Promise<Operation[]>;
   getOperationsByWorkOrderId(workOrderId: string, organizationId: string): Promise<Operation[]>;
-  getOperationsCountByWorkOrderId(workOrderId: string): Promise<number>;
+  getOperationsCountByWorkOrderId(workOrderId: string, organizationId: string): Promise<number>;
   getOperationsCountByClientId(clientId: string): Promise<number>;
-  getOperation(id: string): Promise<Operation | undefined>;
-  createOperation(operation: InsertOperation): Promise<Operation>;
-  updateOperation(id: string, updates: UpdateOperation): Promise<Operation>;
-  deleteOperation(id: string): Promise<boolean>;
-  deleteOperationsByReportId(reportId: string): Promise<boolean>;
-  deleteOperationsByWorkOrderId(workOrderId: string): Promise<boolean>;
+  getOperation(id: string, organizationId: string): Promise<Operation | undefined>;
+  createOperation(operation: InsertOperation, organizationId: string): Promise<Operation>;
+  updateOperation(id: string, updates: UpdateOperation, organizationId: string): Promise<Operation>;
+  deleteOperation(id: string, organizationId: string): Promise<boolean>;
+  deleteOperationsByReportId(reportId: string, organizationId: string): Promise<boolean>;
+  deleteOperationsByWorkOrderId(workOrderId: string, organizationId: string): Promise<boolean>;
   deleteOperationsByClientId(clientId: string): Promise<boolean>;
-  
+
   // Counts for cascade delete
   getDailyReportsCountByEmployeeId(employeeId: string): Promise<number>;
   getWorkOrdersCountByClientId(clientId: string): Promise<number>;
-  deleteDailyReportsByEmployeeId(employeeId: string): Promise<boolean>;
-  deleteWorkOrdersByClientId(clientId: string): Promise<boolean>;
+  deleteDailyReportsByEmployeeId(employeeId: string, organizationId: string): Promise<boolean>;
+  deleteWorkOrdersByClientId(clientId: string, organizationId: string): Promise<boolean>;
   
   // Statistics
   getWorkOrdersStats(organizationId: string): Promise<Array<{
@@ -240,16 +240,16 @@ export interface IStorage {
   getAttendanceEntriesByDate(date: string, organizationId: string): Promise<AttendanceEntry[]>;
   getAttendanceEntry(userId: string, date: string, organizationId: string): Promise<AttendanceEntry | undefined>;
   createAttendanceEntry(entry: InsertAttendanceEntry, organizationId: string): Promise<AttendanceEntry>;
-  updateAttendanceEntry(id: string, updates: UpdateAttendanceEntry): Promise<AttendanceEntry>;
-  deleteAttendanceEntry(id: string): Promise<boolean>;
+  updateAttendanceEntry(id: string, updates: UpdateAttendanceEntry, organizationId: string): Promise<AttendanceEntry>;
+  deleteAttendanceEntry(id: string, organizationId: string): Promise<boolean>;
   deleteAttendanceEntriesByUserId(userId: string, organizationId: string): Promise<boolean>;
-  
+
   // Hours adjustments
   getHoursAdjustment(dailyReportId: string, organizationId: string): Promise<HoursAdjustment | undefined>;
   createHoursAdjustment(adjustment: InsertHoursAdjustment, organizationId: string, createdBy: string): Promise<HoursAdjustment>;
-  updateHoursAdjustment(id: string, updates: UpdateHoursAdjustment): Promise<HoursAdjustment>;
-  deleteHoursAdjustment(id: string): Promise<boolean>;
-  deleteHoursAdjustmentsByReportId(reportId: string): Promise<boolean>;
+  updateHoursAdjustment(id: string, updates: UpdateHoursAdjustment, organizationId: string): Promise<HoursAdjustment>;
+  deleteHoursAdjustment(id: string, organizationId: string): Promise<boolean>;
+  deleteHoursAdjustmentsByReportId(reportId: string, organizationId: string): Promise<boolean>;
   
   // Vehicles (Mezzi)
   getAllVehicles(organizationId: string): Promise<Vehicle[]>;
@@ -416,9 +416,13 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users).where(eq(users.organizationId, organizationId));
   }
 
-  async getUser(id: string): Promise<User | undefined> {
+  async getUser(id: string, organizationId?: string): Promise<User | undefined> {
     await this.ensureInitialized();
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const conditions = [eq(users.id, id)];
+    if (organizationId) {
+      conditions.push(eq(users.organizationId, organizationId));
+    }
+    const [user] = await db.select().from(users).where(and(...conditions));
     return user || undefined;
   }
 
@@ -444,13 +448,13 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUser(id: string, updates: Partial<InsertUser>): Promise<User> {
+  async updateUser(id: string, updates: Partial<InsertUser>, organizationId: string): Promise<User> {
     await this.ensureInitialized();
-    const existingUser = await this.getUser(id);
+    const existingUser = await this.getUser(id, organizationId);
     if (!existingUser) {
       throw new Error("Utente non trovato");
     }
-    
+
     const updatedData: any = { ...updates };
     if (updates.password) {
       updatedData.password = await hashPassword(updates.password);
@@ -458,12 +462,19 @@ export class DatabaseStorage implements IStorage {
         updatedData.plainPassword = updates.password;
       }
     }
-    
+
     const [updatedUser] = await db.update(users)
       .set(updatedData)
-      .where(eq(users.id, id))
+      .where(and(
+        eq(users.id, id),
+        eq(users.organizationId, organizationId)
+      ))
       .returning();
-    
+
+    if (!updatedUser) {
+      throw new Error("Utente non trovato");
+    }
+
     return updatedUser;
   }
 
@@ -477,31 +488,36 @@ export class DatabaseStorage implements IStorage {
       ));
   }
 
-  async updateUserStatus(id: string, isActive: boolean): Promise<User> {
+  async updateUserStatus(id: string, isActive: boolean, organizationId: string): Promise<User> {
     await this.ensureInitialized();
     const [updatedUser] = await db.update(users)
       .set({ isActive })
-      .where(eq(users.id, id))
+      .where(and(
+        eq(users.id, id),
+        eq(users.organizationId, organizationId)
+      ))
       .returning();
-    
+
     if (!updatedUser) {
       throw new Error("Utente non trovato");
     }
-    
+
     return updatedUser;
   }
 
-  async deleteUser(id: string): Promise<boolean> {
+  async deleteUser(id: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
-    const user = await this.getUser(id);
+    const user = await this.getUser(id, organizationId);
     if (!user) {
       return false;
     }
-    await this.deleteDailyReportsByEmployeeId(id);
-    if (user.organizationId) {
-      await this.deleteAttendanceEntriesByUserId(id, user.organizationId);
-    }
-    const result = await db.delete(users).where(eq(users.id, id));
+    await this.deleteDailyReportsByEmployeeId(id, organizationId);
+    await this.deleteAttendanceEntriesByUserId(id, organizationId);
+
+    const result = await db.delete(users).where(and(
+      eq(users.id, id),
+      eq(users.organizationId, organizationId)
+    ));
     return result.rowCount !== null && result.rowCount > 0;
   }
 
@@ -520,9 +536,21 @@ export class DatabaseStorage implements IStorage {
     return client;
   }
 
-  async deleteClient(id: string): Promise<boolean> {
+  async deleteClient(id: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
-    await this.deleteWorkOrdersByClientId(id);
+    // Verify client belongs to organization
+    const [client] = await db.select()
+      .from(clients)
+      .where(and(
+        eq(clients.id, id),
+        eq(clients.organizationId, organizationId)
+      ));
+
+    if (!client) {
+      return false;
+    }
+
+    await this.deleteWorkOrdersByClientId(id, organizationId);
     const result = await db.delete(clients).where(eq(clients.id, id));
     return result.rowCount !== null && result.rowCount > 0;
   }
@@ -533,9 +561,12 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(workTypes).where(eq(workTypes.organizationId, organizationId));
   }
 
-  async getWorkType(id: string): Promise<WorkType | undefined> {
+  async getWorkType(id: string, organizationId: string): Promise<WorkType | undefined> {
     await this.ensureInitialized();
-    const [workType] = await db.select().from(workTypes).where(eq(workTypes.id, id));
+    const [workType] = await db.select().from(workTypes).where(and(
+      eq(workTypes.id, id),
+      eq(workTypes.organizationId, organizationId)
+    ));
     return workType || undefined;
   }
 
@@ -548,23 +579,29 @@ export class DatabaseStorage implements IStorage {
     return workType;
   }
 
-  async updateWorkType(id: string, updates: Partial<InsertWorkType>): Promise<WorkType> {
+  async updateWorkType(id: string, updates: Partial<InsertWorkType>, organizationId: string): Promise<WorkType> {
     await this.ensureInitialized();
     const [updatedWorkType] = await db.update(workTypes)
       .set(updates)
-      .where(eq(workTypes.id, id))
+      .where(and(
+        eq(workTypes.id, id),
+        eq(workTypes.organizationId, organizationId)
+      ))
       .returning();
-    
+
     if (!updatedWorkType) {
       throw new Error("Lavorazione non trovata");
     }
-    
+
     return updatedWorkType;
   }
 
-  async deleteWorkType(id: string): Promise<boolean> {
+  async deleteWorkType(id: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
-    const result = await db.delete(workTypes).where(eq(workTypes.id, id));
+    const result = await db.delete(workTypes).where(and(
+      eq(workTypes.id, id),
+      eq(workTypes.organizationId, organizationId)
+    ));
     return result.rowCount !== null && result.rowCount > 0;
   }
 
@@ -574,9 +611,12 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(materials).where(eq(materials.organizationId, organizationId));
   }
 
-  async getMaterial(id: string): Promise<Material | undefined> {
+  async getMaterial(id: string, organizationId: string): Promise<Material | undefined> {
     await this.ensureInitialized();
-    const [material] = await db.select().from(materials).where(eq(materials.id, id));
+    const [material] = await db.select().from(materials).where(and(
+      eq(materials.id, id),
+      eq(materials.organizationId, organizationId)
+    ));
     return material || undefined;
   }
 
@@ -589,23 +629,29 @@ export class DatabaseStorage implements IStorage {
     return material;
   }
 
-  async updateMaterial(id: string, updates: Partial<InsertMaterial>): Promise<Material> {
+  async updateMaterial(id: string, updates: Partial<InsertMaterial>, organizationId: string): Promise<Material> {
     await this.ensureInitialized();
     const [updatedMaterial] = await db.update(materials)
       .set(updates)
-      .where(eq(materials.id, id))
+      .where(and(
+        eq(materials.id, id),
+        eq(materials.organizationId, organizationId)
+      ))
       .returning();
-    
+
     if (!updatedMaterial) {
       throw new Error("Materiale non trovato");
     }
-    
+
     return updatedMaterial;
   }
 
-  async deleteMaterial(id: string): Promise<boolean> {
+  async deleteMaterial(id: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
-    const result = await db.delete(materials).where(eq(materials.id, id));
+    const result = await db.delete(materials).where(and(
+      eq(materials.id, id),
+      eq(materials.organizationId, organizationId)
+    ));
     return result.rowCount !== null && result.rowCount > 0;
   }
 
@@ -646,37 +692,55 @@ export class DatabaseStorage implements IStorage {
     return workOrder;
   }
 
-  async updateWorkOrder(id: string, updates: Partial<InsertWorkOrder>): Promise<WorkOrder> {
+  async updateWorkOrder(id: string, updates: Partial<InsertWorkOrder>, organizationId: string): Promise<WorkOrder> {
     await this.ensureInitialized();
     const [updatedWorkOrder] = await db.update(workOrders)
       .set(updates)
-      .where(eq(workOrders.id, id))
+      .where(and(
+        eq(workOrders.id, id),
+        eq(workOrders.organizationId, organizationId)
+      ))
       .returning();
-    
+
     if (!updatedWorkOrder) {
       throw new Error("Commessa non trovata");
     }
-    
+
     return updatedWorkOrder;
   }
 
-  async updateWorkOrderStatus(id: string, isActive: boolean): Promise<WorkOrder> {
+  async updateWorkOrderStatus(id: string, isActive: boolean, organizationId: string): Promise<WorkOrder> {
     await this.ensureInitialized();
     const [updatedWorkOrder] = await db.update(workOrders)
       .set({ isActive })
-      .where(eq(workOrders.id, id))
+      .where(and(
+        eq(workOrders.id, id),
+        eq(workOrders.organizationId, organizationId)
+      ))
       .returning();
-    
+
     if (!updatedWorkOrder) {
       throw new Error("Commessa non trovata");
     }
-    
+
     return updatedWorkOrder;
   }
 
-  async deleteWorkOrder(id: string): Promise<boolean> {
+  async deleteWorkOrder(id: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
-    await this.deleteOperationsByWorkOrderId(id);
+    // Verify work order belongs to organization
+    const [workOrder] = await db.select()
+      .from(workOrders)
+      .where(and(
+        eq(workOrders.id, id),
+        eq(workOrders.organizationId, organizationId)
+      ));
+
+    if (!workOrder) {
+      return false;
+    }
+
+    await this.deleteOperationsByWorkOrderId(id, organizationId);
     const result = await db.delete(workOrders).where(eq(workOrders.id, id));
     return result.rowCount !== null && result.rowCount > 0;
   }
@@ -696,9 +760,14 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
-  async getDailyReport(id: string): Promise<DailyReport | undefined> {
+  async getDailyReport(id: string, organizationId: string): Promise<DailyReport | undefined> {
     await this.ensureInitialized();
-    const [report] = await db.select().from(dailyReports).where(eq(dailyReports.id, id));
+    const [report] = await db.select().from(dailyReports).where(
+      and(
+        eq(dailyReports.id, id),
+        eq(dailyReports.organizationId, organizationId)
+      )
+    );
     return report || undefined;
   }
 
@@ -751,18 +820,25 @@ export class DatabaseStorage implements IStorage {
     return updatedReport;
   }
 
-  async deleteDailyReport(id: string): Promise<boolean> {
+  async deleteDailyReport(id: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
-    await this.deleteOperationsByReportId(id);
-    await this.deleteHoursAdjustmentsByReportId(id);
+    await this.deleteOperationsByReportId(id, organizationId);
+    await this.deleteHoursAdjustmentsByReportId(id, organizationId);
     const result = await db.delete(dailyReports).where(eq(dailyReports.id, id));
     return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Operations
-  async getOperationsByReportId(reportId: string): Promise<Operation[]> {
+  async getOperationsByReportId(reportId: string, organizationId: string): Promise<Operation[]> {
     await this.ensureInitialized();
-    return await db.select().from(operations).where(eq(operations.dailyReportId, reportId));
+    const result = await db.select({ operations })
+      .from(operations)
+      .innerJoin(dailyReports, eq(operations.dailyReportId, dailyReports.id))
+      .where(and(
+        eq(operations.dailyReportId, reportId),
+        eq(dailyReports.organizationId, organizationId)
+      ));
+    return result.map(r => r.operations);
   }
 
   async getOperationsByWorkOrderId(workOrderId: string, organizationId: string): Promise<Operation[]> {
@@ -780,52 +856,158 @@ export class DatabaseStorage implements IStorage {
     return result.map(r => r.operations);
   }
 
-  async getOperation(id: string): Promise<Operation | undefined> {
+  async getOperation(id: string, organizationId: string): Promise<Operation | undefined> {
     await this.ensureInitialized();
-    const [operation] = await db.select().from(operations).where(eq(operations.id, id));
-    return operation || undefined;
+    const result = await db.select({ operations })
+      .from(operations)
+      .innerJoin(dailyReports, eq(operations.dailyReportId, dailyReports.id))
+      .where(and(
+        eq(operations.id, id),
+        eq(dailyReports.organizationId, organizationId)
+      ));
+    return result[0]?.operations;
   }
 
-  async createOperation(insertOperation: InsertOperation): Promise<Operation> {
+  async createOperation(insertOperation: InsertOperation, organizationId: string): Promise<Operation> {
     await this.ensureInitialized();
+    // Validate dailyReportId belongs to organization
+    const [report] = await db.select()
+      .from(dailyReports)
+      .where(and(
+        eq(dailyReports.id, insertOperation.dailyReportId),
+        eq(dailyReports.organizationId, organizationId)
+      ));
+    if (!report) {
+      throw new Error("Daily report not found or access denied");
+    }
+
+    // Validate clientId belongs to organization
+    const [client] = await db.select()
+      .from(clients)
+      .where(and(
+        eq(clients.id, insertOperation.clientId),
+        eq(clients.organizationId, organizationId)
+      ));
+    if (!client) {
+      throw new Error("Client not found or access denied");
+    }
+
+    // Validate workOrderId belongs to organization
+    const [workOrder] = await db.select()
+      .from(workOrders)
+      .where(and(
+        eq(workOrders.id, insertOperation.workOrderId),
+        eq(workOrders.organizationId, organizationId)
+      ));
+    if (!workOrder) {
+      throw new Error("Work order not found or access denied");
+    }
+
     const [operation] = await db.insert(operations).values(insertOperation).returning();
     return operation;
   }
 
-  async updateOperation(id: string, updates: UpdateOperation): Promise<Operation> {
+  async updateOperation(id: string, updates: UpdateOperation, organizationId: string): Promise<Operation> {
     await this.ensureInitialized();
+    // Verify operation belongs to organization
+    const existing = await this.getOperation(id, organizationId);
+    if (!existing) {
+      throw new Error("Operation not found or access denied");
+    }
+
+    // If updating foreign keys, validate them
+    if (updates.clientId) {
+      const [client] = await db.select()
+        .from(clients)
+        .where(and(
+          eq(clients.id, updates.clientId),
+          eq(clients.organizationId, organizationId)
+        ));
+      if (!client) {
+        throw new Error("Client not found or access denied");
+      }
+    }
+
+    if (updates.workOrderId) {
+      const [workOrder] = await db.select()
+        .from(workOrders)
+        .where(and(
+          eq(workOrders.id, updates.workOrderId),
+          eq(workOrders.organizationId, organizationId)
+        ));
+      if (!workOrder) {
+        throw new Error("Work order not found or access denied");
+      }
+    }
+
     const [updatedOperation] = await db.update(operations)
       .set(updates)
       .where(eq(operations.id, id))
       .returning();
-    
+
     if (!updatedOperation) {
       throw new Error("Operation not found");
     }
-    
+
     return updatedOperation;
   }
 
-  async deleteOperation(id: string): Promise<boolean> {
+  async deleteOperation(id: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
+    // Verify ownership before deleting
+    const existing = await this.getOperation(id, organizationId);
+    if (!existing) {
+      return false;
+    }
+
     const result = await db.delete(operations).where(eq(operations.id, id));
     return result.rowCount !== null && result.rowCount > 0;
   }
 
-  async deleteOperationsByReportId(reportId: string): Promise<boolean> {
+  async deleteOperationsByReportId(reportId: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
+    // Verify report belongs to organization
+    const [report] = await db.select()
+      .from(dailyReports)
+      .where(and(
+        eq(dailyReports.id, reportId),
+        eq(dailyReports.organizationId, organizationId)
+      ));
+
+    if (!report) {
+      return false;
+    }
+
     const result = await db.delete(operations).where(eq(operations.dailyReportId, reportId));
     return result.rowCount !== null && result.rowCount > 0;
   }
 
-  async getOperationsCountByWorkOrderId(workOrderId: string): Promise<number> {
+  async getOperationsCountByWorkOrderId(workOrderId: string, organizationId: string): Promise<number> {
     await this.ensureInitialized();
-    const ops = await db.select().from(operations).where(eq(operations.workOrderId, workOrderId));
-    return ops.length;
+    const result = await db.select({ operations })
+      .from(operations)
+      .innerJoin(workOrders, eq(operations.workOrderId, workOrders.id))
+      .where(and(
+        eq(operations.workOrderId, workOrderId),
+        eq(workOrders.organizationId, organizationId)
+      ));
+    return result.length;
   }
 
-  async deleteOperationsByWorkOrderId(workOrderId: string): Promise<boolean> {
+  async deleteOperationsByWorkOrderId(workOrderId: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
+    // Verify work order belongs to organization
+    const [workOrder] = await db.select()
+      .from(workOrders)
+      .where(and(
+        eq(workOrders.id, workOrderId),
+        eq(workOrders.organizationId, organizationId)
+      ));
+
+    if (!workOrder) {
+      return false;
+    }
+
     const result = await db.delete(operations).where(eq(operations.workOrderId, workOrderId));
     return result.rowCount !== null && result.rowCount > 0;
   }
@@ -874,28 +1056,44 @@ export class DatabaseStorage implements IStorage {
     return orders.length;
   }
 
-  async deleteDailyReportsByEmployeeId(employeeId: string): Promise<boolean> {
+  async deleteDailyReportsByEmployeeId(employeeId: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
-    const employeeReports = await db.select().from(dailyReports).where(eq(dailyReports.employeeId, employeeId));
-    
+    const employeeReports = await db.select()
+      .from(dailyReports)
+      .where(and(
+        eq(dailyReports.employeeId, employeeId),
+        eq(dailyReports.organizationId, organizationId)
+      ));
+
     for (const report of employeeReports) {
-      await this.deleteOperationsByReportId(report.id);
-      await this.deleteHoursAdjustmentsByReportId(report.id);
+      await this.deleteOperationsByReportId(report.id, organizationId);
+      await this.deleteHoursAdjustmentsByReportId(report.id, organizationId);
     }
-    
-    const result = await db.delete(dailyReports).where(eq(dailyReports.employeeId, employeeId));
+
+    const result = await db.delete(dailyReports).where(and(
+      eq(dailyReports.employeeId, employeeId),
+      eq(dailyReports.organizationId, organizationId)
+    ));
     return result.rowCount !== null && result.rowCount > 0;
   }
 
-  async deleteWorkOrdersByClientId(clientId: string): Promise<boolean> {
+  async deleteWorkOrdersByClientId(clientId: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
-    const clientWorkOrders = await db.select().from(workOrders).where(eq(workOrders.clientId, clientId));
-    
+    const clientWorkOrders = await db.select()
+      .from(workOrders)
+      .where(and(
+        eq(workOrders.clientId, clientId),
+        eq(workOrders.organizationId, organizationId)
+      ));
+
     for (const workOrder of clientWorkOrders) {
-      await this.deleteOperationsByWorkOrderId(workOrder.id);
+      await this.deleteOperationsByWorkOrderId(workOrder.id, organizationId);
     }
-    
-    const result = await db.delete(workOrders).where(eq(workOrders.clientId, clientId));
+
+    const result = await db.delete(workOrders).where(and(
+      eq(workOrders.clientId, clientId),
+      eq(workOrders.organizationId, organizationId)
+    ));
     return result.rowCount !== null && result.rowCount > 0;
   }
 
@@ -1004,19 +1202,30 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updateAttendanceEntry(id: string, updates: UpdateAttendanceEntry): Promise<AttendanceEntry> {
+  async updateAttendanceEntry(id: string, updates: UpdateAttendanceEntry, organizationId: string): Promise<AttendanceEntry> {
     await this.ensureInitialized();
     const result = await db.update(attendanceEntries)
       .set(updates)
-      .where(eq(attendanceEntries.id, id))
+      .where(and(
+        eq(attendanceEntries.id, id),
+        eq(attendanceEntries.organizationId, organizationId)
+      ))
       .returning();
+
+    if (!result[0]) {
+      throw new Error("Attendance entry not found or access denied");
+    }
+
     return result[0];
   }
 
-  async deleteAttendanceEntry(id: string): Promise<boolean> {
+  async deleteAttendanceEntry(id: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
-    await db.delete(attendanceEntries).where(eq(attendanceEntries.id, id));
-    return true;
+    const result = await db.delete(attendanceEntries).where(and(
+      eq(attendanceEntries.id, id),
+      eq(attendanceEntries.organizationId, organizationId)
+    ));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async deleteAttendanceEntriesByUserId(userId: string, organizationId: string): Promise<boolean> {
@@ -1053,27 +1262,41 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updateHoursAdjustment(id: string, updates: UpdateHoursAdjustment): Promise<HoursAdjustment> {
+  async updateHoursAdjustment(id: string, updates: UpdateHoursAdjustment, organizationId: string): Promise<HoursAdjustment> {
     await this.ensureInitialized();
     const result = await db.update(hoursAdjustments)
       .set({
         ...updates,
         updatedAt: new Date()
       })
-      .where(eq(hoursAdjustments.id, id))
+      .where(and(
+        eq(hoursAdjustments.id, id),
+        eq(hoursAdjustments.organizationId, organizationId)
+      ))
       .returning();
+
+    if (!result[0]) {
+      throw new Error("Hours adjustment not found or access denied");
+    }
+
     return result[0];
   }
 
-  async deleteHoursAdjustment(id: string): Promise<boolean> {
+  async deleteHoursAdjustment(id: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
-    await db.delete(hoursAdjustments).where(eq(hoursAdjustments.id, id));
-    return true;
+    const result = await db.delete(hoursAdjustments).where(and(
+      eq(hoursAdjustments.id, id),
+      eq(hoursAdjustments.organizationId, organizationId)
+    ));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
-  async deleteHoursAdjustmentsByReportId(reportId: string): Promise<boolean> {
+  async deleteHoursAdjustmentsByReportId(reportId: string, organizationId: string): Promise<boolean> {
     await this.ensureInitialized();
-    const result = await db.delete(hoursAdjustments).where(eq(hoursAdjustments.dailyReportId, reportId));
+    const result = await db.delete(hoursAdjustments).where(and(
+      eq(hoursAdjustments.dailyReportId, reportId),
+      eq(hoursAdjustments.organizationId, organizationId)
+    ));
     return result.rowCount !== null && result.rowCount > 0;
   }
 
