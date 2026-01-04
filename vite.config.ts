@@ -30,11 +30,18 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // Ottimizzazioni per Capacitor
+    target: 'es2015',
+    minify: 'esbuild',
+    sourcemap: false,
   },
   server: {
     fs: {
       strict: true,
       deny: ["**/.*"],
     },
+    // Per testare con Capacitor in dev mode
+    host: '0.0.0.0',
+    port: 5173,
   },
 });
