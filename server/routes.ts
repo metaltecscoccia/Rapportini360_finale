@@ -142,6 +142,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       (req as any).session.userRole = user.role;
       (req as any).session.organizationId = user.organizationId;
 
+      // DEBUG: Log session info
+      console.log(`[LOGIN] User: ${user.username}, OrgId: ${user.organizationId}, SessionOrgId: ${(req as any).session.organizationId}`);
+
       // Return user data without password
       const { password: _, plainPassword: __, ...userWithoutPassword } = user;
       res.json({
@@ -636,7 +639,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clients", requireAuth, async (req, res) => {
     try {
       const organizationId = (req as any).session.organizationId;
+      console.log(`[GET /api/clients] SessionOrgId: ${organizationId}`);
       const clients = await storage.getAllClients(organizationId);
+      console.log(`[GET /api/clients] Found ${clients.length} clients for org ${organizationId}`);
       res.json(clients);
     } catch (error) {
       console.error("Error fetching clients:", error);
