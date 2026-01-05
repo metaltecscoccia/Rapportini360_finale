@@ -290,6 +290,8 @@ function App() {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        // Clear all cached queries to prevent showing data from previous user
+        queryClient.clear();
         setCurrentUser(data.user);
         toast({
           title: "Login effettuato",
