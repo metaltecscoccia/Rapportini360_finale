@@ -94,6 +94,9 @@ export function ObjectUploader({
           saveToGallery: false,
           correctOrientation: true,
           direction: CameraDirection.Rear,
+          promptLabelHeader: 'Seleziona sorgente',
+          promptLabelPhoto: 'Dalla galleria',
+          promptLabelPicture: 'Scatta foto',
         });
 
         console.log('Image captured');
