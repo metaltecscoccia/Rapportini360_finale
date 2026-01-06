@@ -236,6 +236,258 @@ app.get("/health", (req, res) => {
 });
 
 // ============================================
+// PUBLIC LEGAL DOCUMENTS (for Google Play Store)
+// ============================================
+
+app.get("/privacy", (_req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(`
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - Rapportini360</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+    h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
+    h2 { color: #1e40af; margin-top: 30px; }
+    h3 { color: #1e3a8a; margin-top: 20px; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 3px; }
+    a { color: #2563eb; }
+    strong { color: #1f2937; }
+    ul { padding-left: 20px; }
+    .updated { color: #6b7280; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>Informativa sulla Privacy</h1>
+  <p class="updated"><strong>Ultima modifica:</strong> 6 gennaio 2026</p>
+
+  <h2>1. Introduzione</h2>
+  <p>Rapportini360 (di seguito "l'App", "noi", "nostro") rispetta la privacy degli utenti e si impegna a proteggere i dati personali raccolti attraverso l'applicazione mobile.</p>
+  <p>Questa informativa sulla privacy descrive quali dati raccogliamo, come li utilizziamo, con chi li condividiamo e quali diritti hai in relazione ai tuoi dati personali.</p>
+
+  <h2>2. Titolare del Trattamento</h2>
+  <p><strong>Nome Azienda:</strong> [DA COMPILARE]<br>
+  <strong>Indirizzo:</strong> [DA COMPILARE]<br>
+  <strong>Email:</strong> [DA COMPILARE]<br>
+  <strong>Partita IVA:</strong> [DA COMPILARE]</p>
+
+  <h2>3. Dati Raccolti</h2>
+
+  <h3>3.1 Dati forniti direttamente dall'utente</h3>
+  <ul>
+    <li><strong>Informazioni di registrazione:</strong> Nome completo, username</li>
+    <li><strong>Credenziali di accesso:</strong> Username e password (criptata con algoritmo bcrypt)</li>
+    <li><strong>Dati lavorativi:</strong>
+      <ul>
+        <li>Rapportini giornalieri (data, cliente, commessa, tipo lavoro, materiali, ore lavorate, note)</li>
+        <li>Registrazioni presenze (data, tipo assenza, note)</li>
+        <li>Rettifiche ore lavorate</li>
+      </ul>
+    </li>
+    <li><strong>Foto:</strong> Immagini scattate o selezionate dalla galleria per documentare le attività lavorative</li>
+    <li><strong>Dati veicoli</strong> (se utilizzati): Targa, tipo carburante, chilometraggio, rifornimenti</li>
+  </ul>
+
+  <h3>3.2 Dati raccolti automaticamente</h3>
+  <ul>
+    <li><strong>Dati tecnici:</strong> Indirizzo IP, tipo di dispositivo, sistema operativo</li>
+    <li><strong>Dati di sessione:</strong> Data e ora di accesso, durata della sessione</li>
+  </ul>
+
+  <h3>3.3 Dati non raccolti</h3>
+  <p>L'App <strong>NON</strong> raccoglie:</p>
+  <ul>
+    <li>Posizione GPS o dati di geolocalizzazione</li>
+    <li>Contatti dal dispositivo</li>
+    <li>Dati di navigazione su altri siti/app</li>
+    <li>Dati biometrici</li>
+    <li>Informazioni di pagamento (carte di credito, conti bancari)</li>
+  </ul>
+
+  <h2>4. Finalità del Trattamento</h2>
+
+  <h3>4.1 Finalità principali (base giuridica: esecuzione del contratto)</h3>
+  <ul>
+    <li>Gestione rapportini di lavoro giornalieri</li>
+    <li>Tracciamento ore lavorate e presenze</li>
+    <li>Documentazione fotografica delle attività lavorative</li>
+    <li>Gestione flotta veicoli e rifornimenti</li>
+    <li>Generazione report per l'organizzazione di appartenenza</li>
+  </ul>
+
+  <h3>4.2 Finalità secondarie (base giuridica: legittimo interesse)</h3>
+  <ul>
+    <li>Sicurezza dell'applicazione e prevenzione accessi non autorizzati</li>
+    <li>Miglioramento delle funzionalità dell'App</li>
+    <li>Supporto tecnico agli utenti</li>
+  </ul>
+
+  <h2>6. Condivisione dei Dati</h2>
+
+  <h3>6.1 All'interno dell'organizzazione</h3>
+  <p>I dati sono accessibili a:</p>
+  <ul>
+    <li><strong>Amministratori dell'organizzazione:</strong> Accesso completo ai dati dei dipendenti della propria organizzazione</li>
+    <li><strong>Super amministratori:</strong> Gestiscono gli account delle organizzazioni ma <strong>NON</strong> hanno accesso ai dati interni delle organizzazioni (rapportini, presenze, foto)</li>
+    <li><strong>Dipendenti:</strong> Accesso solo ai propri dati personali</li>
+  </ul>
+
+  <h3>6.2 Fornitori di servizi terzi</h3>
+
+  <p><strong>Cloudinary (Cloudinary Ltd.)</strong></p>
+  <ul>
+    <li><strong>Finalità:</strong> Archiviazione e gestione foto</li>
+    <li><strong>Dati condivisi:</strong> Foto caricate dagli utenti</li>
+    <li><strong>Ubicazione server:</strong> Stati Uniti e Europa</li>
+    <li><strong>Privacy policy:</strong> <a href="https://cloudinary.com/privacy">https://cloudinary.com/privacy</a></li>
+  </ul>
+
+  <p><strong>Railway (Railway Corp.)</strong></p>
+  <ul>
+    <li><strong>Finalità:</strong> Hosting dell'applicazione e database</li>
+    <li><strong>Dati condivisi:</strong> Tutti i dati dell'applicazione</li>
+    <li><strong>Ubicazione server:</strong> Stati Uniti</li>
+    <li><strong>Privacy policy:</strong> <a href="https://railway.app/legal/privacy">https://railway.app/legal/privacy</a></li>
+  </ul>
+
+  <h2>8. Sicurezza dei Dati</h2>
+
+  <h3>8.1 Misure tecniche</h3>
+  <ul>
+    <li><strong>Crittografia in transito:</strong> HTTPS/TLS per tutte le comunicazioni</li>
+    <li><strong>Password criptate:</strong> Hashing con algoritmo bcrypt (12 salt rounds)</li>
+    <li><strong>Cookie sicuri:</strong> Flag HttpOnly, Secure, SameSite per protezione XSS e CSRF</li>
+    <li><strong>Sessioni temporanee:</strong> Scadenza automatica dopo 24 ore</li>
+    <li><strong>Rate limiting:</strong> Protezione contro attacchi brute force (max 100 richieste/15 minuti)</li>
+  </ul>
+
+  <h2>9. Diritti degli Utenti (GDPR)</h2>
+  <p>Hai i seguenti diritti in relazione ai tuoi dati personali:</p>
+  <ul>
+    <li><strong>Diritto di accesso:</strong> Puoi richiedere copia dei tuoi dati personali</li>
+    <li><strong>Diritto di rettifica:</strong> Puoi richiedere la correzione di dati inesatti</li>
+    <li><strong>Diritto di cancellazione:</strong> Puoi richiedere la cancellazione dei tuoi dati</li>
+    <li><strong>Diritto di portabilità:</strong> Puoi richiedere i tuoi dati in formato CSV/JSON</li>
+    <li><strong>Diritto di reclamo:</strong> Puoi presentare reclamo al Garante Privacy</li>
+  </ul>
+
+  <h2>10. Come Esercitare i Tuoi Diritti</h2>
+  <p>Per esercitare i tuoi diritti, contatta l'amministratore della tua organizzazione o il titolare del trattamento all'indirizzo: <strong>[DA COMPILARE]</strong></p>
+
+  <h2>11. Contatti</h2>
+  <p><strong>Email:</strong> [DA COMPILARE]<br>
+  <strong>Indirizzo:</strong> [DA COMPILARE]</p>
+
+  <p style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.9em;">
+    Questo documento fa parte dei requisiti legali per la pubblicazione su Google Play Store.
+  </p>
+</body>
+</html>
+  `);
+});
+
+app.get("/terms", (_req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(`
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Termini e Condizioni - Rapportini360</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+    h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
+    h2 { color: #1e40af; margin-top: 30px; }
+    h3 { color: #1e3a8a; margin-top: 20px; }
+    a { color: #2563eb; }
+    strong { color: #1f2937; }
+    ul { padding-left: 20px; }
+    .updated { color: #6b7280; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>Termini e Condizioni di Servizio</h1>
+  <p class="updated"><strong>Ultima modifica:</strong> 6 gennaio 2026</p>
+
+  <h2>1. Accettazione dei Termini</h2>
+  <p>Utilizzando Rapportini360 ("l'App", "il Servizio"), accetti di essere vincolato da questi Termini e Condizioni di Servizio. Se non accetti questi Termini, non utilizzare l'App.</p>
+
+  <h2>2. Descrizione del Servizio</h2>
+  <p>Rapportini360 è un'applicazione mobile e web per la gestione di:</p>
+  <ul>
+    <li>Rapportini giornalieri di lavoro</li>
+    <li>Registrazione presenze e assenze</li>
+    <li>Documentazione fotografica attività</li>
+    <li>Gestione flotta veicoli e rifornimenti</li>
+    <li>Report e statistiche</li>
+  </ul>
+
+  <h2>3. Requisiti per l'Utilizzo</h2>
+  <p>Per utilizzare l'App devi:</p>
+  <ul>
+    <li>Avere almeno 16 anni</li>
+    <li>Essere dipendente o amministratore di un'organizzazione registrata</li>
+    <li>Accettare questi Termini e l'Informativa sulla Privacy</li>
+  </ul>
+
+  <h2>4. Account</h2>
+  <ul>
+    <li>L'account viene creato dall'amministratore dell'organizzazione</li>
+    <li>Ogni utente riceve un username univoco</li>
+    <li>Al primo accesso, l'utente deve impostare una password personale</li>
+    <li>Sei responsabile della sicurezza delle tue credenziali</li>
+    <li>Non puoi condividere il tuo account con altri</li>
+  </ul>
+
+  <h2>5. Obblighi dell'Utente</h2>
+  <p>L'utente si impegna a:</p>
+  <ul>
+    <li>Inserire dati veritieri e accurati nei rapportini</li>
+    <li>Utilizzare l'App in modo conforme alla legge</li>
+    <li>Non caricare contenuti offensivi o illegali</li>
+    <li>Mantenere riservata la propria password</li>
+  </ul>
+
+  <h2>6. Privacy</h2>
+  <p>L'utilizzo dell'App è disciplinato dalla nostra <a href="/privacy">Informativa sulla Privacy</a>.</p>
+
+  <h2>7. Limitazione di Responsabilità</h2>
+  <p>L'APP È FORNITA "COSÌ COM'È" SENZA GARANZIE DI ALCUN TIPO. Non garantiamo che il servizio sarà ininterrotto o privo di errori.</p>
+
+  <h2>8. Legge Applicabile</h2>
+  <p>Questi Termini sono regolati dalla legge italiana.</p>
+
+  <h2>9. Contatti</h2>
+  <p><strong>Email:</strong> [DA COMPILARE]<br>
+  <strong>Indirizzo:</strong> [DA COMPILARE]</p>
+
+  <p style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.9em;">
+    Utilizzando Rapportini360, dichiari di aver letto e accettato questi Termini e Condizioni.
+  </p>
+</body>
+</html>
+  `);
+});
+
+// ============================================
 // SERVER INITIALIZATION
 // ============================================
 
