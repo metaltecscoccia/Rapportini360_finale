@@ -147,10 +147,10 @@ app.use(
     cookie: {
       secure: process.env.NODE_ENV === "production", // HTTPS only in production
       httpOnly: true, // Prevent XSS attacks
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days (was 24 hours)
       sameSite: process.env.NODE_ENV === "production" ? "lax" : "lax", // CSRF protection
     },
-    rolling: true, // Reset maxAge on every response
+    rolling: true, // Reset maxAge on every response (extends session on each request)
   }),
 );
 
