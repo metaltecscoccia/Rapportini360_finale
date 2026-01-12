@@ -1933,7 +1933,7 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                <div className="flex flex-row gap-2 items-center">
                   <div className="flex items-center gap-2 flex-1">
                     <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                     <Input
@@ -1950,21 +1950,23 @@ export default function AdminDashboard() {
                       data-testid="input-from-date"
                     />
                   </div>
-                  <span className="text-muted-foreground hidden sm:block">-</span>
-                  <Input
-                    ref={toDateInputRef}
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => {
-                      setToDate(e.target.value);
-                      setTimeout(() => {
-                        toDateInputRef.current?.blur();
-                      }, 0);
-                    }}
-                    placeholder="A"
-                    className="flex-1 min-w-0"
-                    data-testid="input-to-date"
-                  />
+                  <span className="text-muted-foreground">-</span>
+                  <div className="flex items-center gap-2 flex-1">
+                    <Input
+                      ref={toDateInputRef}
+                      type="date"
+                      value={toDate}
+                      onChange={(e) => {
+                        setToDate(e.target.value);
+                        setTimeout(() => {
+                          toDateInputRef.current?.blur();
+                        }, 0);
+                      }}
+                      placeholder="A"
+                      className="flex-1 min-w-0"
+                      data-testid="input-to-date"
+                    />
+                  </div>
                 </div>
               </div>
             </CardHeader>
