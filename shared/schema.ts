@@ -73,6 +73,7 @@ export const dailyReports = pgTable("daily_reports", {
   employeeId: varchar("employee_id").notNull().references(() => users.id),
   date: text("date").notNull(), // YYYY-MM-DD format
   status: text("status").notNull().default("In attesa"), // "In attesa" or "Approvato"
+  createdBy: text("created_by").notNull().default("employee"), // "employee" (mobile) or "admin" (dashboard)
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 }, (table) => ({
@@ -211,6 +212,7 @@ export const insertWorkOrderSchema = createInsertSchema(workOrders).omit({
 export const insertDailyReportSchema = createInsertSchema(dailyReports).omit({
   id: true,
   organizationId: true, // Will be set automatically from session
+  createdBy: true, // Will be determined automatically based on who creates the report
   createdAt: true,
   updatedAt: true,
 });

@@ -1172,6 +1172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             employeeName: employee?.fullName || "Unknown",
             operations: operations.length,
             totalHours: Math.round(totalHours * 10) / 10,
+            createdBy: report.createdBy || "employee", // Fallback for legacy reports
           };
         }),
       );
@@ -1268,6 +1269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         employeeId: actualEmployeeId,
         date: date || new Date().toISOString().split("T")[0],
         status: "In attesa",
+        createdBy: (employeeId && employeeId !== userId) ? "admin" : "employee",
       };
 
       const reportResult = insertDailyReportSchema.safeParse(reportData);
