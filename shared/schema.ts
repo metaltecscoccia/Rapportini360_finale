@@ -19,7 +19,7 @@ export const users = pgTable("users", {
   organizationId: varchar("organization_id").references(() => organizations.id),
   username: text("username").notNull(),
   password: text("password").notNull(),
-  plainPassword: text("plain_password"), // Only for employees, null for admin
+  mustResetPassword: boolean("must_reset_password").notNull().default(false), // true = must set new password at next login
   role: text("role").notNull().default("employee"), // employee, admin, or superadmin
   fullName: text("full_name").notNull(),
   isActive: boolean("is_active").notNull().default(true), // true = attivo, false = licenziato

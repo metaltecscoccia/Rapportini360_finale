@@ -436,15 +436,14 @@ export class DatabaseStorage implements IStorage {
     await this.ensureInitialized();
     const hashedPassword = await hashPassword(insertUser.password);
     const role = insertUser.role || "employee";
-    
+
     const [user] = await db.insert(users).values({
       ...insertUser,
       password: hashedPassword,
-      plainPassword: role === 'employee' ? insertUser.password : null,
       role: role,
       organizationId
     }).returning();
-    
+
     return user;
   }
 
@@ -458,9 +457,6 @@ export class DatabaseStorage implements IStorage {
     const updatedData: any = { ...updates };
     if (updates.password) {
       updatedData.password = await hashPassword(updates.password);
-      if (existingUser.role === 'employee') {
-        updatedData.plainPassword = updates.password;
-      }
     }
 
     const [updatedUser] = await db.update(users)

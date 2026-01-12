@@ -9,3 +9,16 @@ vite.config.ts.*
 android/
 ios/
 .capacitor/
+
+# Keystore (IMPORTANT: Never commit this!)
+*.jks
+*.keystore
+key.properties
+
+# IDE
+.idea/
+.vscode/
+.claude/
+
+# Local state
+.local/

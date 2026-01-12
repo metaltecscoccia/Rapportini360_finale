@@ -55,7 +55,8 @@ import {
   BarChart2,
   TrendingUp,
   AlertTriangle,
-  Download
+  Download,
+  Copy
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import StatusBadge from "./StatusBadge";
@@ -151,6 +152,8 @@ export default function AdminDashboard() {
   const [employeeToToggle, setEmployeeToToggle] = useState<any>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [tempPasswordModalOpen, setTempPasswordModalOpen] = useState(false);
+  const [temporaryPassword, setTemporaryPassword] = useState<string>("");
   const [newPassword, setNewPassword] = useState<string>("");
   const [employeeStatsDialogOpen, setEmployeeStatsDialogOpen] = useState(false);
   const [selectedEmployeeForStats, setSelectedEmployeeForStats] = useState<any>(null);
@@ -444,24 +447,25 @@ export default function AdminDashboard() {
     enabled: missingEmployeesDialogOpen,
   });
 
-  // Mutation per creare nuovo dipendente
+  // Mutation per creare nuovo dipendente - genera password temporanea
   const createEmployeeMutation = useMutation({
     mutationFn: async (data: AddEmployeeForm) => {
-      return apiRequest('POST', '/api/users', {
+      const response = await apiRequest('POST', '/api/users', {
         fullName: data.fullName,
         username: data.username,
-        password: data.password,
+        password: data.password, // Will be replaced with temp password by server
         role: 'employee'
       });
+      return response.json(); // Returns user + temporaryPassword
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
-      toast({
-        title: "Dipendente aggiunto",
-        description: "Il nuovo dipendente è stato aggiunto con successo.",
-      });
       form.reset();
       setAddEmployeeDialogOpen(false);
+
+      // Show temp password modal
+      setTemporaryPassword(data.temporaryPassword);
+      setTempPasswordModalOpen(true);
     },
     onError: (error: any) => {
       toast({
@@ -686,25 +690,23 @@ export default function AdminDashboard() {
     }
   });
 
-  // Reset password mutation
+  // Reset password mutation - generates temporary password
   const resetPasswordMutation = useMutation({
-    mutationFn: async ({ employeeId, newPassword }: { employeeId: string; newPassword: string }) => {
-      const response = await apiRequest('POST', `/api/users/${employeeId}/reset-password`, { newPassword });
-      return response.json(); // Parse JSON response
+    mutationFn: async (employeeId: string) => {
+      const response = await apiRequest('POST', `/api/users/${employeeId}/reset-password`, {});
+      return response.json(); // Returns { temporaryPassword, username, fullName }
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] }); // Refresh user list
       setResetPasswordDialogOpen(false);
+      setTemporaryPassword(data.temporaryPassword); // Save temp password to show in modal
+      setTempPasswordModalOpen(true); // Show modal with temp password
       setSelectedEmployee(null);
-      toast({
-        title: "Password aggiornata",
-        description: "La password del dipendente è stata aggiornata con successo.",
-      });
     },
     onError: (error: any) => {
       toast({
         title: "Errore",
-        description: error.message || "Errore durante l'aggiornamento della password.",
+        description: error.message || "Errore durante la generazione della password temporanea.",
         variant: "destructive",
       });
     },
@@ -852,16 +854,12 @@ export default function AdminDashboard() {
 
   const handleResetPassword = (employee: any) => {
     setSelectedEmployee(employee);
-    setNewPassword("");
     setResetPasswordDialogOpen(true);
   };
 
   const confirmResetPassword = () => {
-    if (selectedEmployee && newPassword.trim().length >= 6) {
-      resetPasswordMutation.mutate({
-        employeeId: selectedEmployee.id,
-        newPassword: newPassword.trim()
-      });
+    if (selectedEmployee) {
+      resetPasswordMutation.mutate(selectedEmployee.id);
     }
   };
 
@@ -2832,7 +2830,6 @@ export default function AdminDashboard() {
                       <TableRow>
                         <TableHead>Nome</TableHead>
                         <TableHead>Username</TableHead>
-                        <TableHead>Password Attuale</TableHead>
                         <TableHead>Ruolo</TableHead>
                         <TableHead>Stato</TableHead>
                         <TableHead>Azioni</TableHead>
@@ -2855,11 +2852,6 @@ export default function AdminDashboard() {
                       <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.fullName}</TableCell>
                         <TableCell>{employee.username}</TableCell>
-                        <TableCell>
-                          <span className="font-mono text-sm bg-muted px-2 py-1 rounded">
-                            {employee.plainPassword || "Non disponibile"}
-                          </span>
-                        </TableCell>
                         <TableCell>
                           <Badge variant="secondary">Dipendente</Badge>
                         </TableCell>
@@ -3482,62 +3474,101 @@ export default function AdminDashboard() {
 
       {/* TUTTI I DIALOG - INIZIO */}
 
-      {/* Dialog per impostare nuova password */}
+      {/* Dialog per conferma reset password */}
       <Dialog open={resetPasswordDialogOpen} onOpenChange={setResetPasswordDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Imposta Nuova Password</DialogTitle>
+            <DialogTitle>Reset Password Dipendente</DialogTitle>
             <DialogDescription>
-              Inserisci la nuova password per il dipendente.
+              Verrà generata una password temporanea casuale che dovrai comunicare al dipendente.
             </DialogDescription>
           </DialogHeader>
 
           {selectedEmployee && (
-            <div className="space-y-4">
-              <div className="bg-muted p-4 rounded-lg">
-                <div className="space-y-2">
-                  <div>
-                    <Label className="text-sm font-medium">Dipendente:</Label>
-                    <p className="text-sm">{selectedEmployee.fullName}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Username:</Label>
-                    <p className="text-sm font-mono">{selectedEmployee.username}</p>
-                  </div>
+            <div className="bg-muted p-4 rounded-lg">
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-sm font-medium">Dipendente:</Label>
+                  <p className="text-sm">{selectedEmployee.fullName}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Username:</Label>
+                  <p className="text-sm font-mono">{selectedEmployee.username}</p>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">Nuova Password</Label>
-                <Input
-                  id="newPassword"
-                  type="text"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Inserisci la nuova password (min. 6 caratteri)"
-                  data-testid="input-new-password"
-                />
-                {newPassword.length > 0 && newPassword.length < 6 && (
-                  <p className="text-sm text-destructive">Password deve essere di almeno 6 caratteri</p>
-                )}
-              </div>
+              <p className="text-sm text-muted-foreground mt-4">
+                Il dipendente dovrà impostare una nuova password al prossimo accesso.
+              </p>
             </div>
           )}
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setResetPasswordDialogOpen(false)}
               data-testid="button-cancel-password"
             >
               Annulla
             </Button>
-            <Button 
+            <Button
               onClick={confirmResetPassword}
-              disabled={resetPasswordMutation.isPending || newPassword.trim().length < 6}
+              disabled={resetPasswordMutation.isPending}
               data-testid="button-confirm-password"
             >
-              {resetPasswordMutation.isPending ? "Aggiornando..." : "Aggiorna Password"}
+              {resetPasswordMutation.isPending ? "Generando..." : "Genera Password Temporanea"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal per mostrare password temporanea (UNA VOLTA) */}
+      <Dialog open={tempPasswordModalOpen} onOpenChange={setTempPasswordModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-green-600">Password Temporanea Generata</DialogTitle>
+            <DialogDescription>
+              Comunica questa password al dipendente. Sarà visualizzata SOLO UNA VOLTA.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="bg-amber-50 border-2 border-amber-300 p-4 rounded-lg">
+              <Label className="text-sm font-medium text-amber-900">Password Temporanea:</Label>
+              <div className="flex items-center gap-2 mt-2">
+                <code className="flex-1 text-2xl font-bold font-mono bg-white p-3 rounded border-2 border-amber-400 text-center select-all">
+                  {temporaryPassword}
+                </code>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    navigator.clipboard.writeText(temporaryPassword);
+                    toast({
+                      title: "Copiato",
+                      description: "Password copiata negli appunti",
+                    });
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+              <p className="text-sm text-blue-900">
+                <strong>Importante:</strong> Al prossimo accesso, il dipendente dovrà impostare una nuova password personale.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setTempPasswordModalOpen(false);
+                setTemporaryPassword("");
+              }}
+            >
+              Ho comunicato la password
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,0 +1,12 @@
+{
+  "appId": "com.dailyreportify.app",
+  "appName": "DailyReportify",
+  "webDir": "dist/public",
+  "assets": {
+    "splash": {
+      "backgroundColor": "#ffffff",
+      "width": 1500,
+      "height": 1500
+    }
+  }
+}

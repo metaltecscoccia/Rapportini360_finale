@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import LoginForm from "@/components/LoginForm";
+import SetPasswordForm from "@/components/SetPasswordForm";
 import DailyReportForm from "@/components/DailyReportForm";
 import AdminDashboard from "@/components/AdminDashboard";
 import SuperAdminDashboard from "@/components/SuperAdminDashboard";
@@ -271,6 +272,7 @@ function AuthenticatedApp({
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [mustResetPassword, setMustResetPassword] = useState(false);
   const { toast } = useToast();
 
   const handleLogin = async (
@@ -292,6 +294,18 @@ function App() {
       if (response.ok && data.success) {
         // Clear all cached queries to prevent showing data from previous user
         queryClient.clear();
+
+        // Check if user must reset password (temporary password)
+        if (data.mustResetPassword) {
+          setCurrentUser(data.user); // Set user for authenticated session
+          setMustResetPassword(true); // Show SetPasswordForm
+          toast({
+            title: "Password temporanea",
+            description: "Imposta una nuova password per continuare.",
+          });
+          return { success: true };
+        }
+
         setCurrentUser(data.user);
         toast({
           title: "Login effettuato",
@@ -310,6 +324,20 @@ function App() {
   const handleLogout = () => {
     setCurrentUser(null);
   };
+
+  // Show SetPasswordForm if user must reset password
+  if (mustResetPassword && currentUser) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <ThemeProvider>
+            <SetPasswordForm />
+            <Toaster />
+          </ThemeProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
 
   // Show login form if not authenticated
   if (!currentUser) {

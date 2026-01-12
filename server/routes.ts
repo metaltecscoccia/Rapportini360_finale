@@ -34,6 +34,7 @@ import {
   insertOrganizationSchema,
 } from "@shared/schema";
 import { validatePassword, verifyPassword, hashPassword } from "./auth";
+import { generateTemporaryPassword } from "./utils/passwordGenerator";
 
 // ============================================
 // CLOUDINARY & MULTER CONFIGURATION
@@ -146,7 +147,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[LOGIN] User: ${user.username}, OrgId: ${user.organizationId}, SessionOrgId: ${(req as any).session.organizationId}`);
 
       // Return user data without password
-      const { password: _, plainPassword: __, ...userWithoutPassword } = user;
+      const { password: _, ...userWithoutPassword } = user;
+
+      // Check if user must reset password (temporary password)
+      if (user.mustResetPassword) {
+        return res.json({
+          success: true,
+          user: userWithoutPassword,
+          mustResetPassword: true, // Client will redirect to SetPasswordForm
+        });
+      }
+
       res.json({
         success: true,
         user: userWithoutPassword,
@@ -460,9 +471,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const organizationId = (req as any).session.organizationId;
-      const user = await storage.createUser(result.data, organizationId);
 
-      res.json(user);
+      // Generate temporary password for new employee
+      const tempPassword = generateTemporaryPassword();
+
+      // Create user with temp password and mustResetPassword flag
+      const user = await storage.createUser({
+        ...result.data,
+        password: tempPassword,
+        mustResetPassword: true,
+      }, organizationId);
+
+      // Return user + temporary password (shown once to admin)
+      const { password: _, ...userWithoutPassword } = user;
+      res.json({
+        ...userWithoutPassword,
+        temporaryPassword: tempPassword, // Admin must communicate this to employee
+      });
     } catch (error: any) {
       console.error("Error creating user:", error);
       res.status(500).json({ error: "Failed to create user" });
@@ -591,16 +616,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reset user password (admin only)
+  // Reset user password (admin only) - Generates temporary password
   app.post("/api/users/:id/reset-password", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { newPassword } = req.body;
       const organizationId = (req as any).session.organizationId;
-
-      if (!newPassword || newPassword.trim().length === 0) {
-        return res.status(400).json({ error: "Password non può essere vuota" });
-      }
 
       const existingUser = await storage.getUser(id, organizationId);
       if (!existingUser) {
@@ -616,18 +636,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
       }
 
+      // Generate temporary password
+      const tempPassword = generateTemporaryPassword();
+
+      // Update user with temp password and mustResetPassword flag
       const updatedUser = await storage.updateUser(id, {
-        password: newPassword.trim(),
+        password: tempPassword,
+        mustResetPassword: true,
       }, organizationId);
 
+      // Return temporary password to admin (shown only once)
       res.json({
         success: true,
-        message: "Password aggiornata con successo.",
+        message: "Password temporanea generata con successo.",
         username: existingUser.username,
         fullName: existingUser.fullName,
+        temporaryPassword: tempPassword, // Admin must communicate this to employee
       });
     } catch (error) {
       console.error("Error resetting password:", error);
+      res.status(500).json({ error: "Errore interno del server" });
+    }
+  });
+
+  // Set permanent password (employee after first login with temp password)
+  app.post("/api/set-password", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).session.userId;
+      const { newPassword } = req.body;
+
+      if (!newPassword || newPassword.trim().length < 8) {
+        return res.status(400).json({
+          error: "La password deve essere di almeno 8 caratteri"
+        });
+      }
+
+      // Validate password strength: at least 1 uppercase, 1 number
+      const hasUppercase = /[A-Z]/.test(newPassword);
+      const hasNumber = /[0-9]/.test(newPassword);
+
+      if (!hasUppercase || !hasNumber) {
+        return res.status(400).json({
+          error: "La password deve contenere almeno una lettera maiuscola e un numero"
+        });
+      }
+
+      const user = await storage.getUser(userId, (req as any).session.organizationId);
+      if (!user) {
+        return res.status(404).json({ error: "Utente non trovato" });
+      }
+
+      // Prevent admin from using this endpoint
+      if (user.role === "admin") {
+        return res.status(403).json({
+          error: "Gli amministratori non possono usare questo endpoint"
+        });
+      }
+
+      // Update password and clear mustResetPassword flag
+      await storage.updateUser(userId, {
+        password: newPassword.trim(),
+        mustResetPassword: false,
+      }, (req as any).session.organizationId);
+
+      res.json({
+        success: true,
+        message: "Password impostata con successo.",
+      });
+    } catch (error) {
+      console.error("Error setting password:", error);
       res.status(500).json({ error: "Errore interno del server" });
     }
   });
