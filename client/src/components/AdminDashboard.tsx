@@ -1,5 +1,7 @@
 import { useState, useRef, Fragment, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Lightbox from "yet-another-react-lightbox";
+import "yet-another-react-lightbox/styles.css";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -177,6 +179,11 @@ export default function AdminDashboard() {
   const [clientWorkOrdersCount, setClientWorkOrdersCount] = useState<number>(0);
   const [clientOperationsCount, setClientOperationsCount] = useState<number>(0);
   const [employeeReportsCount, setEmployeeReportsCount] = useState<number>(0);
+
+  // Lightbox state for photo gallery
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxPhotos, setLightboxPhotos] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   // Ref for auto-focus on toDate input
   const toDateInputRef = useRef<HTMLInputElement>(null);
@@ -1890,8 +1897,8 @@ export default function AdminDashboard() {
               </div>
 
               {/* Filters */}
-              <div className="flex flex-col md:flex-row flex-wrap gap-4">
-                <div className="w-[250px] relative">
+              <div className="flex flex-col gap-4">
+                <div className="w-full relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Cerca dipendente..."
@@ -1903,7 +1910,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[200px]" data-testid="select-status-filter">
+                  <SelectTrigger className="w-full" data-testid="select-status-filter">
                     <Filter className="h-4 w-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
@@ -1914,11 +1921,13 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
 
-                <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-background">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">
-                    {showAllReports ? 'Tutti i rapportini' : 'Ultimi 7 giorni'}
-                  </span>
+                <div className="flex items-center justify-between gap-2 px-3 py-2 border rounded-md bg-background">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium whitespace-nowrap">
+                      {showAllReports ? 'Tutti' : 'Ultimi 7gg'}
+                    </span>
+                  </div>
                   <Switch
                     checked={showAllReports}
                     onCheckedChange={setShowAllReports}
@@ -1926,9 +1935,9 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                <div className="flex gap-2 items-center">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                  <div className="flex items-center gap-2 flex-1">
+                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                     <Input
                       type="date"
                       value={fromDate}
@@ -1939,11 +1948,11 @@ export default function AdminDashboard() {
                         }, 0);
                       }}
                       placeholder="Da"
-                      className="w-[135px]"
+                      className="flex-1 min-w-0"
                       data-testid="input-from-date"
                     />
                   </div>
-                  <span className="text-muted-foreground">-</span>
+                  <span className="text-muted-foreground hidden sm:block">-</span>
                   <Input
                     ref={toDateInputRef}
                     type="date"
@@ -1955,7 +1964,7 @@ export default function AdminDashboard() {
                       }, 0);
                     }}
                     placeholder="A"
-                    className="w-[135px]"
+                    className="flex-1 min-w-0"
                     data-testid="input-to-date"
                   />
                 </div>
@@ -2216,15 +2225,26 @@ export default function AdminDashboard() {
                                                       Foto allegate:
                                                     </span>
                                                     <div className="flex flex-wrap gap-2">
-                                                      {operation.photos.map((photoPath: string, idx: number) => (
-                                                        <img 
-                                                          key={idx}
-                                                          src={photoPath.startsWith('http') ? photoPath : `/objects/${encodeURIComponent(photoPath)}`}
-                                                          alt={`Foto ${idx + 1}`} 
-                                                          className="w-20 h-20 object-cover rounded-md border"
-                                                          data-testid={`operation-photo-${index}-${idx}`}
-                                                        />
-                                                      ))}
+                                                      {operation.photos.map((photoPath: string, idx: number) => {
+                                                        const fullPhotoPath = photoPath.startsWith('http') ? photoPath : `/objects/${encodeURIComponent(photoPath)}`;
+                                                        return (
+                                                          <img
+                                                            key={idx}
+                                                            src={fullPhotoPath}
+                                                            alt={`Foto ${idx + 1}`}
+                                                            className="w-20 h-20 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity"
+                                                            data-testid={`operation-photo-${index}-${idx}`}
+                                                            onClick={() => {
+                                                              const allPhotos = operation.photos.map((p: string) =>
+                                                                p.startsWith('http') ? p : `/objects/${encodeURIComponent(p)}`
+                                                              );
+                                                              setLightboxPhotos(allPhotos);
+                                                              setLightboxIndex(idx);
+                                                              setLightboxOpen(true);
+                                                            }}
+                                                          />
+                                                        );
+                                                      })}
                                                     </div>
                                                   </div>
                                                 )}
@@ -5146,6 +5166,14 @@ export default function AdminDashboard() {
           </Tabs>
         </TabsContent>
       </Tabs>
+
+      {/* Lightbox for photo gallery */}
+      <Lightbox
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        slides={lightboxPhotos.map(src => ({ src }))}
+        index={lightboxIndex}
+      />
     </div>
   );
 }

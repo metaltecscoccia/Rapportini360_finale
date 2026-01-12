@@ -112,10 +112,12 @@
     "web-push": "^3.6.7",
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
+    "yet-another-react-lightbox": "^3.28.0",
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@replit/vite-plugin-cartographer": "^0.3.1",
     "@replit/vite-plugin-dev-banner": "^0.1.1",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
