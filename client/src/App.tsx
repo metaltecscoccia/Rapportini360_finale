@@ -257,6 +257,7 @@ function AuthenticatedApp({
                   createReportMutation.isPending ||
                   updateReportMutation.isPending
                 }
+                reportStatus={todayReport?.status || null}
               />
             )}
           </div>

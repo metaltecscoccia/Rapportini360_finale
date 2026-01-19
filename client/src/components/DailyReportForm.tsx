@@ -33,6 +33,7 @@ interface DailyReportFormProps {
   initialOperations?: Operation[]; // For editing existing reports
   isEditing?: boolean; // To show different UI for editing
   isSubmitting?: boolean; // To disable submit button during submission
+  reportStatus?: "In attesa" | "Approvato" | null; // null se non esiste ancora
 }
 
 // Load data from backend
@@ -394,13 +395,14 @@ function OperationCard({
   );
 }
 
-export default function DailyReportForm({ 
-  employeeName, 
-  date, 
-  onSubmit, 
-  initialOperations, 
+export default function DailyReportForm({
+  employeeName,
+  date,
+  onSubmit,
+  initialOperations,
   isEditing = false,
-  isSubmitting = false
+  isSubmitting = false,
+  reportStatus = null
 }: DailyReportFormProps) {
   // Initialize with provided operations or default empty operation
   const [operations, setOperations] = useState<Operation[]>(
@@ -561,7 +563,11 @@ export default function DailyReportForm({
               {employeeName} - {date}
             </p>
           </div>
-          <StatusBadge status="In attesa" viewMode="employee" />
+          <StatusBadge
+            status={reportStatus || "In attesa"}
+            viewMode="employee"
+            isNew={!reportStatus}
+          />
         </CardHeader>
         
         <CardContent>
