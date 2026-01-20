@@ -136,10 +136,13 @@ function AuthenticatedApp({
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/daily-reports/today"] });
+      // Invalida TUTTE le query che iniziano con /api/daily-reports
+      queryClient.invalidateQueries({ queryKey: ["/api/daily-reports"] });
       toast({
         title: "Rapportino aggiornato",
-        description: "Le lavorazioni sono state aggiunte con successo.",
+        description: data.status === "In attesa"
+          ? "Stato resettato per nuova approvazione."
+          : "Le lavorazioni sono state aggiunte con successo.",
       });
     },
     onError: (error: any) => {
@@ -257,7 +260,7 @@ function AuthenticatedApp({
                   createReportMutation.isPending ||
                   updateReportMutation.isPending
                 }
-                reportStatus={todayReport?.status || null}
+                reportStatus={todayReport?.status ?? null}
               />
             )}
           </div>

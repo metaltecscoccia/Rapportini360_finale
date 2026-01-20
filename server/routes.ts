@@ -1600,22 +1600,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { operations } = req.body;
-      const organizationId = (req as any).session.organizationId;
+      const session = (req as any).session;
+      const organizationId = session.organizationId;
 
-      const existingReport = await storage.getDailyReport(id, organizationId);
-      if (!existingReport) {
+      // 1. Recupera report esistente
+      let currentReport = await storage.getDailyReport(id, organizationId);
+      if (!currentReport) {
         return res.status(404).json({ error: "Rapportino non trovato" });
       }
 
-      if (
-        (req as any).session.userRole !== "admin" &&
-        (req as any).session.userId !== existingReport.employeeId
-      ) {
+      // 2. Controllo autorizzazioni
+      if (session.userRole !== "admin" && session.userId !== currentReport.employeeId) {
         return res
           .status(403)
           .json({ error: "Non autorizzato a modificare questo rapportino" });
       }
 
+      // 3. RESET STATUS: Solo se dipendente modifica report approvato
+      if (session.userRole !== "admin" && currentReport.status === "Approvato") {
+        console.log(`🔄 Dipendente sta modificando rapportino approvato - cambio status da "Approvato" a "In attesa"`);
+        currentReport = await storage.updateDailyReportStatus(id, "In attesa");
+        console.log(`✅ Status cambiato con successo: ${currentReport.status}`);
+      }
+
+      // 4. Aggiorna operazioni
       if (operations && Array.isArray(operations)) {
         await storage.deleteOperationsByReportId(id, organizationId);
 
@@ -1631,9 +1639,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // 5. Recupera operazioni aggiornate
       const finalOperations = await storage.getOperationsByReportId(id, organizationId);
+
+      // IMPORTANTE: Usa currentReport (aggiornato), non existingReport!
       res.json({
-        ...existingReport,
+        ...currentReport,
         operations: finalOperations,
       });
     } catch (error) {
