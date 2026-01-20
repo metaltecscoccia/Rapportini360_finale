@@ -1272,6 +1272,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: (employeeId && employeeId !== userId) ? "admin" : "employee",
       };
 
+      // LOG DEBUG - Verificare che createdBy sia impostato correttamente
+      console.log(`🔍 [CREATE REPORT] userId: ${userId}, employeeId: ${employeeId}, actualEmployeeId: ${actualEmployeeId}`);
+      console.log(`🔍 [BEFORE VALIDATION] createdBy: ${reportData.createdBy}`);
+
       const reportResult = insertDailyReportSchema.safeParse(reportData);
       if (!reportResult.success) {
         return res
@@ -1281,6 +1285,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             issues: reportResult.error.issues,
           });
       }
+
+      // LOG DEBUG - Verificare che createdBy sia preservato dopo la validazione
+      console.log(`✅ [AFTER VALIDATION] createdBy: ${reportResult.data.createdBy}`);
 
       const newReport = await storage.createDailyReport(
         reportResult.data,

@@ -212,9 +212,10 @@ export const insertWorkOrderSchema = createInsertSchema(workOrders).omit({
 export const insertDailyReportSchema = createInsertSchema(dailyReports).omit({
   id: true,
   organizationId: true, // Will be set automatically from session
-  createdBy: true, // Will be determined automatically based on who creates the report
   createdAt: true,
   updatedAt: true,
+}).extend({
+  createdBy: z.enum(["employee", "admin"]).optional().default("employee")
 });
 
 export const insertOperationSchema = createInsertSchema(operations).omit({
