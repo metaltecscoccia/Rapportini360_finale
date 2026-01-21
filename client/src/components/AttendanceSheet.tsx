@@ -80,20 +80,6 @@ function getHeaderBgColor(year: string, month: string, day: number): string {
   return 'bg-muted';
 }
 
-// Helper per mostrare il numero di ore nei permessi e assenze
-function getAbsenceDisplay(absenceEntry: any, absenceType: string): string {
-  if (!absenceEntry) return absenceType; // Fallback alla lettera semplice
-
-  const { absenceType: type, hours } = absenceEntry;
-
-  // Solo P e A mostrano le ore
-  if ((type === "P" || type === "A") && hours && Number(hours) < 8) {
-    return `${type}${Math.round(Number(hours))}`; // P1, A2, etc.
-  }
-
-  return type; // P, A, F, M (senza numero)
-}
-
 export default function AttendanceSheet() {
   const currentDate = new Date();
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
@@ -348,7 +334,7 @@ export default function AttendanceSheet() {
                               >
                                 {absence ? (
                                   <div className="flex items-center justify-center gap-0.5">
-                                    <span className="font-medium">{getAbsenceDisplay(absenceEntry, absence)}</span>
+                                    <span className="font-medium">{absence}</span>
                                     {absenceEntry && (
                                       <button
                                         onClick={(e) => {
