@@ -326,10 +326,10 @@ export default function AttendanceSheet() {
                             totalOvertime += overtime;
 
                             return (
-                              <TableCell 
-                                key={day} 
+                              <TableCell
+                                key={day}
                                 className={`text-center p-0.5 text-xs ${!absence ? 'cursor-pointer hover-elevate' : ''} relative group ${getCellBgColor(selectedYear, selectedMonth, day)}`}
-                                onClick={() => !absence && !dayData?.ordinary && !overtime && handleCellClick(employee.userId, employee.fullName, day)}
+                                onClick={() => !absence && !overtime && handleCellClick(employee.userId, employee.fullName, day)}
                                 data-testid={`cell-absence-${employee.userId}-${day}`}
                               >
                                 {absence ? (
