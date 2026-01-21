@@ -404,6 +404,7 @@ export default function DailyReportForm({
   isSubmitting = false,
   reportStatus = null
 }: DailyReportFormProps) {
+
   // Initialize with provided operations or default empty operation
   const [operations, setOperations] = useState<Operation[]>(
     initialOperations && initialOperations.length > 0 
