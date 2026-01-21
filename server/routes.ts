@@ -1938,10 +1938,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const organizationId = (req as any).session.organizationId;
+      const { userId, date, absenceType } = result.data;
 
       const existing = await storage.getAttendanceEntry(
-        result.data.userId,
-        result.data.date,
+        userId,
+        date,
         organizationId,
       );
 
@@ -1951,8 +1952,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // CALCOLO AUTOMATICO ORE per P (Permessi) e A (Assenze)
+      let hours = null;
+      if (absenceType === "P" || absenceType === "A") {
+        // Recupera le ore lavorate per quel giorno
+        const dailyReports = await storage.getDailyReportsByDate(date, organizationId);
+        const employeeReport = dailyReports.find(r => r.employeeId === userId);
+
+        if (employeeReport) {
+          const operations = await storage.getOperationsByReportId(employeeReport.id, organizationId);
+          const totalHoursWorked = operations.reduce((sum, op) => sum + Number(op.hours || 0), 0);
+          const absenceHours = 8 - totalHoursWorked;
+
+          // Se absenceHours < 8, salva il numero; altrimenti null (giornata intera)
+          hours = absenceHours < 8 && absenceHours > 0 ? String(absenceHours) : null;
+        } else {
+          // Nessun rapportino → giornata intera di permesso/assenza
+          hours = null; // Mostrerà solo "P" o "A"
+        }
+      }
+
       const entry = await storage.createAttendanceEntry(
-        result.data,
+        { ...result.data, hours },
         organizationId,
       );
       res.json(entry);
