@@ -174,20 +174,6 @@ export default function AttendanceSheet() {
     setAbsenceDialogOpen(true);
   };
 
-  // Helper per mostrare il numero di ore nei permessi e assenze
-  const getAbsenceDisplay = (absenceEntry: any, absenceType: string) => {
-    if (!absenceEntry) return absenceType; // Fallback alla lettera semplice
-
-    const { absenceType: type, hours } = absenceEntry;
-
-    // Solo P e A mostrano le ore
-    if ((type === "P" || type === "A") && hours && Number(hours) < 8) {
-      return `${type}${Math.round(Number(hours))}`; // P1, A2, etc.
-    }
-
-    return type; // P, A, F, M (senza numero)
-  };
-
   const handleAddAbsence = () => {
     if (!selectedCell || !selectedAbsenceType) return;
 
@@ -348,7 +334,7 @@ export default function AttendanceSheet() {
                               >
                                 {absence ? (
                                   <div className="flex items-center justify-center gap-0.5">
-                                    <span className="font-medium">{getAbsenceDisplay(absenceEntry, absence)}</span>
+                                    <span className="font-medium">{absence}</span>
                                     {absenceEntry && (
                                       <button
                                         onClick={(e) => {
