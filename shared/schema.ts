@@ -103,6 +103,7 @@ export const attendanceEntries = pgTable("attendance_entries", {
   userId: varchar("user_id").notNull().references(() => users.id),
   date: text("date").notNull(), // YYYY-MM-DD format
   absenceType: text("absence_type").notNull(), // A, F, P, M, CP, L104
+  hours: numeric("hours"), // Ore di permesso/assenza (null per giornata intera o tipi senza ore)
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
@@ -229,7 +230,10 @@ export const insertAttendanceEntrySchema = createInsertSchema(attendanceEntries)
   organizationId: true, // Will be set automatically from session
   createdAt: true,
 }).extend({
-  absenceType: z.string().min(1, "Tipo assenza richiesto")
+  absenceType: z.string().min(1, "Tipo assenza richiesto"),
+  hours: z.union([z.string(), z.number(), z.null()]).transform(val =>
+    val === null || val === undefined ? null : String(val)
+  ).optional()
 });
 
 export const insertHoursAdjustmentSchema = createInsertSchema(hoursAdjustments).omit({
