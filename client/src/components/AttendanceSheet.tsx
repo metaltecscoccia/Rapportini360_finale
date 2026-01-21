@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -106,6 +107,13 @@ export default function AttendanceSheet() {
     day: number;
   } | null>(null);
   const [selectedAbsenceType, setSelectedAbsenceType] = useState<string>("");
+  const [advanceDialogOpen, setAdvanceDialogOpen] = useState(false);
+  const [selectedAdvance, setSelectedAdvance] = useState({
+    userId: "",
+    userName: "",
+    amount: "",
+    notes: ""
+  });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -132,6 +140,19 @@ export default function AttendanceSheet() {
         { credentials: "include" }
       );
       if (!res.ok) throw new Error("Failed to fetch attendance entries");
+      return res.json();
+    }
+  });
+
+  // Get advances for the month
+  const { data: advances = [] } = useQuery({
+    queryKey: ["/api/advances", selectedYear, selectedMonth],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/advances?year=${selectedYear}&month=${selectedMonth}`,
+        { credentials: "include" }
+      );
+      if (!res.ok) throw new Error("Failed to fetch advances");
       return res.json();
     }
   });
@@ -176,6 +197,52 @@ export default function AttendanceSheet() {
     },
   });
 
+  // Create advance mutation
+  const createAdvanceMutation = useMutation({
+    mutationFn: async (data: { userId: string; yearMonth: string; amount: string; notes?: string }) => {
+      return apiRequest("POST", "/api/advances", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/attendance/monthly"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/advances"] });
+      toast({
+        title: "Acconto registrato",
+        description: "L'acconto è stato registrato con successo",
+      });
+      setAdvanceDialogOpen(false);
+      setSelectedAdvance({ userId: "", userName: "", amount: "", notes: "" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante la registrazione dell'acconto",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete advance mutation
+  const deleteAdvanceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/advances/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/attendance/monthly"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/advances"] });
+      toast({
+        title: "Acconto eliminato",
+        description: "L'acconto è stato rimosso con successo",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante l'eliminazione dell'acconto",
+        variant: "destructive",
+      });
+    },
+  });
+
   const daysInMonth = new Date(
     parseInt(selectedYear),
     parseInt(selectedMonth),
@@ -200,6 +267,24 @@ export default function AttendanceSheet() {
 
   const handleDeleteAbsence = (entryId: string) => {
     deleteAbsenceMutation.mutate(entryId);
+  };
+
+  const handleAddAdvance = () => {
+    if (!selectedAdvance.userId || !selectedAdvance.amount) return;
+
+    const yearMonth = `${selectedYear}-${selectedMonth.padStart(2, '0')}`;
+    createAdvanceMutation.mutate({
+      userId: selectedAdvance.userId,
+      yearMonth,
+      amount: selectedAdvance.amount,
+      notes: selectedAdvance.notes || undefined,
+    });
+  };
+
+  const getUserTotalAdvance = (userId: string): number => {
+    return advances
+      .filter((adv: any) => adv.userId === userId)
+      .reduce((sum: number, adv: any) => sum + Number(adv.amount), 0);
   };
 
   const handleExportExcel = () => {
@@ -253,12 +338,20 @@ export default function AttendanceSheet() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button 
+              <Button
                 onClick={handleExportExcel}
                 data-testid="button-export-excel"
               >
                 <Download className="mr-2 h-4 w-4" />
                 Esporta Excel
+              </Button>
+              <Button
+                onClick={() => setAdvanceDialogOpen(true)}
+                variant="outline"
+                data-testid="button-register-advance"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Registra Acconto
               </Button>
             </div>
           </div>
@@ -281,6 +374,7 @@ export default function AttendanceSheet() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="sticky left-0 bg-background z-10 min-w-[150px]">Nome</TableHead>
+                    <TableHead className="text-center w-20 bg-muted">Acconto</TableHead>
                     <TableHead className="text-center w-12 bg-muted">T</TableHead>
                     {Array.from({ length: daysInMonth }, (_, i) => (
                       <TableHead 
@@ -304,6 +398,9 @@ export default function AttendanceSheet() {
                         <TableRow key={`${employee.userId}-ordinary`}>
                           <TableCell rowSpan={2} className="sticky left-0 bg-background z-10 font-medium align-middle">
                             {employee.fullName}
+                          </TableCell>
+                          <TableCell rowSpan={2} className="text-center align-middle bg-green-50 dark:bg-green-950/20">
+                            {employee.totalAdvance > 0 ? `€${employee.totalAdvance.toFixed(2)}` : '-'}
                           </TableCell>
                           <TableCell className="text-center text-xs bg-muted/50">O</TableCell>
                           {Array.from({ length: daysInMonth }, (_, i) => {
@@ -422,6 +519,114 @@ export default function AttendanceSheet() {
               data-testid="button-save-absence"
             >
               {createAbsenceMutation.isPending ? "Salvataggio..." : "Salva"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Advance Dialog */}
+      <Dialog open={advanceDialogOpen} onOpenChange={setAdvanceDialogOpen}>
+        <DialogContent data-testid="dialog-add-advance">
+          <DialogHeader>
+            <DialogTitle>Registra Acconto Mensile</DialogTitle>
+            <DialogDescription>
+              Registra un acconto per {getMonthName(selectedMonth)} {selectedYear}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Dipendente</Label>
+              <Select
+                value={selectedAdvance.userId}
+                onValueChange={(value) => {
+                  const emp = attendanceData.find((e: any) => e.userId === value);
+                  setSelectedAdvance({
+                    ...selectedAdvance,
+                    userId: value,
+                    userName: emp?.fullName || ""
+                  });
+                }}
+              >
+                <SelectTrigger data-testid="select-advance-employee">
+                  <SelectValue placeholder="Seleziona dipendente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {attendanceData.map((emp: any) => (
+                    <SelectItem key={emp.userId} value={emp.userId}>
+                      {emp.fullName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Importo (€)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={selectedAdvance.amount}
+                onChange={(e) => setSelectedAdvance({ ...selectedAdvance, amount: e.target.value })}
+                data-testid="input-advance-amount"
+              />
+            </div>
+
+            <div>
+              <Label>Note (opzionale)</Label>
+              <Input
+                type="text"
+                placeholder="Es: Acconto su ferie..."
+                value={selectedAdvance.notes}
+                onChange={(e) => setSelectedAdvance({ ...selectedAdvance, notes: e.target.value })}
+                data-testid="input-advance-notes"
+              />
+            </div>
+
+            {selectedAdvance.userId && (
+              <div className="p-3 bg-muted rounded-md text-sm">
+                <strong>Acconti esistenti per {selectedAdvance.userName}:</strong>
+                <div className="mt-2 space-y-1">
+                  {advances.filter((adv: any) => adv.userId === selectedAdvance.userId).map((adv: any) => (
+                    <div key={adv.id} className="flex justify-between items-center">
+                      <span>
+                        €{Number(adv.amount).toFixed(2)}
+                        {adv.notes && ` - ${adv.notes}`}
+                      </span>
+                      <button
+                        onClick={() => deleteAdvanceMutation.mutate(adv.id)}
+                        className="text-destructive hover:underline text-xs"
+                        data-testid={`button-delete-advance-${adv.id}`}
+                      >
+                        Elimina
+                      </button>
+                    </div>
+                  ))}
+                  {advances.filter((adv: any) => adv.userId === selectedAdvance.userId).length === 0 && (
+                    <span className="text-muted-foreground">Nessun acconto registrato</span>
+                  )}
+                  <div className="border-t pt-2 mt-2 font-medium">
+                    Totale: €{getUserTotalAdvance(selectedAdvance.userId).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAdvanceDialogOpen(false)}
+              data-testid="button-cancel-advance"
+            >
+              Annulla
+            </Button>
+            <Button
+              onClick={handleAddAdvance}
+              disabled={!selectedAdvance.userId || !selectedAdvance.amount || createAdvanceMutation.isPending}
+              data-testid="button-save-advance"
+            >
+              {createAdvanceMutation.isPending ? "Salvataggio..." : "Salva"}
             </Button>
           </DialogFooter>
         </DialogContent>

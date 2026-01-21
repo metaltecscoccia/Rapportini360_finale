@@ -120,6 +120,21 @@ export const hoursAdjustments = pgTable("hours_adjustments", {
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 
+// Advances (Acconti mensili per dipendenti)
+export const advances = pgTable("advances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  yearMonth: text("year_month").notNull(), // Formato: "2026-01"
+  amount: numeric("amount").notNull(), // Importo in euro (es. "150.00")
+  notes: text("notes"), // Note opzionali
+  createdBy: varchar("created_by").notNull().references(() => users.id), // Admin che ha registrato l'acconto
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+}, (table) => ({
+  orgYearMonthIdx: index("advances_org_year_month_idx").on(table.organizationId, table.yearMonth),
+  userYearMonthIdx: index("advances_user_year_month_idx").on(table.userId, table.yearMonth),
+}));
+
 // Vehicles table (Mezzi aziendali per gestione carburante)
 export const vehicles = pgTable("vehicles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -246,6 +261,21 @@ export const insertHoursAdjustmentSchema = createInsertSchema(hoursAdjustments).
   adjustment: z.union([z.string(), z.number()]).transform(val => String(val))
 });
 
+export const insertAdvanceSchema = createInsertSchema(advances).omit({
+  id: true,
+  organizationId: true, // Will be set automatically from session
+  createdBy: true, // Will be set automatically from session
+  createdAt: true,
+}).extend({
+  amount: z.union([z.string(), z.number()]).transform(val => String(val)),
+  yearMonth: z.string().regex(/^\d{4}-\d{2}$/, "Formato mese non valido (deve essere YYYY-MM)"),
+  notes: z.string().optional(),
+});
+
+export const updateAdvanceSchema = insertAdvanceSchema.partial().extend({
+  id: z.string().optional()
+});
+
 export const insertVehicleSchema = createInsertSchema(vehicles).omit({
   id: true,
   organizationId: true, // Will be set automatically from session
@@ -348,6 +378,10 @@ export type UpdateAttendanceEntry = z.infer<typeof updateAttendanceEntrySchema>;
 export type InsertHoursAdjustment = z.infer<typeof insertHoursAdjustmentSchema>;
 export type HoursAdjustment = typeof hoursAdjustments.$inferSelect;
 export type UpdateHoursAdjustment = z.infer<typeof updateHoursAdjustmentSchema>;
+
+export type InsertAdvance = z.infer<typeof insertAdvanceSchema>;
+export type Advance = typeof advances.$inferSelect;
+export type UpdateAdvance = z.infer<typeof updateAdvanceSchema>;
 
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;

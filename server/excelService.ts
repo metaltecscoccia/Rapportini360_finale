@@ -20,23 +20,24 @@ export async function generateAttendanceExcel(
 
   // Set column widths (ultra-compact: 2 characters)
   worksheet.getColumn(1).width = 15; // Nome column
-  worksheet.getColumn(2).width = 5;  // Tipo column (O/S)
-  for (let i = 3; i <= daysInMonth + 2; i++) {
+  worksheet.getColumn(2).width = 10; // Acconto column
+  worksheet.getColumn(3).width = 5;  // Tipo column (O/S)
+  for (let i = 4; i <= daysInMonth + 3; i++) {
     worksheet.getColumn(i).width = 4; // Day columns (ultra-compact)
   }
-  worksheet.getColumn(daysInMonth + 3).width = 6; // TOT column
+  worksheet.getColumn(daysInMonth + 4).width = 6; // TOT column
 
   // Title row
   const titleRow = worksheet.addRow([`FOGLIO PRESENZE - ${getMonthName(monthNum)} ${year}`]);
   titleRow.font = { bold: true, size: 14 };
-  worksheet.mergeCells(1, 1, 1, daysInMonth + 3);
+  worksheet.mergeCells(1, 1, 1, daysInMonth + 4);
   titleRow.alignment = { horizontal: 'center', vertical: 'middle' };
   titleRow.height = 25;
 
   // Legend row
   const legendRow = worksheet.addRow(['Legenda: F=Ferie | P=Permessi | M=Malattia | CP=Cong.Parent. | L104=Legge104']);
   legendRow.font = { size: 9, italic: true };
-  worksheet.mergeCells(2, 1, 2, daysInMonth + 3);
+  worksheet.mergeCells(2, 1, 2, daysInMonth + 4);
   legendRow.alignment = { horizontal: 'left', vertical: 'middle' };
   legendRow.height = 18;
 
@@ -44,7 +45,7 @@ export async function generateAttendanceExcel(
   worksheet.addRow([]);
 
   // Header row
-  const headerRow = worksheet.addRow(['Nome', 'T', ...Array.from({ length: daysInMonth }, (_, i) => i + 1), 'TOT']);
+  const headerRow = worksheet.addRow(['Nome', 'Acconto', 'T', ...Array.from({ length: daysInMonth }, (_, i) => i + 1), 'TOT']);
   headerRow.font = { bold: true, size: 10 };
   headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
   headerRow.height = 20;
@@ -67,7 +68,7 @@ export async function generateAttendanceExcel(
   // Color day columns based on day of week and holidays
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${year}-${month.padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-    const colIndex = day + 2; // +2 because first two columns are Nome and Tipo
+    const colIndex = day + 3; // +3 because first three columns are Nome, Acconto, and Tipo
     const cell = headerRow.getCell(colIndex);
     
     if (isItalianHoliday(dateStr)) {
@@ -94,7 +95,8 @@ export async function generateAttendanceExcel(
   // Add employee rows
   attendanceData.forEach((employee: any) => {
     // Row 1: Ordinarie
-    const ordinaryValues: (string | number)[] = [employee.fullName, 'O'];
+    const advanceAmount = employee.totalAdvance > 0 ? `€${employee.totalAdvance.toFixed(2)}` : '-';
+    const ordinaryValues: (string | number)[] = [employee.fullName, advanceAmount, 'O'];
     let totalOrdinary = 0;
     
     for (let day = 1; day <= daysInMonth; day++) {
@@ -121,7 +123,7 @@ export async function generateAttendanceExcel(
     row1.font = { size: 9 };
     
     // Row 2: Straordinari/Assenze
-    const overtimeValues: (string | number)[] = ['', 'S'];
+    const overtimeValues: (string | number)[] = ['', '', 'S'];
     let totalOvertime = 0;
     
     for (let day = 1; day <= daysInMonth; day++) {
@@ -158,6 +160,16 @@ export async function generateAttendanceExcel(
     const mergedNameCell = worksheet.getCell(row1.number, 1);
     mergedNameCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
+    // Merge advance cell across both rows
+    worksheet.mergeCells(row1.number, 2, row2.number, 2);
+    const mergedAdvanceCell = worksheet.getCell(row1.number, 2);
+    mergedAdvanceCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    mergedAdvanceCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE8F5E9' } // Light green for advance
+    };
+
     // Apply borders and background colors to both rows
     [row1, row2].forEach(row => {
       row.eachCell((cell, colNumber) => {
@@ -167,12 +179,12 @@ export async function generateAttendanceExcel(
           bottom: { style: 'thin' },
           right: { style: 'thin' }
         };
-        
+
         // Apply day colors to data cells
-        if (colNumber > 2 && colNumber <= daysInMonth + 2) {
-          const day = colNumber - 2;
+        if (colNumber > 3 && colNumber <= daysInMonth + 3) {
+          const day = colNumber - 3;
           const dateStr = `${year}-${month.padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-          
+
           if (isItalianHoliday(dateStr)) {
             cell.fill = {
               type: 'pattern',
@@ -197,7 +209,7 @@ export async function generateAttendanceExcel(
     });
     
     // Make second row tipo cell slightly lighter
-    row2.getCell(2).fill = {
+    row2.getCell(3).fill = {
       type: 'pattern',
       pattern: 'solid',
       fgColor: { argb: 'FFF5F5F5' }

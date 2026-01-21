@@ -1,4 +1,4 @@
-import { 
+import {
   users,
   clients,
   workTypes,
@@ -8,11 +8,12 @@ import {
   operations,
   attendanceEntries,
   hoursAdjustments,
+  advances,
   vehicles,
   fuelRefills,
   fuelTankLoads,
   organizations,
-  type User, 
+  type User,
   type InsertUser,
   type Client,
   type InsertClient,
@@ -32,6 +33,9 @@ import {
   type HoursAdjustment,
   type InsertHoursAdjustment,
   type UpdateHoursAdjustment,
+  type Advance,
+  type InsertAdvance,
+  type UpdateAdvance,
   type Vehicle,
   type InsertVehicle,
   type UpdateVehicle,
@@ -1296,6 +1300,50 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
+  // Advances (Acconti mensili)
+  async getAllAdvances(organizationId: string, year: string, month: string): Promise<Advance[]> {
+    await this.ensureInitialized();
+    const yearMonth = `${year}-${month.padStart(2, '0')}`;
+    return await db.select().from(advances).where(and(
+      eq(advances.organizationId, organizationId),
+      eq(advances.yearMonth, yearMonth)
+    ));
+  }
+
+  async getAdvancesByUser(userId: string, yearMonth: string, organizationId: string): Promise<Advance[]> {
+    await this.ensureInitialized();
+    return await db.select().from(advances).where(and(
+      eq(advances.userId, userId),
+      eq(advances.yearMonth, yearMonth),
+      eq(advances.organizationId, organizationId)
+    ));
+  }
+
+  async getTotalAdvancesByUser(userId: string, yearMonth: string, organizationId: string): Promise<number> {
+    await this.ensureInitialized();
+    const userAdvances = await this.getAdvancesByUser(userId, yearMonth, organizationId);
+    return userAdvances.reduce((sum, adv) => sum + Number(adv.amount), 0);
+  }
+
+  async createAdvance(advance: InsertAdvance, organizationId: string, createdBy: string): Promise<Advance> {
+    await this.ensureInitialized();
+    const [newAdvance] = await db.insert(advances).values({
+      ...advance,
+      organizationId,
+      createdBy
+    }).returning();
+    return newAdvance;
+  }
+
+  async deleteAdvance(id: string, organizationId: string): Promise<boolean> {
+    await this.ensureInitialized();
+    const result = await db.delete(advances).where(and(
+      eq(advances.id, id),
+      eq(advances.organizationId, organizationId)
+    ));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
   // Vehicles (Mezzi)
   async getAllVehicles(organizationId: string): Promise<Vehicle[]> {
     await this.ensureInitialized();
@@ -1638,7 +1686,14 @@ export class DatabaseStorage implements IStorage {
     
     // Get attendance entries for the month
     const absences = await this.getAllAttendanceEntries(organizationId, year, month);
-    
+
+    // Get advances for the month
+    const yearMonth = `${year}-${month.padStart(2, '0')}`;
+    const allAdvances = await db.select().from(advances).where(and(
+      eq(advances.organizationId, organizationId),
+      eq(advances.yearMonth, yearMonth)
+    ));
+
     // Get all hours adjustments for these reports
     const allAdjustments = await db.select().from(hoursAdjustments);
     const monthAdjustments = allAdjustments.filter(adj => reportIds.includes(adj.dailyReportId));
@@ -1658,7 +1713,11 @@ export class DatabaseStorage implements IStorage {
     const attendanceData = relevantUsers.map(user => {
       const userReports = monthReports.filter(r => r.employeeId === user.id);
       const userAbsences = absences.filter(a => a.userId === user.id);
-      
+
+      // Calculate total advances for this user
+      const userAdvances = allAdvances.filter(adv => adv.userId === user.id);
+      const totalAdvance = userAdvances.reduce((sum, adv) => sum + Number(adv.amount), 0);
+
       const dailyData: Record<string, { ordinary: number; overtime: number; absence?: string; adjustment?: number }> = {};
       
       // Process daily reports
@@ -1690,14 +1749,15 @@ export class DatabaseStorage implements IStorage {
         }
         dailyData[absence.date].absence = absence.absenceType;
       });
-      
+
       return {
         userId: user.id,
         fullName: user.fullName,
+        totalAdvance,
         dailyData
       };
     });
-    
+
     return attendanceData;
   }
 

@@ -25,6 +25,7 @@ import {
   updateAttendanceEntrySchema,
   insertHoursAdjustmentSchema,
   updateHoursAdjustmentSchema,
+  insertAdvanceSchema,
   insertVehicleSchema,
   updateVehicleSchema,
   insertFuelRefillSchema,
@@ -2178,6 +2179,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error exporting attendance to Excel:", error);
       res.status(500).json({ error: "Failed to export attendance to Excel" });
+    }
+  });
+
+  // ============================================
+  // ADVANCES (ACCONTI MENSILI)
+  // ============================================
+
+  app.get("/api/advances", requireAdmin, async (req, res) => {
+    try {
+      const { year, month } = req.query;
+
+      if (!year || !month) {
+        return res.status(400).json({ error: "Year and month are required" });
+      }
+
+      const organizationId = (req as any).session.organizationId;
+      const advances = await storage.getAllAdvances(
+        organizationId,
+        year as string,
+        month as string
+      );
+
+      res.json(advances);
+    } catch (error) {
+      console.error("Error fetching advances:", error);
+      res.status(500).json({ error: "Failed to fetch advances" });
+    }
+  });
+
+  app.post("/api/advances", requireAdmin, async (req, res) => {
+    try {
+      const result = insertAdvanceSchema.safeParse(req.body);
+
+      if (!result.success) {
+        return res.status(400).json({
+          error: "Dati acconto non validi",
+          issues: result.error.issues,
+        });
+      }
+
+      const organizationId = (req as any).session.organizationId;
+      const userId = (req as any).session.userId;
+
+      const advance = await storage.createAdvance(
+        result.data,
+        organizationId,
+        userId
+      );
+
+      res.status(201).json(advance);
+    } catch (error) {
+      console.error("Error creating advance:", error);
+      res.status(500).json({ error: "Failed to create advance" });
+    }
+  });
+
+  app.delete("/api/advances/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = (req as any).session.organizationId;
+
+      const deleted = await storage.deleteAdvance(id, organizationId);
+
+      if (deleted) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "Advance not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting advance:", error);
+      res.status(500).json({ error: "Failed to delete advance" });
     }
   });
 
