@@ -61,6 +61,8 @@ import {
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import StatusBadge from "./StatusBadge";
+import StatsCard from "./StatsCard";
+import QuickActionCard from "./QuickActionCard";
 import WorkOrderReport from "./WorkOrderReport";
 import DailyReportForm from "./DailyReportForm";
 import AttendanceSheet from "./AttendanceSheet";
@@ -1853,6 +1855,76 @@ export default function AdminDashboard() {
 
         {/* Reports Tab */}
         <TabsContent value="reports" className="space-y-4">
+          {/* Stats Cards Grid */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <StatsCard
+              title="Rapportini Totali"
+              value={reports.length}
+              icon={FileText}
+              gradientFrom="hsl(217, 91%, 55%)"
+              gradientTo="hsl(217, 91%, 70%)"
+              delay={0}
+            />
+            <StatsCard
+              title="In Attesa"
+              value={reports.filter((r: any) => r.status === "In attesa").length}
+              icon={Clock}
+              gradientFrom="hsl(38, 92%, 45%)"
+              gradientTo="hsl(38, 92%, 60%)"
+              delay={0.1}
+            />
+            <StatsCard
+              title="Approvati Oggi"
+              value={reports.filter((r: any) => {
+                const today = new Date().toISOString().split('T')[0];
+                return r.status === "Approvato" && r.date === today;
+              }).length}
+              icon={CheckCircle}
+              gradientFrom="hsl(142, 76%, 31%)"
+              gradientTo="hsl(142, 76%, 46%)"
+              delay={0.2}
+            />
+            <StatsCard
+              title="Dipendenti Attivi"
+              value={activeEmployees.length}
+              icon={Users}
+              gradientFrom="hsl(280, 65%, 50%)"
+              gradientTo="hsl(280, 65%, 65%)"
+              delay={0.3}
+            />
+          </div>
+
+          {/* Quick Actions Grid */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <QuickActionCard
+              title="Nuova Commessa"
+              description="Crea una nuova commessa di lavoro"
+              icon={Briefcase}
+              gradientFrom="hsl(217, 91%, 55%)"
+              gradientTo="hsl(217, 91%, 70%)"
+              onClick={() => setAddWorkOrderDialogOpen(true)}
+              delay={0}
+            />
+            <QuickActionCard
+              title="Aggiungi Cliente"
+              description="Registra un nuovo cliente"
+              icon={Building}
+              gradientFrom="hsl(142, 76%, 31%)"
+              gradientTo="hsl(142, 76%, 46%)"
+              onClick={() => setAddClientDialogOpen(true)}
+              delay={0.1}
+            />
+            <QuickActionCard
+              title="Nuovo Dipendente"
+              description="Aggiungi un nuovo dipendente"
+              icon={Users}
+              gradientFrom="hsl(280, 65%, 50%)"
+              gradientTo="hsl(280, 65%, 65%)"
+              onClick={() => setAddEmployeeDialogOpen(true)}
+              delay={0.2}
+            />
+          </div>
+
           <Card>
             <CardHeader>
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
