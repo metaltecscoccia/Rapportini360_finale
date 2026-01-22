@@ -24,7 +24,7 @@ export default function StatusBadge({ status, viewMode = 'admin', isNew = false 
       return (
         <Badge
           variant="outline"
-          className="flex items-center gap-1 border-0 bg-orange-500 text-white dark:bg-orange-500 dark:text-white"
+          className="flex items-center gap-1 border-0 bg-gradient-warning text-white shadow-md"
           data-testid="badge-status-non-inviato"
         >
           <Clock className="h-3 w-3" />
@@ -36,7 +36,7 @@ export default function StatusBadge({ status, viewMode = 'admin', isNew = false 
       return (
         <Badge
           variant="outline"
-          className="flex items-center gap-1 border-0 bg-blue-500 text-white dark:bg-blue-500 dark:text-white"
+          className="flex items-center gap-1 border-0 bg-gradient-info text-white shadow-md"
           data-testid="badge-status-inviato"
         >
           <Send className="h-3 w-3" />
@@ -48,7 +48,7 @@ export default function StatusBadge({ status, viewMode = 'admin', isNew = false 
       return (
         <Badge
           variant="outline"
-          className="flex items-center gap-1 border-0 bg-green-500 text-black dark:bg-green-500 dark:text-black"
+          className="flex items-center gap-1 border-0 bg-gradient-success text-white shadow-md"
           data-testid="badge-status-accettato"
         >
           <CheckCircle className="h-3 w-3" />
@@ -62,10 +62,10 @@ export default function StatusBadge({ status, viewMode = 'admin', isNew = false 
     return (
       <Badge
         variant="outline"
-        className={`flex items-center gap-1 border-0 ${
+        className={`flex items-center gap-1 border-0 shadow-md ${
           isPending
-            ? 'bg-orange-500 text-white dark:bg-orange-500 dark:text-white'
-            : 'bg-green-500 text-black dark:bg-green-500 dark:text-black'
+            ? 'bg-gradient-warning text-white'
+            : 'bg-gradient-success text-white'
         }`}
         data-testid={`badge-status-${status.toLowerCase().replace(' ', '-')}`}
       >

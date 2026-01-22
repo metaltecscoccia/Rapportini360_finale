@@ -173,8 +173,8 @@ function AuthenticatedApp({
       transition={{ duration: 0.3 }}
     >
       {/* Header */}
-      <motion.header 
-        className="border-b bg-card"
+      <motion.header
+        className="border-b bg-gradient-header shadow-sm"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.1 }}
@@ -186,7 +186,7 @@ function AuthenticatedApp({
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.3, delay: 0.2 }}
             >
-              <h1 className="text-xl font-semibold">
+              <h1 className="text-xl font-semibold text-gradient-primary">
                 {currentUser.role === "superadmin"
                   ? "Super Admin"
                   : currentUser.role === "admin"
