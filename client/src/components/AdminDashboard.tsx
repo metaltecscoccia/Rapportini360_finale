@@ -1855,45 +1855,6 @@ export default function AdminDashboard() {
 
         {/* Reports Tab */}
         <TabsContent value="reports" className="space-y-4">
-          {/* Stats Cards Grid */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <StatsCard
-              title="Rapportini Totali"
-              value={reports.length}
-              icon={FileText}
-              gradientFrom="hsl(217, 91%, 55%)"
-              gradientTo="hsl(217, 91%, 70%)"
-              delay={0}
-            />
-            <StatsCard
-              title="In Attesa"
-              value={reports.filter((r: any) => r.status === "In attesa").length}
-              icon={Clock}
-              gradientFrom="hsl(38, 92%, 45%)"
-              gradientTo="hsl(38, 92%, 60%)"
-              delay={0.1}
-            />
-            <StatsCard
-              title="Approvati Oggi"
-              value={reports.filter((r: any) => {
-                const today = new Date().toISOString().split('T')[0];
-                return r.status === "Approvato" && r.date === today;
-              }).length}
-              icon={CheckCircle}
-              gradientFrom="hsl(142, 76%, 31%)"
-              gradientTo="hsl(142, 76%, 46%)"
-              delay={0.2}
-            />
-            <StatsCard
-              title="Dipendenti Attivi"
-              value={activeEmployees.length}
-              icon={Users}
-              gradientFrom="hsl(280, 65%, 50%)"
-              gradientTo="hsl(280, 65%, 65%)"
-              delay={0.3}
-            />
-          </div>
-
           {/* Quick Actions Grid */}
           <div className="grid gap-4 md:grid-cols-3">
             <QuickActionCard
