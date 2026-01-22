@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0" +
-  " hover-elevate active-elevate-2 hover:scale-[1.02] active:scale-[0.98] transition-transform duration-150 ease-out",
+  " hover-elevate active-elevate-2 hover:scale-[1.02] active:scale-[0.98] transition-transform duration-150 ease-out ripple-container",
   {
     variants: {
       variant: {
@@ -46,12 +46,39 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, onClick, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
+
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      // Create ripple effect
+      const button = e.currentTarget
+      const rect = button.getBoundingClientRect()
+      const ripple = document.createElement('span')
+      const size = Math.max(rect.width, rect.height)
+      const x = e.clientX - rect.left - size / 2
+      const y = e.clientY - rect.top - size / 2
+
+      ripple.style.width = ripple.style.height = `${size}px`
+      ripple.style.left = `${x}px`
+      ripple.style.top = `${y}px`
+      ripple.className = 'ripple-effect'
+
+      button.appendChild(ripple)
+
+      // Remove ripple after animation
+      setTimeout(() => {
+        ripple.remove()
+      }, 600)
+
+      // Call original onClick
+      onClick?.(e)
+    }
+
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        onClick={asChild ? onClick : handleClick}
         {...props}
       />
     )

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -1973,11 +1974,18 @@ export default function AdminDashboard() {
 
             <CardContent>
               {isLoadingReports ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                    <p className="text-muted-foreground">Caricamento rapportini...</p>
-                  </div>
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 p-4 border rounded-lg">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-48" />
+                      </div>
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                      <Skeleton className="h-9 w-24 rounded-md" />
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="overflow-x-auto" data-testid="scroll-table-reports">
@@ -2502,11 +2510,21 @@ export default function AdminDashboard() {
                   </TableHeader>
                   <TableBody>
                   {isLoadingClients ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8">
-                        Caricamento...
-                      </TableCell>
-                    </TableRow>
+                    <>
+                      {[...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Skeleton className="h-9 w-9 rounded-md" />
+                              <Skeleton className="h-9 w-9 rounded-md" />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </>
                   ) : (clients as any[]).length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
@@ -2835,8 +2853,35 @@ export default function AdminDashboard() {
                 </Select>
               </div>
               {isLoadingEmployees ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Caricamento dipendenti...
+                <div className="overflow-x-auto" data-testid="scroll-table-employees">
+                  <Table className="min-w-[700px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Username</TableHead>
+                        <TableHead>Ruolo</TableHead>
+                        <TableHead>Stato</TableHead>
+                        <TableHead>Azioni</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {[...Array(4)].map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                          <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                          <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Skeleton className="h-9 w-9 rounded-md" />
+                              <Skeleton className="h-9 w-9 rounded-md" />
+                              <Skeleton className="h-9 w-9 rounded-md" />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               ) : (
                 <div className="overflow-x-auto" data-testid="scroll-table-employees">

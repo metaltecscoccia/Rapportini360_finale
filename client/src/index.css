@@ -269,6 +269,63 @@
   }
 
   /* ============================================
+     MICRO-INTERACTION KEYFRAMES
+     ============================================ */
+
+  @keyframes ripple {
+    0% {
+      transform: scale(0);
+      opacity: 0.6;
+    }
+    100% {
+      transform: scale(4);
+      opacity: 0;
+    }
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  @keyframes pulse-success {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--gradient-success-from) / 0.7);
+    }
+    50% {
+      box-shadow: 0 0 0 8px hsl(var(--gradient-success-from) / 0);
+    }
+  }
+
+  @keyframes pulse-error {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--destructive) / 0.7);
+    }
+    50% {
+      box-shadow: 0 0 0 8px hsl(var(--destructive) / 0);
+    }
+  }
+
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* ============================================
      GRADIENT UTILITIES
      ============================================ */
 
@@ -311,6 +368,66 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  /* ============================================
+     MICRO-INTERACTION UTILITIES
+     ============================================ */
+
+  /* Ripple effect container */
+  .ripple-container {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ripple-effect {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+    animation: ripple 0.6s ease-out;
+  }
+
+  /* Shake animation */
+  .animate-shake {
+    animation: shake 0.5s ease-in-out;
+  }
+
+  /* Shimmer effect for skeleton loaders */
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--accent)) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Success pulse */
+  .animate-pulse-success {
+    animation: pulse-success 1s ease-out;
+  }
+
+  /* Error pulse */
+  .animate-pulse-error {
+    animation: pulse-error 0.5s ease-out;
+  }
+
+  /* Slow spin for loaders */
+  .animate-spin-slow {
+    animation: spin-slow 2s linear infinite;
+  }
+
+  /* Icon hover animations */
+  .icon-hover-rotate:hover {
+    transform: rotate(15deg);
+    transition: transform 0.2s ease-out;
+  }
+
+  .icon-hover-bounce:hover {
+    animation: bounce 0.5s ease-in-out;
   }
 
   /* Hide search cancel button in Chrome */
