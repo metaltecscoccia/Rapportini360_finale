@@ -182,20 +182,28 @@ function AuthenticatedApp({
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <motion.div
+              className="flex items-center gap-3"
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.3, delay: 0.2 }}
             >
-              <h1 className="text-xl font-semibold text-gradient-primary">
-                {currentUser.role === "superadmin"
-                  ? "Super Admin"
-                  : currentUser.role === "admin"
-                  ? "Dashboard Amministratore"
-                  : "Rapportini Giornalieri"}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Benvenuto, {currentUser.fullName}
-              </p>
+              <img
+                src="/resources/icon.png"
+                alt="Logo Aziendale"
+                className="h-10 w-10 object-contain"
+              />
+              <div>
+                <h1 className="text-xl font-semibold text-gradient-primary">
+                  {currentUser.role === "superadmin"
+                    ? "Super Admin"
+                    : currentUser.role === "admin"
+                    ? "Dashboard Amministratore"
+                    : "Rapportini Giornalieri"}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Benvenuto, {currentUser.fullName}
+                </p>
+              </div>
             </motion.div>
 
             <motion.div 
