@@ -1876,12 +1876,12 @@ export default function AdminDashboard() {
               delay={0.1}
             />
             <QuickActionCard
-              title="Nuovo Dipendente"
-              description="Aggiungi un nuovo dipendente"
-              icon={Users}
+              title="Registra Assenze"
+              description="Registra assenze dipendenti"
+              icon={UserX}
               gradientFrom="hsl(280, 65%, 50%)"
               gradientTo="hsl(280, 65%, 65%)"
-              onClick={() => setAddEmployeeDialogOpen(true)}
+              onClick={() => setRegisterAbsenceDialogOpen(true)}
               delay={0.2}
             />
           </div>
