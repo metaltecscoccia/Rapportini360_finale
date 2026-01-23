@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Building, ClipboardList, Settings, Calendar, BarChart2, Menu } from "lucide-react";
+import { LayoutDashboard, Users, Building, ClipboardList, Settings, Calendar, BarChart2, Package, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ const sidebarItems: SidebarItem[] = [
   { id: "configuration", icon: Settings, label: "Configurazione" },
   { id: "attendance", icon: Calendar, label: "Presenze" },
   { id: "absence-stats", icon: BarChart2, label: "Statistiche" },
+  { id: "fuel", icon: Package, label: "Rifornimenti" },
 ];
 
 interface AppSidebarProps {

@@ -1783,6 +1783,7 @@ export default function AdminDashboard() {
       "configuration": { mainSection: "rapportini", tab: "work-types" },
       "attendance": { mainSection: "rapportini", tab: "attendance" },
       "absence-stats": { mainSection: "rapportini", tab: "absence-stats" },
+      "fuel": { mainSection: "rifornimenti", tab: "refills" },
     };
     return sectionMap[activeSection] || { mainSection: "rapportini", tab: "reports" };
   };
