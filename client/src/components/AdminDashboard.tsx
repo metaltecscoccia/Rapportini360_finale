@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,13 +24,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateToItalian, formatDateToISO } from "@/lib/dateUtils";
-import { 
-  Users, 
-  FileText, 
+import {
+  Users,
+  FileText,
   Building,
-  Building2, 
-  Briefcase, 
-  Search, 
+  Building2,
+  Briefcase,
+  Search,
   Filter,
   CheckCircle,
   Clock,
@@ -57,7 +58,8 @@ import {
   TrendingUp,
   AlertTriangle,
   Download,
-  Copy
+  Copy,
+  Menu
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import StatusBadge from "./StatusBadge";
@@ -70,6 +72,8 @@ import { HoursAdjustmentDialog } from "./HoursAdjustmentDialog";
 import VehiclesManagement from "./VehiclesManagement";
 import FuelRefillsManagement from "./FuelRefillsManagement";
 import FuelStatistics from "./FuelStatistics";
+import { AppSidebar, sidebarItems } from "./AppSidebar";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 // Schema per form aggiunta dipendente
 const addEmployeeSchema = z.object({
@@ -142,6 +146,13 @@ export default function AdminDashboard() {
   const [employeeStatusFilter, setEmployeeStatusFilter] = useState("all"); // all, active, inactive
   const [mainSection, setMainSection] = useState("rapportini"); // rapportini or rifornimenti
   const [selectedTab, setSelectedTab] = useState("reports");
+
+  // Sidebar state
+  const [activeSection, setActiveSection] = useState("dashboard");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<{
     id: string;
     number: string;
@@ -1761,10 +1772,95 @@ export default function AdminDashboard() {
   // Ordina i clienti alfabeticamente
   const sortedClientNames = Object.keys(workOrdersByClient).sort((a, b) => a.localeCompare(b));
 
+  // Map activeSection to old tab values for backward compatibility
+  // This allows us to reuse all existing code while transitioning to sidebar
+  const getSectionMapping = () => {
+    const sectionMap: Record<string, { mainSection: string; tab: string }> = {
+      "dashboard": { mainSection: "rapportini", tab: "reports" },
+      "reports": { mainSection: "rapportini", tab: "reports" },
+      "employees": { mainSection: "rapportini", tab: "employees" },
+      "clients": { mainSection: "rapportini", tab: "clients" },
+      "workorders": { mainSection: "rapportini", tab: "workorders" },
+      "configuration": { mainSection: "rapportini", tab: "configuration" },
+      "attendance": { mainSection: "rapportini", tab: "attendance" },
+      "absence-stats": { mainSection: "rapportini", tab: "absence-stats" },
+    };
+    return sectionMap[activeSection] || { mainSection: "rapportini", tab: "reports" };
+  };
+
+  const currentMapping = getSectionMapping();
+
+  // Sync old state with new sidebar state (for backward compatibility)
+  useEffect(() => {
+    setSelectedTab(currentMapping.tab);
+    setMainSection(currentMapping.mainSection);
+  }, [activeSection]);
+
+  // Get pending reports count for sidebar badge
+  const pendingReportsCount = totalPendingReports || 0;
+
+  // Get current section title
+  const getCurrentSectionTitle = () => {
+    const item = sidebarItems.find(item => item.id === activeSection);
+    return item?.label || "Dashboard";
+  };
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Main Navigation */}
-      <Tabs value={mainSection} onValueChange={setMainSection}>
+    <div className="flex h-screen overflow-hidden">
+      {/* Desktop Sidebar */}
+      {!isMobile && (
+        <AppSidebar
+          activeSection={activeSection}
+          onSectionChange={setActiveSection}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          pendingReportsCount={pendingReportsCount}
+        />
+      )}
+
+      {/* Mobile Drawer */}
+      {isMobile && (
+        <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+          <SheetContent side="left" className="p-0 w-[250px]">
+            <AppSidebar
+              activeSection={activeSection}
+              onSectionChange={(section) => {
+                setActiveSection(section);
+                setIsMobileSidebarOpen(false);
+              }}
+              isCollapsed={false}
+              onToggleCollapse={() => setIsMobileSidebarOpen(false)}
+              isMobile
+              pendingReportsCount={pendingReportsCount}
+            />
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        {/* Header con hamburger mobile */}
+        <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
+          <div className="flex items-center gap-4 p-4">
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMobileSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            )}
+            <h1 className="text-2xl font-bold">
+              {getCurrentSectionTitle()}
+            </h1>
+          </div>
+        </header>
+
+        {/* Content Area */}
+        <div className="p-6 space-y-6">
+      {/* Old tab navigation - keeping for backward compatibility during transition */}
+      <Tabs value={mainSection} onValueChange={setMainSection} className="hidden">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="rapportini" data-testid="tab-main-rapportini">
             <FileText className="h-4 w-4 mr-2" />
@@ -5298,6 +5394,11 @@ export default function AdminDashboard() {
         slides={lightboxPhotos.map(src => ({ src }))}
         index={lightboxIndex}
       />
+        </div>
+        {/* End Content Area */}
+      </main>
+      {/* End Main Content */}
     </div>
+    /* End flex container */
   );
 }
