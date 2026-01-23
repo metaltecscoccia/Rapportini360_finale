@@ -1859,9 +1859,9 @@ export default function AdminDashboard() {
 
         {/* Content Area */}
         <div className="p-6 space-y-6">
-      {/* Old tab navigation - keeping for backward compatibility during transition */}
-      <Tabs value={mainSection} onValueChange={setMainSection} className="hidden">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+      {/* Tabs - navigation now handled by sidebar */}
+      <Tabs value={mainSection} onValueChange={setMainSection}>
+        <TabsList className="hidden">
           <TabsTrigger value="rapportini" data-testid="tab-main-rapportini">
             <FileText className="h-4 w-4 mr-2" />
             Rapportini
