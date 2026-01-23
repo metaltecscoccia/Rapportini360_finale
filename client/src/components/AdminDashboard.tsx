@@ -1777,11 +1777,10 @@ export default function AdminDashboard() {
   const getSectionMapping = () => {
     const sectionMap: Record<string, { mainSection: string; tab: string }> = {
       "dashboard": { mainSection: "rapportini", tab: "reports" },
-      "reports": { mainSection: "rapportini", tab: "reports" },
       "employees": { mainSection: "rapportini", tab: "employees" },
       "clients": { mainSection: "rapportini", tab: "clients" },
-      "workorders": { mainSection: "rapportini", tab: "workorders" },
-      "configuration": { mainSection: "rapportini", tab: "configuration" },
+      "workorders": { mainSection: "rapportini", tab: "work-orders" },
+      "configuration": { mainSection: "rapportini", tab: "work-types" },
       "attendance": { mainSection: "rapportini", tab: "attendance" },
       "absence-stats": { mainSection: "rapportini", tab: "absence-stats" },
     };
@@ -1916,9 +1915,9 @@ export default function AdminDashboard() {
 
       </div>
 
-      {/* Main Content Tabs */}
+      {/* Main Content Tabs - now handled by sidebar */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="flex-wrap h-auto">
+        <TabsList className="hidden">
           <TabsTrigger value="reports" data-testid="tab-reports">
             <FileText className="h-4 w-4 mr-2" />
             Rapportini

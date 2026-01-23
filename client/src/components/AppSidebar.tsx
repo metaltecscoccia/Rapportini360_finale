@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Users, Building, ClipboardList, Settings, Calendar, BarChart2, Menu } from "lucide-react";
+import { LayoutDashboard, Users, Building, ClipboardList, Settings, Calendar, BarChart2, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,6 @@ interface SidebarItem {
 
 const sidebarItems: SidebarItem[] = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { id: "reports", icon: FileText, label: "Rapportini" },
   { id: "employees", icon: Users, label: "Dipendenti" },
   { id: "clients", icon: Building, label: "Clienti" },
   { id: "workorders", icon: ClipboardList, label: "Commesse" },
@@ -39,9 +38,9 @@ export function AppSidebar({
   isMobile = false,
   pendingReportsCount = 0,
 }: AppSidebarProps) {
-  // Update badge for reports if we have pending reports
+  // Update badge for dashboard if we have pending reports
   const itemsWithBadges = sidebarItems.map(item => {
-    if (item.id === "reports" && pendingReportsCount > 0) {
+    if (item.id === "dashboard" && pendingReportsCount > 0) {
       return { ...item, badge: pendingReportsCount };
     }
     return item;
