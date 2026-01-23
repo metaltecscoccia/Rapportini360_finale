@@ -62,6 +62,7 @@ import {
   Menu
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
 import StatusBadge from "./StatusBadge";
 import StatsCard from "./StatsCard";
 import QuickActionCard from "./QuickActionCard";
@@ -1853,11 +1854,11 @@ export default function AdminDashboard() {
             )}
             <div className="flex items-center gap-3">
               <img
-                src="/resources/icon.png"
+                src={logoPath}
                 alt="Logo"
                 className="h-8 w-8 object-contain"
               />
-              <h1 className="text-2xl font-bold">Rapportini360</h1>
+              <h1 className="text-2xl font-bold">Dashboard</h1>
             </div>
           </div>
         </header>
