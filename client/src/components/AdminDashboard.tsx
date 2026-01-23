@@ -1851,9 +1851,14 @@ export default function AdminDashboard() {
                 <Menu className="h-5 w-5" />
               </Button>
             )}
-            <h1 className="text-2xl font-bold">
-              {getCurrentSectionTitle()}
-            </h1>
+            <div className="flex items-center gap-3">
+              <img
+                src="/resources/icon.png"
+                alt="Logo"
+                className="h-8 w-8 object-contain"
+              />
+              <h1 className="text-2xl font-bold">Rapportini360</h1>
+            </div>
           </div>
         </header>
 
