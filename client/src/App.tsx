@@ -191,7 +191,7 @@ function AuthenticatedApp({
               <img
                 src={logoPath}
                 alt="Logo Aziendale"
-                className="h-30 w-30 object-contain"
+                className="h-10 w-10 object-contain"
               />
               <div>
                 <h1 className="text-xl font-semibold text-gradient-primary">
