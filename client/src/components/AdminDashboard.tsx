@@ -2967,9 +2967,9 @@ export default function AdminDashboard() {
                       }
                       data-testid="button-confirm-toggle-status"
                     >
-                      {toggleEmployeeStatusMutation.isPending 
-                        ? "Aggiornando..." 
-                        : employeeToToggle?.isActive ? "Disattiva" : "Riattiva"
+                      {toggleEmployeeStatusMutation.isPending
+                        ? "Aggiornando..."
+                        : dialogState.state.employee.type === 'toggleEmployeeStatus' && dialogState.state.employee.employee.isActive ? "Disattiva" : "Riattiva"
                       }
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -3775,7 +3775,6 @@ export default function AdminDashboard() {
             <Button
               onClick={() => {
                 dialogState.closeDialog('employee');
-                setTemporaryPassword("");
               }}
             >
               Ho comunicato la password
