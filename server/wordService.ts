@@ -385,6 +385,7 @@ export class WordService {
 
     const client = (await storage.getAllClients(organizationId)).find(c => c.id === workOrder.clientId);
     const operations = await storage.getOperationsByWorkOrderId(workOrderId, organizationId);
+    const expenses = await storage.getWorkOrderExpenses(workOrderId, organizationId);
 
     // Filter only operations from approved reports
     const dailyReports = await storage.getAllDailyReports(organizationId);
@@ -458,6 +459,89 @@ export class WordService {
     }
 
     documentSections.push(new Paragraph({ text: '', spacing: { after: 300 } }));
+
+    // Confronto Ore - if estimatedHours exists
+    if (workOrder.estimatedHours) {
+      const estimatedHours = Number(workOrder.estimatedHours);
+      const totalHoursForComparison = enrichedOperations.reduce((sum, op) => sum + this.parseHours(op.hours), 0);
+      const delta = totalHoursForComparison - estimatedHours;
+      const percentage = (totalHoursForComparison / estimatedHours) * 100;
+
+      documentSections.push(
+        new Paragraph({
+          text: 'Confronto Ore',
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 200, after: 100 }
+        })
+      );
+
+      const hoursComparisonRows: TableRow[] = [];
+
+      // Header row
+      hoursComparisonRows.push(
+        new TableRow({
+          tableHeader: true,
+          children: [
+            new TableCell({
+              children: [new Paragraph({ text: 'Ore Previste', alignment: AlignmentType.CENTER, bold: true })],
+              shading: { fill: 'E5E7EB' }
+            }),
+            new TableCell({
+              children: [new Paragraph({ text: 'Ore Effettive', alignment: AlignmentType.CENTER, bold: true })],
+              shading: { fill: 'E5E7EB' }
+            }),
+            new TableCell({
+              children: [new Paragraph({ text: 'Delta', alignment: AlignmentType.CENTER, bold: true })],
+              shading: { fill: 'E5E7EB' }
+            }),
+            new TableCell({
+              children: [new Paragraph({ text: 'Completamento', alignment: AlignmentType.CENTER, bold: true })],
+              shading: { fill: 'E5E7EB' }
+            })
+          ]
+        })
+      );
+
+      // Data row
+      hoursComparisonRows.push(
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [new Paragraph({ text: `${estimatedHours.toFixed(1)}h`, alignment: AlignmentType.CENTER })]
+            }),
+            new TableCell({
+              children: [new Paragraph({ text: `${totalHoursForComparison.toFixed(1)}h`, alignment: AlignmentType.CENTER })]
+            }),
+            new TableCell({
+              children: [new Paragraph({
+                text: `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}h`,
+                alignment: AlignmentType.CENTER
+              })]
+            }),
+            new TableCell({
+              children: [new Paragraph({ text: `${percentage.toFixed(0)}%`, alignment: AlignmentType.CENTER })]
+            })
+          ]
+        })
+      );
+
+      documentSections.push(
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          rows: hoursComparisonRows,
+          borders: {
+            top: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+            bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+            left: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+            right: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+            insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'EEEEEE' },
+            insideVertical: { style: BorderStyle.SINGLE, size: 1, color: 'EEEEEE' }
+          }
+        }) as any
+      );
+
+      documentSections.push(new Paragraph({ text: '', spacing: { after: 300 } }));
+    }
 
     // Operations table
     const tableRows: TableRow[] = [];
@@ -581,6 +665,117 @@ export class WordService {
       }) as any
     );
 
+    // Spese Commessa - if expenses exist
+    if (expenses.length > 0) {
+      documentSections.push(new Paragraph({ text: '', spacing: { after: 400 } }));
+
+      documentSections.push(
+        new Paragraph({
+          text: 'Spese Commessa',
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 400, after: 100 }
+        })
+      );
+
+      const expensesRows: TableRow[] = [];
+
+      // Header row
+      expensesRows.push(
+        new TableRow({
+          tableHeader: true,
+          children: [
+            new TableCell({
+              children: [new Paragraph({ text: 'Data', alignment: AlignmentType.CENTER, bold: true })],
+              shading: { fill: 'E5E7EB' },
+              width: { size: 15, type: WidthType.PERCENTAGE }
+            }),
+            new TableCell({
+              children: [new Paragraph({ text: 'Categoria', alignment: AlignmentType.CENTER, bold: true })],
+              shading: { fill: 'E5E7EB' },
+              width: { size: 20, type: WidthType.PERCENTAGE }
+            }),
+            new TableCell({
+              children: [new Paragraph({ text: 'Descrizione', alignment: AlignmentType.CENTER, bold: true })],
+              shading: { fill: 'E5E7EB' },
+              width: { size: 50, type: WidthType.PERCENTAGE }
+            }),
+            new TableCell({
+              children: [new Paragraph({ text: 'Importo (€)', alignment: AlignmentType.CENTER, bold: true })],
+              shading: { fill: 'E5E7EB' },
+              width: { size: 15, type: WidthType.PERCENTAGE }
+            })
+          ]
+        })
+      );
+
+      // Expense rows
+      let totalExpenses = 0;
+      expenses.forEach(expense => {
+        const amount = Number(expense.amount);
+        totalExpenses += amount;
+
+        const [year, month, day] = expense.date.split('-');
+        const formattedDate = `${day}/${month}/${year}`;
+
+        expensesRows.push(
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [new Paragraph({ text: formattedDate })]
+              }),
+              new TableCell({
+                children: [new Paragraph({ text: expense.category.toUpperCase() })]
+              }),
+              new TableCell({
+                children: [new Paragraph({ text: expense.description })]
+              }),
+              new TableCell({
+                children: [new Paragraph({ text: `€${amount.toFixed(2)}`, alignment: AlignmentType.RIGHT })]
+              })
+            ]
+          })
+        );
+      });
+
+      // Total row
+      expensesRows.push(
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ text: '' })] }),
+            new TableCell({ children: [new Paragraph({ text: '' })] }),
+            new TableCell({
+              children: [new Paragraph({
+                children: [new TextRun({ text: 'TOTALE SPESE:', bold: true })],
+                alignment: AlignmentType.RIGHT
+              })],
+              shading: { fill: 'F3F4F6' }
+            }),
+            new TableCell({
+              children: [new Paragraph({
+                children: [new TextRun({ text: `€${totalExpenses.toFixed(2)}`, bold: true })],
+                alignment: AlignmentType.RIGHT
+              })],
+              shading: { fill: 'F3F4F6' }
+            })
+          ]
+        })
+      );
+
+      documentSections.push(
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          rows: expensesRows,
+          borders: {
+            top: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+            bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+            left: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+            right: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+            insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'EEEEEE' },
+            insideVertical: { style: BorderStyle.SINGLE, size: 1, color: 'EEEEEE' }
+          }
+        }) as any
+      );
+    }
 
     const doc = new Document({
       sections: [{

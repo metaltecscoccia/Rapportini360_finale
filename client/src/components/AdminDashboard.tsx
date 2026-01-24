@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useForm } from "react-hook-form";
@@ -97,6 +97,9 @@ const addWorkOrderSchema = z.object({
   clientId: z.string().min(1, "Cliente è richiesto"),
   name: z.string().min(2, "Il nome deve essere di almeno 2 caratteri"),
   description: z.string().optional(),
+  estimatedHours: z.union([z.string(), z.number(), z.null()])
+    .transform(val => val === null || val === '' ? null : Number(val))
+    .optional(),
   isActive: z.boolean().default(true),
   availableWorkTypes: z.array(z.string()).default([]),
   availableMaterials: z.array(z.string()).default([]),
@@ -252,6 +255,7 @@ export default function AdminDashboard() {
       clientId: "",
       name: "",
       description: "",
+      estimatedHours: null,
       isActive: true,
       availableWorkTypes: [],
       availableMaterials: [],
@@ -265,6 +269,7 @@ export default function AdminDashboard() {
       clientId: "",
       name: "",
       description: "",
+      estimatedHours: null,
       isActive: true,
       availableWorkTypes: [],
       availableMaterials: [],
@@ -631,7 +636,6 @@ export default function AdminDashboard() {
         description: "La commessa è stata eliminata con successo.",
       });
       dialogState.closeDialog('workOrder');
-      setSelectedWorkOrderToDelete(null);
     },
     onError: (error: any) => {
       toast({
@@ -670,6 +674,7 @@ export default function AdminDashboard() {
         clientId: data.clientId,
         name: data.name,
         description: data.description || "",
+        estimatedHours: data.estimatedHours,
         isActive: data.isActive,
         availableWorkTypes: data.availableWorkTypes || [],
         availableMaterials: data.availableMaterials || [],
@@ -683,7 +688,6 @@ export default function AdminDashboard() {
       });
       editWorkOrderForm.reset();
       dialogState.closeDialog('workOrder');
-      setSelectedWorkOrderToEdit(null);
     },
     onError: (error: any) => {
       toast({
@@ -796,6 +800,7 @@ export default function AdminDashboard() {
       clientId: workOrder.clientId,
       name: workOrder.name,
       description: workOrder.description || "",
+      estimatedHours: workOrder.estimatedHours ? Number(workOrder.estimatedHours) : null,
       isActive: workOrder.isActive ?? true,
       availableWorkTypes: workOrder.availableWorkTypes || [],
       availableMaterials: workOrder.availableMaterials || [],
@@ -1712,6 +1717,7 @@ export default function AdminDashboard() {
     return {
       ...wo,
       clientName: client?.name || "Cliente eliminato",
+      estimatedHours: stats?.estimatedHours || wo.estimatedHours || null,
       totalHours: stats?.totalHours || 0,
       totalOperations: stats?.totalOperations || 0,
       lastActivity: stats?.lastActivity || "Nessuna attività",
@@ -2528,8 +2534,38 @@ export default function AdminDashboard() {
                                       </SelectContent>
                                     </Select>
                                   </TableCell>
-                                  <TableCell className="text-right font-medium tabular-nums">
-                                    {workOrder.totalHours}h
+                                  <TableCell className="text-right">
+                                    <div className="flex flex-col gap-1 items-end">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-muted-foreground">Effettive:</span>
+                                        <Badge variant="secondary" className="tabular-nums">
+                                          {Number(workOrder.totalHours).toFixed(1)}h
+                                        </Badge>
+                                      </div>
+                                      {workOrder.estimatedHours && (
+                                        <>
+                                          <div className="flex items-center gap-1">
+                                            <span className="text-xs text-muted-foreground">Previste:</span>
+                                            <Badge variant="outline" className="tabular-nums">
+                                              {Number(workOrder.estimatedHours).toFixed(1)}h
+                                            </Badge>
+                                          </div>
+                                          {(() => {
+                                            const actual = Number(workOrder.totalHours);
+                                            const estimated = Number(workOrder.estimatedHours);
+                                            const percentage = (actual / estimated) * 100;
+                                            return (
+                                              <Badge
+                                                variant={percentage > 100 ? "destructive" : percentage > 80 ? "default" : "outline"}
+                                                className="tabular-nums"
+                                              >
+                                                {percentage.toFixed(0)}%
+                                              </Badge>
+                                            );
+                                          })()}
+                                        </>
+                                      )}
+                                    </div>
                                   </TableCell>
                                   <TableCell className="text-sm text-muted-foreground">
                                     {workOrder.lastActivity === "Nessuna attività" 
@@ -4047,6 +4083,31 @@ export default function AdminDashboard() {
               />
               <FormField
                 control={workOrderForm.control}
+                name="estimatedHours"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ore Previste (opzionale)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        placeholder="Es: 120"
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        data-testid="input-work-order-estimated-hours"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Stima delle ore totali necessarie per completare la commessa
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={workOrderForm.control}
                 name="availableWorkTypes"
                 render={({ field }) => (
                   <FormItem>
@@ -4301,10 +4362,10 @@ export default function AdminDashboard() {
                 )}
               />
               <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setAddClientDialogOpen(false)}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => dialogState.closeDialog('client')}
                   data-testid="button-cancel-add-client"
                 >
                   Annulla
@@ -4424,6 +4485,31 @@ export default function AdminDashboard() {
                         data-testid="input-edit-work-order-description"
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editWorkOrderForm.control}
+                name="estimatedHours"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ore Previste (opzionale)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        placeholder="Es: 120"
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        data-testid="input-edit-work-order-estimated-hours"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Stima delle ore totali necessarie per completare la commessa
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -1,12 +1,17 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileText, Download, Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, FileText, Download, Loader2, Plus, Trash2 } from "lucide-react";
 import { formatDateToItalian } from "@/lib/dateUtils";
+import { useToast } from "@/hooks/use-toast";
 
 interface WorkOrderReportProps {
   workOrderId: string;
@@ -95,15 +100,95 @@ export default function WorkOrderReport({
   clientName, 
   onBack 
 }: WorkOrderReportProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   // Fetch operations for this work order
   const { data: operations = [], isLoading, error } = useQuery<EnrichedOperation[]>({
     queryKey: ['/api/work-orders', workOrderId, 'operations'],
     enabled: !!workOrderId
   });
 
+  // Fetch work order stats (includes estimatedHours)
+  const { data: workOrdersStats = [] } = useQuery<any[]>({
+    queryKey: ['/api/work-orders/stats'],
+  });
+
+  const workOrderStats = workOrdersStats.find(s => s.workOrderId === workOrderId);
+
+  // Fetch expenses for this work order
+  const { data: expenses = [] } = useQuery<any[]>({
+    queryKey: [`/api/work-orders/${workOrderId}/expenses`],
+    enabled: !!workOrderId
+  });
+
   // Create employee rows grouped by date
   const reportData = createEmployeeRows(operations);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
+
+  // Expense dialog state
+  const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const [newExpense, setNewExpense] = useState({
+    amount: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+    category: 'altro' as 'carburante' | 'materiali' | 'trasferta' | 'altro'
+  });
+
+  // Mutations for expenses
+  const createExpenseMutation = useMutation({
+    mutationFn: async (data: typeof newExpense) => {
+      const res = await fetch(`/api/work-orders/${workOrderId}/expenses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to create expense");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/work-orders/${workOrderId}/expenses`] });
+      setExpenseDialogOpen(false);
+      setNewExpense({ amount: '', description: '', date: new Date().toISOString().split('T')[0], category: 'altro' });
+      toast({ title: "Spesa registrata" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante la creazione della spesa",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/work-orders/expenses/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to delete expense");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/work-orders/${workOrderId}/expenses`] });
+      toast({ title: "Spesa eliminata" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante l'eliminazione della spesa",
+        variant: "destructive"
+      });
+    }
+  });
 
   const updateAdminNotes = (rowKey: string, notes: string) => {
     setAdminNotes(prev => ({
@@ -199,6 +284,171 @@ export default function WorkOrderReport({
           </div>
         </CardContent>
       </Card>
+
+      {/* Confronto Ore - Only if estimatedHours exists */}
+      {workOrderStats?.estimatedHours && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Confronto Ore</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Ore Previste</p>
+                <p className="text-2xl font-bold">{Number(workOrderStats.estimatedHours).toFixed(1)}h</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Ore Effettive</p>
+                <p className="text-2xl font-bold">{Number(workOrderStats.totalHours).toFixed(1)}h</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Delta</p>
+                <p className={`text-2xl font-bold ${
+                  Number(workOrderStats.totalHours) > Number(workOrderStats.estimatedHours)
+                    ? 'text-destructive'
+                    : 'text-green-600'
+                }`}>
+                  {(Number(workOrderStats.totalHours) - Number(workOrderStats.estimatedHours)).toFixed(1)}h
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Completamento</p>
+                <p className="text-2xl font-bold">
+                  {((Number(workOrderStats.totalHours) / Number(workOrderStats.estimatedHours)) * 100).toFixed(0)}%
+                </p>
+              </div>
+            </div>
+            <Progress
+              value={(Number(workOrderStats.totalHours) / Number(workOrderStats.estimatedHours)) * 100}
+              className="mt-4"
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Spese Commessa */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Spese Commessa</CardTitle>
+          <Button onClick={() => setExpenseDialogOpen(true)} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Aggiungi Spesa
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {expenses.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nessuna spesa registrata</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Descrizione</TableHead>
+                  <TableHead className="text-right">Importo</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {expenses.map((expense: any) => (
+                  <TableRow key={expense.id}>
+                    <TableCell>{new Date(expense.date).toLocaleDateString('it-IT')}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{expense.category}</Badge>
+                    </TableCell>
+                    <TableCell>{expense.description}</TableCell>
+                    <TableCell className="text-right font-medium">
+                      €{Number(expense.amount).toFixed(2)}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteExpenseMutation.mutate(expense.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="font-bold">
+                  <TableCell colSpan={3} className="text-right">Totale Spese:</TableCell>
+                  <TableCell className="text-right">
+                    €{expenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0).toFixed(2)}
+                  </TableCell>
+                  <TableCell></TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialog Aggiungi Spesa */}
+      <Dialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Aggiungi Spesa</DialogTitle>
+            <DialogDescription>Registra una spesa per questa commessa</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Importo (€)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={newExpense.amount}
+                onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Descrizione</Label>
+              <Input
+                type="text"
+                placeholder="Es: Carburante per trasferta..."
+                value={newExpense.description}
+                onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Data</Label>
+              <Input
+                type="date"
+                value={newExpense.date}
+                onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Categoria</Label>
+              <Select
+                value={newExpense.category}
+                onValueChange={(value: any) => setNewExpense({ ...newExpense, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="carburante">Carburante</SelectItem>
+                  <SelectItem value="materiali">Materiali</SelectItem>
+                  <SelectItem value="trasferta">Trasferta</SelectItem>
+                  <SelectItem value="altro">Altro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExpenseDialogOpen(false)}>Annulla</Button>
+            <Button
+              onClick={() => createExpenseMutation.mutate(newExpense)}
+              disabled={!newExpense.amount || !newExpense.description || createExpenseMutation.isPending}
+            >
+              Salva
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Main Report Table - Compact Excel Style */}
       <Card>

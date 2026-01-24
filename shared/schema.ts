@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, numeric, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, numeric, index, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -59,11 +59,28 @@ export const workOrders = pgTable("work_orders", {
   name: text("name").notNull(),
   description: text("description"),
   isActive: boolean("is_active").notNull().default(true),
+  estimatedHours: numeric("estimated_hours"), // Ore previste per completare la commessa
   availableWorkTypes: text("available_work_types").array().notNull().default(sql`ARRAY[]::text[]`),
   availableMaterials: text("available_materials").array().notNull().default(sql`ARRAY[]::text[]`),
 }, (table) => ({
   orgActiveIdx: index("work_orders_org_active_idx").on(table.organizationId, table.isActive),
   clientIdx: index("work_orders_client_idx").on(table.clientId),
+}));
+
+// Work order expenses table (Spese per commesse)
+export const workOrderExpenses = pgTable("work_order_expenses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  workOrderId: varchar("work_order_id").notNull().references(() => workOrders.id, { onDelete: 'cascade' }),
+  amount: numeric("amount").notNull(), // Importo in €
+  description: text("description").notNull(), // Descrizione/Note
+  date: date("date").notNull(), // Data spesa
+  category: text("category").notNull(), // carburante | materiali | trasferta | altro
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+}, (table) => ({
+  workOrderIdx: index("expenses_work_order_idx").on(table.workOrderId),
+  orgIdx: index("expenses_org_idx").on(table.organizationId),
 }));
 
 // Daily reports table
@@ -223,6 +240,21 @@ export const insertMaterialSchema = createInsertSchema(materials).omit({
 export const insertWorkOrderSchema = createInsertSchema(workOrders).omit({
   id: true,
   organizationId: true, // Will be set automatically from session
+}).extend({
+  estimatedHours: z.union([z.string(), z.number(), z.null()])
+    .transform(val => val === null || val === '' ? null : String(val))
+    .optional(),
+});
+
+export const insertExpenseSchema = createInsertSchema(workOrderExpenses).omit({
+  id: true,
+  organizationId: true, // Will be set automatically from session
+  createdBy: true,
+  createdAt: true,
+}).extend({
+  amount: z.union([z.string(), z.number()])
+    .transform(val => String(val)),
+  category: z.enum(['carburante', 'materiali', 'trasferta', 'altro']),
 });
 
 export const insertDailyReportSchema = createInsertSchema(dailyReports).omit({
@@ -324,6 +356,10 @@ export const updateOperationSchema = insertOperationSchema.partial().extend({
   id: z.string().optional()
 });
 
+export const updateWorkOrderSchema = insertWorkOrderSchema.partial().extend({
+  id: z.string().optional()
+});
+
 export const updateAttendanceEntrySchema = insertAttendanceEntrySchema.partial().extend({
   id: z.string().optional(),
   absenceType: z.enum(["A", "F", "P", "M", "CP", "L104"]).optional()
@@ -364,6 +400,10 @@ export type Material = typeof materials.$inferSelect;
 
 export type InsertWorkOrder = z.infer<typeof insertWorkOrderSchema>;
 export type WorkOrder = typeof workOrders.$inferSelect;
+export type UpdateWorkOrder = z.infer<typeof updateWorkOrderSchema>;
+
+export type InsertWorkOrderExpense = z.infer<typeof insertExpenseSchema>;
+export type WorkOrderExpense = typeof workOrderExpenses.$inferSelect;
 
 export type InsertDailyReport = z.infer<typeof insertDailyReportSchema>;
 export type DailyReport = typeof dailyReports.$inferSelect;

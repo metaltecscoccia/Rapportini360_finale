@@ -21,6 +21,7 @@ import {
   insertWorkTypeSchema,
   insertMaterialSchema,
   insertWorkOrderSchema,
+  insertExpenseSchema,
   insertAttendanceEntrySchema,
   updateAttendanceEntrySchema,
   insertHoursAdjustmentSchema,
@@ -1091,6 +1092,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting work order:", error);
       res.status(500).json({ error: "Failed to delete work order" });
+    }
+  });
+
+  // Work Order Expenses
+  app.get("/api/work-orders/:workOrderId/expenses", requireAuth, async (req, res) => {
+    try {
+      const { workOrderId } = req.params;
+      const organizationId = (req as any).session.organizationId;
+
+      const expenses = await storage.getWorkOrderExpenses(workOrderId, organizationId);
+      res.json(expenses);
+    } catch (error: any) {
+      console.error("Error fetching work order expenses:", error);
+      res.status(500).json({ error: "Failed to fetch work order expenses" });
+    }
+  });
+
+  app.post("/api/work-orders/:workOrderId/expenses", requireAdmin, async (req, res) => {
+    try {
+      const { workOrderId } = req.params;
+      const organizationId = (req as any).session.organizationId;
+      const userId = (req as any).session.userId;
+
+      const result = insertExpenseSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({
+          error: "Dati spesa non validi",
+          issues: result.error.issues
+        });
+      }
+
+      const expense = await storage.createWorkOrderExpense({
+        ...result.data,
+        workOrderId
+      }, organizationId, userId);
+
+      res.status(201).json(expense);
+    } catch (error: any) {
+      console.error("Error creating work order expense:", error);
+      res.status(500).json({ error: "Failed to create work order expense" });
+    }
+  });
+
+  app.delete("/api/work-orders/expenses/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = (req as any).session.organizationId;
+
+      const deleted = await storage.deleteWorkOrderExpense(id, organizationId);
+      if (deleted) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "Spesa non trovata" });
+      }
+    } catch (error: any) {
+      console.error("Error deleting work order expense:", error);
+      res.status(500).json({ error: "Failed to delete work order expense" });
     }
   });
 

@@ -4,6 +4,7 @@ import {
   workTypes,
   materials,
   workOrders,
+  workOrderExpenses,
   dailyReports,
   operations,
   attendanceEntries,
@@ -23,6 +24,8 @@ import {
   type InsertMaterial,
   type WorkOrder,
   type InsertWorkOrder,
+  type WorkOrderExpense,
+  type InsertWorkOrderExpense,
   type DailyReport,
   type InsertDailyReport,
   type Operation,
@@ -230,10 +233,16 @@ export interface IStorage {
   getWorkOrdersCountByClientId(clientId: string): Promise<number>;
   deleteDailyReportsByEmployeeId(employeeId: string, organizationId: string): Promise<boolean>;
   deleteWorkOrdersByClientId(clientId: string, organizationId: string): Promise<boolean>;
-  
+
+  // Work Order Expenses
+  getWorkOrderExpenses(workOrderId: string, organizationId: string): Promise<WorkOrderExpense[]>;
+  createWorkOrderExpense(expense: InsertWorkOrderExpense, organizationId: string, createdBy: string): Promise<WorkOrderExpense>;
+  deleteWorkOrderExpense(id: string, organizationId: string): Promise<boolean>;
+
   // Statistics
   getWorkOrdersStats(organizationId: string): Promise<Array<{
     workOrderId: string;
+    estimatedHours: string | null;
     totalOperations: number;
     totalHours: number;
     lastActivity: string | null;
@@ -1097,8 +1106,45 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
+  // Work Order Expenses
+  async getWorkOrderExpenses(workOrderId: string, organizationId: string): Promise<WorkOrderExpense[]> {
+    await this.ensureInitialized();
+    return await db.select().from(workOrderExpenses)
+      .where(and(
+        eq(workOrderExpenses.workOrderId, workOrderId),
+        eq(workOrderExpenses.organizationId, organizationId)
+      ))
+      .orderBy(desc(workOrderExpenses.date));
+  }
+
+  async createWorkOrderExpense(
+    expense: InsertWorkOrderExpense,
+    organizationId: string,
+    createdBy: string
+  ): Promise<WorkOrderExpense> {
+    await this.ensureInitialized();
+    const [newExpense] = await db.insert(workOrderExpenses).values({
+      ...expense,
+      organizationId,
+      createdBy
+    }).returning();
+    return newExpense;
+  }
+
+  async deleteWorkOrderExpense(id: string, organizationId: string): Promise<boolean> {
+    await this.ensureInitialized();
+    const result = await db.delete(workOrderExpenses).where(
+      and(
+        eq(workOrderExpenses.id, id),
+        eq(workOrderExpenses.organizationId, organizationId)
+      )
+    );
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
   async getWorkOrdersStats(organizationId: string): Promise<Array<{
     workOrderId: string;
+    estimatedHours: string | null;
     totalOperations: number;
     totalHours: number;
     lastActivity: string | null;
@@ -1145,9 +1191,10 @@ export class DatabaseStorage implements IStorage {
       const stats = statsMap.get(wo.id);
       return {
         workOrderId: wo.id,
+        estimatedHours: wo.estimatedHours,
         totalOperations: stats?.totalOperations || 0,
         totalHours: stats?.totalHours || 0,
-        lastActivity: stats?.dates.length ? 
+        lastActivity: stats?.dates.length ?
           stats.dates.sort().reverse()[0] : null
       };
     });
