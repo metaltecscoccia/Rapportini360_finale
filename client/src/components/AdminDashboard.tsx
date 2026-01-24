@@ -1375,7 +1375,6 @@ export default function AdminDashboard() {
         description: "La data del rapportino è stata modificata con successo."
       });
       dialogState.closeDialog('report');
-      setSelectedReportToChangeDate(null);
       setNewReportDate("");
     },
     onError: (error: any) => {
@@ -1400,7 +1399,6 @@ export default function AdminDashboard() {
         description: "Il rapportino è stato eliminato con successo."
       });
       dialogState.closeDialog('report');
-      setSelectedReportToDelete(null);
     },
     onError: (error: any) => {
       toast({
@@ -1422,9 +1420,11 @@ export default function AdminDashboard() {
       return response.json();
     },
     onSuccess: (data) => {
-      setSelectedReport(data);
-      setReportOperations(data.operations || []);
-      setEditReportDialogOpen(true);
+      dialogState.openReportDialog({
+        type: 'editReport',
+        report: data,
+        operations: data.operations || []
+      });
     },
     onError: (error: any) => {
       console.error("Error fetching report:", error);
@@ -1447,9 +1447,7 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/daily-reports'] });
       queryClient.invalidateQueries({ queryKey: ['/api/work-orders/stats'] });
-      setEditReportDialogOpen(false);
-      setSelectedReport(null);
-      setReportOperations([]);
+      dialogState.closeDialog('report');
       toast({
         title: "Rapportino aggiornato",
         description: "Il rapportino è stato aggiornato con successo.",
@@ -3857,9 +3855,9 @@ export default function AdminDashboard() {
           )}
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setEditReportDialogOpen(false)}
+            <Button
+              variant="outline"
+              onClick={() => dialogState.closeDialog('report')}
               data-testid="button-cancel-edit-report"
             >
               Annulla
