@@ -1988,8 +1988,8 @@ export default function AdminDashboard() {
                     Dipendenti Mancanti
                   </Button>
                 </div>
-                <Button 
-                  onClick={() => setCreateReportDialogOpen(true)}
+                <Button
+                  onClick={() => dialogState.openReportDialog({ type: 'createReport' })}
                   data-testid="button-create-report"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -3869,11 +3869,11 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* Dialog per creazione rapportino da amministratore */}
-      <Dialog 
-        open={createReportDialogOpen} 
+      <Dialog
+        open={dialogState.state.report.type === 'createReport'}
         onOpenChange={(open) => {
-          setCreateReportDialogOpen(open);
           if (!open) {
+            dialogState.closeDialog('report');
             setSelectedEmployeeForReport(null);
           }
         }}
@@ -3939,7 +3939,7 @@ export default function AdminDashboard() {
                       title: "Rapportino creato",
                       description: `Rapportino per ${selectedEmployeeForReport.fullName} creato con successo.`
                     });
-                    setCreateReportDialogOpen(false);
+                    dialogState.closeDialog('report');
                     setSelectedEmployeeForReport(null);
                   } catch (error: any) {
                     toast({
@@ -3958,7 +3958,7 @@ export default function AdminDashboard() {
             <Button 
               variant="outline" 
               onClick={() => {
-                setCreateReportDialogOpen(false);
+                dialogState.closeDialog('report');
                 setSelectedEmployeeForReport(null);
               }}
               data-testid="button-cancel-create-report"
