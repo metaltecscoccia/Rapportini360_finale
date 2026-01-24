@@ -169,28 +169,12 @@ export default function AdminDashboard() {
   // Removed: addEmployeeDialogOpen, editEmployeeDialogOpen, deleteEmployeeDialogOpen, toggleStatusDialogOpen,
   // employeeToToggle, selectedEmployee, resetPasswordDialogOpen, tempPasswordModalOpen,
   // temporaryPassword, newPassword, employeeStatsDialogOpen, selectedEmployeeForStats
-  const [editReportDialogOpen, setEditReportDialogOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<any>(null);
-  const [reportOperations, setReportOperations] = useState<any[]>([]);
-  const [createReportDialogOpen, setCreateReportDialogOpen] = useState(false);
+  // Report, WorkOrder, Client dialogs now managed by dialogState
   const [selectedEmployeeForReport, setSelectedEmployeeForReport] = useState<any>(null);
 
   // Filtri per commesse
   const [workOrderStatusFilter, setWorkOrderStatusFilter] = useState("in-corso");
-  const [workOrderDateFilter, setWorkOrderDateFilter] = useState("all"); // all, last7days, last30days, last90days
-  const [addWorkOrderDialogOpen, setAddWorkOrderDialogOpen] = useState(false);
-  const [editWorkOrderDialogOpen, setEditWorkOrderDialogOpen] = useState(false);
-  const [deleteWorkOrderDialogOpen, setDeleteWorkOrderDialogOpen] = useState(false);
-  const [selectedWorkOrderToEdit, setSelectedWorkOrderToEdit] = useState<any>(null);
-  const [selectedWorkOrderToDelete, setSelectedWorkOrderToDelete] = useState<any>(null);
-  const [deleteReportDialogOpen, setDeleteReportDialogOpen] = useState(false);
-  const [selectedReportToDelete, setSelectedReportToDelete] = useState<any>(null);
-  const [changeDateDialogOpen, setChangeDateDialogOpen] = useState(false);
-  const [selectedReportToChangeDate, setSelectedReportToChangeDate] = useState<any>(null);
-  const [newReportDate, setNewReportDate] = useState<string>("");
-  const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
-  const [deleteClientDialogOpen, setDeleteClientDialogOpen] = useState(false);
-  const [selectedClientToDelete, setSelectedClientToDelete] = useState<any>(null);
+  const [workOrderDateFilter, setWorkOrderDateFilter] = useState("all");
   const [clientWorkOrdersCount, setClientWorkOrdersCount] = useState<number>(0);
   const [clientOperationsCount, setClientOperationsCount] = useState<number>(0);
   const [employeeReportsCount, setEmployeeReportsCount] = useState<number>(0);
@@ -568,7 +552,7 @@ export default function AdminDashboard() {
         description: "Il nuovo cliente è stato aggiunto con successo.",
       });
       clientForm.reset();
-      setAddClientDialogOpen(false);
+      dialogState.closeDialog('client');
     },
     onError: (error: any) => {
       toast({
@@ -592,7 +576,7 @@ export default function AdminDashboard() {
         title: "Cliente eliminato",
         description: "Il cliente e tutte le commesse e operazioni associate sono stati eliminati con successo.",
       });
-      setDeleteClientDialogOpen(false);
+      dialogState.closeDialog('client');
       setSelectedClientToDelete(null);
     },
     onError: (error: any) => {
@@ -622,7 +606,7 @@ export default function AdminDashboard() {
         description: "La nuova commessa è stata creata con successo.",
       });
       workOrderForm.reset();
-      setAddWorkOrderDialogOpen(false);
+      dialogState.closeDialog('workOrder');
     },
     onError: (error: any) => {
       toast({
@@ -644,7 +628,7 @@ export default function AdminDashboard() {
         title: "Commessa eliminata",
         description: "La commessa è stata eliminata con successo.",
       });
-      setDeleteWorkOrderDialogOpen(false);
+      dialogState.closeDialog('workOrder');
       setSelectedWorkOrderToDelete(null);
     },
     onError: (error: any) => {
@@ -696,7 +680,7 @@ export default function AdminDashboard() {
         description: "La commessa è stata aggiornata con successo."
       });
       editWorkOrderForm.reset();
-      setEditWorkOrderDialogOpen(false);
+      dialogState.closeDialog('workOrder');
       setSelectedWorkOrderToEdit(null);
     },
     onError: (error: any) => {
@@ -806,7 +790,6 @@ export default function AdminDashboard() {
   };
 
   const handleEditWorkOrder = (workOrder: any) => {
-    setSelectedWorkOrderToEdit(workOrder);
     editWorkOrderForm.reset({
       clientId: workOrder.clientId,
       name: workOrder.name,
@@ -815,31 +798,31 @@ export default function AdminDashboard() {
       availableWorkTypes: workOrder.availableWorkTypes || [],
       availableMaterials: workOrder.availableMaterials || [],
     });
-    setEditWorkOrderDialogOpen(true);
+    dialogState.openWorkOrderDialog({ type: 'editWorkOrder', workOrder });
   };
 
   const handleUpdateWorkOrder = (data: AddWorkOrderForm) => {
-    if (selectedWorkOrderToEdit) {
+    const workOrderDialog = dialogState.state.workOrder;
+    if (workOrderDialog.type === 'editWorkOrder') {
       updateWorkOrderMutation.mutate({
-        workOrderId: selectedWorkOrderToEdit.id,
+        workOrderId: workOrderDialog.workOrder.id,
         data
       });
     }
   };
 
   const handleDeleteWorkOrder = (workOrder: any) => {
-    setSelectedWorkOrderToDelete(workOrder);
-    setDeleteWorkOrderDialogOpen(true);
+    dialogState.openWorkOrderDialog({ type: 'deleteWorkOrder', workOrder });
   };
 
   const confirmDeleteWorkOrder = () => {
-    if (selectedWorkOrderToDelete) {
-      deleteWorkOrderMutation.mutate(selectedWorkOrderToDelete.id);
+    const workOrderDialog = dialogState.state.workOrder;
+    if (workOrderDialog.type === 'deleteWorkOrder') {
+      deleteWorkOrderMutation.mutate(workOrderDialog.workOrder.id);
     }
   };
 
   const handleDeleteClient = async (client: any) => {
-    setSelectedClientToDelete(client);
 
     // Fetch work orders and operations count
     try {
@@ -857,18 +840,20 @@ export default function AdminDashboard() {
       setClientOperationsCount(0);
     }
 
-    setDeleteClientDialogOpen(true);
+    dialogState.openClientDialog({ type: 'deleteClient', client, workOrdersCount: 0, operationsCount: 0 });
   };
 
   const confirmDeleteClient = () => {
-    if (selectedClientToDelete) {
-      deleteClientMutation.mutate(selectedClientToDelete.id);
+    const clientDialog = dialogState.state.client;
+    if (clientDialog.type === 'deleteClient') {
+      deleteClientMutation.mutate(clientDialog.client.id);
     }
   };
 
   const confirmDeleteReport = () => {
-    if (selectedReportToDelete) {
-      deleteReportMutation.mutate(selectedReportToDelete.id);
+    const reportDialog = dialogState.state.report;
+    if (reportDialog.type === 'deleteReport') {
+      deleteReportMutation.mutate(reportDialog.report.id);
     }
   };
 
@@ -1389,7 +1374,7 @@ export default function AdminDashboard() {
         title: "Data modificata",
         description: "La data del rapportino è stata modificata con successo."
       });
-      setChangeDateDialogOpen(false);
+      dialogState.closeDialog('report');
       setSelectedReportToChangeDate(null);
       setNewReportDate("");
     },
@@ -1414,7 +1399,7 @@ export default function AdminDashboard() {
         title: "Rapportino eliminato",
         description: "Il rapportino è stato eliminato con successo."
       });
-      setDeleteReportDialogOpen(false);
+      dialogState.closeDialog('report');
       setSelectedReportToDelete(null);
     },
     onError: (error: any) => {
@@ -1947,7 +1932,7 @@ export default function AdminDashboard() {
               icon={Briefcase}
               gradientFrom="hsl(217, 91%, 55%)"
               gradientTo="hsl(217, 91%, 70%)"
-              onClick={() => setAddWorkOrderDialogOpen(true)}
+              onClick={() => dialogState.openWorkOrderDialog({ type: 'addWorkOrder' })}
               delay={0}
             />
             <QuickActionCard
@@ -1956,7 +1941,7 @@ export default function AdminDashboard() {
               icon={Building}
               gradientFrom="hsl(142, 76%, 31%)"
               gradientTo="hsl(142, 76%, 46%)"
-              onClick={() => setAddClientDialogOpen(true)}
+              onClick={() => dialogState.openClientDialog({ type: 'addClient' })}
               delay={0.1}
             />
             <QuickActionCard
@@ -2443,7 +2428,7 @@ export default function AdminDashboard() {
                       Seleziona una commessa per visualizzare il report dettagliato
                     </p>
                   </div>
-                  <Button onClick={() => setAddWorkOrderDialogOpen(true)} data-testid="button-add-workorder">
+                  <Button onClick={() => dialogState.openWorkOrderDialog({ type: 'addWorkOrder' })} data-testid="button-add-workorder">
                     <Plus className="h-4 w-4 mr-2" />
                     Nuova Commessa
                   </Button>
@@ -2608,7 +2593,7 @@ export default function AdminDashboard() {
                     Visualizza e gestisci tutti i clienti. L'eliminazione di un cliente non eliminerà le commesse associate.
                   </p>
                 </div>
-                <Button onClick={() => setAddClientDialogOpen(true)} data-testid="button-add-client">
+                <Button onClick={() => dialogState.openClientDialog({ type: 'addClient' })} data-testid="button-add-client">
                   <Plus className="h-4 w-4 mr-2" />
                   Nuovo Cliente
                 </Button>
@@ -3824,7 +3809,7 @@ export default function AdminDashboard() {
           <DialogFooter>
             <Button 
               variant="outline" 
-              onClick={() => setChangeDateDialogOpen(false)}
+              onClick={() => dialogState.closeDialog('report')}
               data-testid="button-cancel-change-date"
             >
               Annulla
@@ -3984,7 +3969,13 @@ export default function AdminDashboard() {
 
       {/* CONTINUA PARTE 3... */}
 {/* Dialog per aggiungere nuova commessa */}
-      <Dialog open={addWorkOrderDialogOpen} onOpenChange={setAddWorkOrderDialogOpen}>
+      <Dialog
+        open={dialogState.state.workOrder.type === 'addWorkOrder'}
+        onOpenChange={(open) => {
+          if (!open) dialogState.closeDialog('workOrder');
+          else dialogState.openWorkOrderDialog({ type: 'addWorkOrder' });
+        }}
+      >
         <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Aggiungi Nuova Commessa</DialogTitle>
@@ -4159,7 +4150,7 @@ export default function AdminDashboard() {
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={() => setAddWorkOrderDialogOpen(false)}
+                  onClick={() => dialogState.closeDialog('workOrder')}
                   data-testid="button-cancel-add-work-order"
                 >
                   Annulla
@@ -4542,7 +4533,7 @@ export default function AdminDashboard() {
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={() => setEditWorkOrderDialogOpen(false)}
+                  onClick={() => dialogState.closeDialog('workOrder')}
                   data-testid="button-cancel-edit-work-order"
                 >
                   Annulla
