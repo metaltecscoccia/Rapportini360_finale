@@ -577,7 +577,6 @@ export default function AdminDashboard() {
         description: "Il cliente e tutte le commesse e operazioni associate sono stati eliminati con successo.",
       });
       dialogState.closeDialog('client');
-      setSelectedClientToDelete(null);
     },
     onError: (error: any) => {
       toast({
