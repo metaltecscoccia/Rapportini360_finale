@@ -23,6 +23,7 @@ import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useDialogState } from "@/hooks/useDialogState";
 import { formatDateToItalian, formatDateToISO } from "@/lib/dateUtils";
 import {
   Users,
@@ -140,6 +141,9 @@ type RegisterAbsenceForm = z.infer<typeof registerAbsenceSchema>;
 // Mock data removed - now using real data from API
 
 export default function AdminDashboard() {
+  // Initialize consolidated dialog state management
+  const dialogState = useDialogState();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [fromDate, setFromDate] = useState<string>("");
@@ -160,18 +164,11 @@ export default function AdminDashboard() {
     description: string;
     clientName: string;
   } | null>(null);
-  const [addEmployeeDialogOpen, setAddEmployeeDialogOpen] = useState(false);
-  const [editEmployeeDialogOpen, setEditEmployeeDialogOpen] = useState(false);
-  const [deleteEmployeeDialogOpen, setDeleteEmployeeDialogOpen] = useState(false);
-  const [toggleStatusDialogOpen, setToggleStatusDialogOpen] = useState(false);
-  const [employeeToToggle, setEmployeeToToggle] = useState<any>(null);
-  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
-  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
-  const [tempPasswordModalOpen, setTempPasswordModalOpen] = useState(false);
-  const [temporaryPassword, setTemporaryPassword] = useState<string>("");
-  const [newPassword, setNewPassword] = useState<string>("");
-  const [employeeStatsDialogOpen, setEmployeeStatsDialogOpen] = useState(false);
-  const [selectedEmployeeForStats, setSelectedEmployeeForStats] = useState<any>(null);
+
+  // Employee dialogs now managed by dialogState.state.employee
+  // Removed: addEmployeeDialogOpen, editEmployeeDialogOpen, deleteEmployeeDialogOpen, toggleStatusDialogOpen,
+  // employeeToToggle, selectedEmployee, resetPasswordDialogOpen, tempPasswordModalOpen,
+  // temporaryPassword, newPassword, employeeStatsDialogOpen, selectedEmployeeForStats
   const [editReportDialogOpen, setEditReportDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [reportOperations, setReportOperations] = useState<any[]>([]);
@@ -426,15 +423,21 @@ export default function AdminDashboard() {
     byDayOfWeek: Record<number, number>;
     byMonth: Array<{ month: string; count: number }>;
   }>({
-    queryKey: ['/api/attendance/stats', selectedEmployeeForStats?.id],
+    queryKey: [
+      '/api/attendance/stats',
+      dialogState.state.employee.type === 'employeeStats' ? dialogState.state.employee.employee.id : null
+    ],
     queryFn: async () => {
-      const res = await fetch(`/api/attendance/stats/${selectedEmployeeForStats?.id}?days=90`, {
+      if (dialogState.state.employee.type !== 'employeeStats') {
+        throw new Error('Invalid dialog state');
+      }
+      const res = await fetch(`/api/attendance/stats/${dialogState.state.employee.employee.id}?days=90`, {
         credentials: 'include'
       });
       if (!res.ok) throw new Error('Failed to fetch employee attendance stats');
       return res.json();
     },
-    enabled: employeeStatsDialogOpen && !!selectedEmployeeForStats?.id,
+    enabled: dialogState.state.employee.type === 'employeeStats',
   });
 
   // Helper function to get work type name by ID
@@ -476,11 +479,13 @@ export default function AdminDashboard() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       form.reset();
-      setAddEmployeeDialogOpen(false);
 
-      // Show temp password modal
-      setTemporaryPassword(data.temporaryPassword);
-      setTempPasswordModalOpen(true);
+      // Show temp password modal with new employee data
+      dialogState.openEmployeeDialog({
+        type: 'showTempPassword',
+        employee: data.user || data,
+        password: data.temporaryPassword
+      });
     },
     onError: (error: any) => {
       toast({
@@ -514,8 +519,7 @@ export default function AdminDashboard() {
         description: "Il dipendente è stato aggiornato con successo.",
       });
       editForm.reset();
-      setEditEmployeeDialogOpen(false);
-      setSelectedEmployee(null);
+      dialogState.closeDialog('employee');
     },
     onError: (error: any) => {
       toast({
@@ -538,8 +542,7 @@ export default function AdminDashboard() {
         title: "Dipendente eliminato",
         description: "Il dipendente è stato eliminato con successo.",
       });
-      setDeleteEmployeeDialogOpen(false);
-      setSelectedEmployee(null);
+      dialogState.closeDialog('employee');
     },
     onError: (error: any) => {
       toast({
@@ -713,10 +716,13 @@ export default function AdminDashboard() {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] }); // Refresh user list
-      setResetPasswordDialogOpen(false);
-      setTemporaryPassword(data.temporaryPassword); // Save temp password to show in modal
-      setTempPasswordModalOpen(true); // Show modal with temp password
-      setSelectedEmployee(null);
+
+      // Show temp password modal with employee data
+      dialogState.openEmployeeDialog({
+        type: 'showTempPassword',
+        employee: { username: data.username, fullName: data.fullName },
+        password: data.temporaryPassword
+      });
     },
     onError: (error: any) => {
       toast({
@@ -754,25 +760,23 @@ export default function AdminDashboard() {
   };
 
   const handleEditEmployee = (employee: any) => {
-    setSelectedEmployee(employee);
     editForm.reset({
       fullName: employee.fullName,
       username: employee.username,
       password: "", // Password vuota per default
       isActive: employee.isActive ?? true,
     });
-    setEditEmployeeDialogOpen(true);
+    dialogState.openEmployeeDialog({ type: 'editEmployee', employee });
   };
 
   const handleUpdateEmployee = (data: EditEmployeeForm) => {
-    if (selectedEmployee) {
-      updateEmployeeMutation.mutate({ ...data, id: selectedEmployee.id });
+    const employeeDialog = dialogState.state.employee;
+    if (employeeDialog.type === 'editEmployee') {
+      updateEmployeeMutation.mutate({ ...data, id: employeeDialog.employee.id });
     }
   };
 
   const handleDeleteEmployee = async (employee: any) => {
-    setSelectedEmployee(employee);
-
     // Fetch daily reports count
     try {
       const response = await fetch(`/api/users/${employee.id}/daily-reports/count`);
@@ -783,12 +787,13 @@ export default function AdminDashboard() {
       setEmployeeReportsCount(0);
     }
 
-    setDeleteEmployeeDialogOpen(true);
+    dialogState.openEmployeeDialog({ type: 'deleteEmployee', employee });
   };
 
   const confirmDeleteEmployee = () => {
-    if (selectedEmployee) {
-      deleteEmployeeMutation.mutate(selectedEmployee.id);
+    const employeeDialog = dialogState.state.employee;
+    if (employeeDialog.type === 'deleteEmployee') {
+      deleteEmployeeMutation.mutate(employeeDialog.employee.id);
     }
   };
 
@@ -868,13 +873,13 @@ export default function AdminDashboard() {
   };
 
   const handleResetPassword = (employee: any) => {
-    setSelectedEmployee(employee);
-    setResetPasswordDialogOpen(true);
+    dialogState.openEmployeeDialog({ type: 'resetPassword', employee });
   };
 
   const confirmResetPassword = () => {
-    if (selectedEmployee) {
-      resetPasswordMutation.mutate(selectedEmployee.id);
+    const employeeDialog = dialogState.state.employee;
+    if (employeeDialog.type === 'resetPassword') {
+      resetPasswordMutation.mutate(employeeDialog.employee.id);
     }
   };
 
@@ -2687,7 +2692,13 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Gestione Dipendenti</CardTitle>
-              <Dialog open={addEmployeeDialogOpen} onOpenChange={setAddEmployeeDialogOpen}>
+              <Dialog
+                open={dialogState.state.employee.type === 'addEmployee'}
+                onOpenChange={(open) => {
+                  if (!open) dialogState.closeDialog('employee');
+                  else dialogState.openEmployeeDialog({ type: 'addEmployee' });
+                }}
+              >
                 <DialogTrigger asChild>
                   <Button data-testid="button-add-employee">
                     <Plus className="h-4 w-4 mr-2" />
@@ -2770,7 +2781,12 @@ export default function AdminDashboard() {
               </Dialog>
 
               {/* Dialog modifica dipendente */}
-              <Dialog open={editEmployeeDialogOpen} onOpenChange={setEditEmployeeDialogOpen}>
+              <Dialog
+                open={dialogState.state.employee.type === 'editEmployee'}
+                onOpenChange={(open) => {
+                  if (!open) dialogState.closeDialog('employee');
+                }}
+              >
                 <DialogContent className="sm:max-w-[425px]">
                   <DialogHeader>
                     <DialogTitle>Modifica Dipendente</DialogTitle>
@@ -2856,10 +2872,10 @@ export default function AdminDashboard() {
                         )}
                       />
                       <DialogFooter>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={() => setEditEmployeeDialogOpen(false)}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => dialogState.closeDialog('employee')}
                         >
                           Annulla
                         </Button>
@@ -2877,12 +2893,17 @@ export default function AdminDashboard() {
               </Dialog>
 
               {/* Dialog conferma eliminazione dipendente */}
-              <AlertDialog open={deleteEmployeeDialogOpen} onOpenChange={setDeleteEmployeeDialogOpen}>
+              <AlertDialog
+                open={dialogState.state.employee.type === 'deleteEmployee'}
+                onOpenChange={(open) => {
+                  if (!open) dialogState.closeDialog('employee');
+                }}
+              >
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Elimina Dipendente</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Sei sicuro di voler eliminare il dipendente "{selectedEmployee?.fullName}"?
+                      Sei sicuro di voler eliminare il dipendente "{dialogState.state.employee.type === 'deleteEmployee' ? dialogState.state.employee.employee.fullName : ''}"?
                       {employeeReportsCount > 0 && (
                         <span className="block mt-2 font-semibold text-destructive">
                           Questa operazione eliminerà anche {employeeReportsCount} {employeeReportsCount === 1 ? 'rapportino associato' : 'rapportini associati'}.
@@ -2908,35 +2929,40 @@ export default function AdminDashboard() {
               </AlertDialog>
 
               {/* AlertDialog conferma cambio stato dipendente */}
-              <AlertDialog open={toggleStatusDialogOpen} onOpenChange={setToggleStatusDialogOpen}>
+              <AlertDialog
+                open={dialogState.state.employee.type === 'toggleEmployeeStatus'}
+                onOpenChange={(open) => {
+                  if (!open) dialogState.closeDialog('employee');
+                }}
+              >
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>
-                      {employeeToToggle?.isActive ? "Disattiva Dipendente" : "Riattiva Dipendente"}
+                      {dialogState.state.employee.type === 'toggleEmployeeStatus' && dialogState.state.employee.employee.isActive ? "Disattiva Dipendente" : "Riattiva Dipendente"}
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                      {employeeToToggle?.isActive 
-                        ? `Sei sicuro di voler impostare "${employeeToToggle?.fullName}" come licenziato? Il dipendente non potrà più accedere al sistema.`
-                        : `Sei sicuro di voler riattivare "${employeeToToggle?.fullName}"? Il dipendente potrà nuovamente accedere al sistema.`
+                      {dialogState.state.employee.type === 'toggleEmployeeStatus' && dialogState.state.employee.employee.isActive
+                        ? `Sei sicuro di voler impostare "${dialogState.state.employee.employee.fullName}" come licenziato? Il dipendente non potrà più accedere al sistema.`
+                        : dialogState.state.employee.type === 'toggleEmployeeStatus' ? `Sei sicuro di voler riattivare "${dialogState.state.employee.employee.fullName}"? Il dipendente potrà nuovamente accedere al sistema.` : ''
                       }
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel data-testid="button-cancel-toggle-status">Annulla</AlertDialogCancel>
-                    <AlertDialogAction 
+                    <AlertDialogAction
                       onClick={() => {
-                        if (employeeToToggle) {
-                          toggleEmployeeStatusMutation.mutate({ 
-                            employeeId: employeeToToggle.id, 
-                            isActive: !employeeToToggle.isActive 
+                        const employeeDialog = dialogState.state.employee;
+                        if (employeeDialog.type === 'toggleEmployeeStatus') {
+                          toggleEmployeeStatusMutation.mutate({
+                            employeeId: employeeDialog.employee.id,
+                            isActive: !employeeDialog.employee.isActive
                           });
-                          setToggleStatusDialogOpen(false);
-                          setEmployeeToToggle(null);
+                          dialogState.closeDialog('employee');
                         }
                       }}
                       disabled={toggleEmployeeStatusMutation.isPending}
-                      className={employeeToToggle?.isActive 
-                        ? "bg-orange-600 text-white hover:bg-orange-700" 
+                      className={dialogState.state.employee.type === 'toggleEmployeeStatus' && dialogState.state.employee.employee.isActive
+                        ? "bg-orange-600 text-white hover:bg-orange-700"
                         : "bg-green-600 text-white hover:bg-green-700"
                       }
                       data-testid="button-confirm-toggle-status"
@@ -3036,12 +3062,11 @@ export default function AdminDashboard() {
                           <div className="flex gap-2">
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => {
-                                    setSelectedEmployeeForStats(employee);
-                                    setEmployeeStatsDialogOpen(true);
+                                    dialogState.openEmployeeDialog({ type: 'employeeStats', employee });
                                   }}
                                   data-testid={`button-employee-stats-${employee.id}`}
                                   className="text-purple-600 hover:text-purple-700"
@@ -3071,12 +3096,11 @@ export default function AdminDashboard() {
                             </Button>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => {
-                                    setEmployeeToToggle(employee);
-                                    setToggleStatusDialogOpen(true);
+                                    dialogState.openEmployeeDialog({ type: 'toggleEmployeeStatus', employee });
                                   }}
                                   data-testid={`button-toggle-status-${employee.id}`}
                                   className={employee.isActive ? "text-orange-600 hover:text-orange-700" : "text-green-600 hover:text-green-700"}
@@ -3647,7 +3671,12 @@ export default function AdminDashboard() {
       {/* TUTTI I DIALOG - INIZIO */}
 
       {/* Dialog per conferma reset password */}
-      <Dialog open={resetPasswordDialogOpen} onOpenChange={setResetPasswordDialogOpen}>
+      <Dialog
+        open={dialogState.state.employee.type === 'resetPassword'}
+        onOpenChange={(open) => {
+          if (!open) dialogState.closeDialog('employee');
+        }}
+      >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Reset Password Dipendente</DialogTitle>
@@ -3656,16 +3685,16 @@ export default function AdminDashboard() {
             </DialogDescription>
           </DialogHeader>
 
-          {selectedEmployee && (
+          {dialogState.state.employee.type === 'resetPassword' && (
             <div className="bg-muted p-4 rounded-lg">
               <div className="space-y-2">
                 <div>
                   <Label className="text-sm font-medium">Dipendente:</Label>
-                  <p className="text-sm">{selectedEmployee.fullName}</p>
+                  <p className="text-sm">{dialogState.state.employee.employee.fullName}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Username:</Label>
-                  <p className="text-sm font-mono">{selectedEmployee.username}</p>
+                  <p className="text-sm font-mono">{dialogState.state.employee.employee.username}</p>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground mt-4">
@@ -3677,7 +3706,7 @@ export default function AdminDashboard() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setResetPasswordDialogOpen(false)}
+              onClick={() => dialogState.closeDialog('employee')}
               data-testid="button-cancel-password"
             >
               Annulla
@@ -3694,7 +3723,12 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* Modal per mostrare password temporanea (UNA VOLTA) */}
-      <Dialog open={tempPasswordModalOpen} onOpenChange={setTempPasswordModalOpen}>
+      <Dialog
+        open={dialogState.state.employee.type === 'showTempPassword'}
+        onOpenChange={(open) => {
+          if (!open) dialogState.closeDialog('employee');
+        }}
+      >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="text-green-600">Password Temporanea Generata</DialogTitle>
@@ -3703,40 +3737,44 @@ export default function AdminDashboard() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="bg-amber-50 border-2 border-amber-300 p-4 rounded-lg">
-              <Label className="text-sm font-medium text-amber-900">Password Temporanea:</Label>
-              <div className="flex items-center gap-2 mt-2">
-                <code className="flex-1 text-2xl font-bold font-mono bg-white p-3 rounded border-2 border-amber-400 text-center select-all">
-                  {temporaryPassword}
-                </code>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => {
-                    navigator.clipboard.writeText(temporaryPassword);
-                    toast({
-                      title: "Copiato",
-                      description: "Password copiata negli appunti",
-                    });
-                  }}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
+          {dialogState.state.employee.type === 'showTempPassword' && (
+            <div className="space-y-4">
+              <div className="bg-amber-50 border-2 border-amber-300 p-4 rounded-lg">
+                <Label className="text-sm font-medium text-amber-900">Password Temporanea:</Label>
+                <div className="flex items-center gap-2 mt-2">
+                  <code className="flex-1 text-2xl font-bold font-mono bg-white p-3 rounded border-2 border-amber-400 text-center select-all">
+                    {dialogState.state.employee.password}
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      if (dialogState.state.employee.type === 'showTempPassword') {
+                        navigator.clipboard.writeText(dialogState.state.employee.password);
+                        toast({
+                          title: "Copiato",
+                          description: "Password copiata negli appunti",
+                        });
+                      }
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                <p className="text-sm text-blue-900">
+                  <strong>Importante:</strong> Al prossimo accesso, il dipendente dovrà impostare una nuova password personale.
+                </p>
               </div>
             </div>
-
-            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
-              <p className="text-sm text-blue-900">
-                <strong>Importante:</strong> Al prossimo accesso, il dipendente dovrà impostare una nuova password personale.
-              </p>
-            </div>
-          </div>
+          )}
 
           <DialogFooter>
             <Button
               onClick={() => {
-                setTempPasswordModalOpen(false);
+                dialogState.closeDialog('employee');
                 setTemporaryPassword("");
               }}
             >
@@ -5101,12 +5139,17 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* Dialog Statistiche Assenze Dipendente */}
-      <Dialog open={employeeStatsDialogOpen} onOpenChange={setEmployeeStatsDialogOpen}>
+      <Dialog
+        open={dialogState.state.employee.type === 'employeeStats'}
+        onOpenChange={(open) => {
+          if (!open) dialogState.closeDialog('employee');
+        }}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <BarChart2 className="h-5 w-5" />
-              Statistiche Assenze - {selectedEmployeeForStats?.fullName}
+              Statistiche Assenze - {dialogState.state.employee.type === 'employeeStats' ? dialogState.state.employee.employee.fullName : ''}
             </DialogTitle>
             <DialogDescription>
               Statistiche delle assenze negli ultimi 90 giorni
