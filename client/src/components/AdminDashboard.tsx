@@ -1470,9 +1470,9 @@ export default function AdminDashboard() {
   };
 
   const handleUpdateReport = (operations: any[]) => {
-    if (selectedReport) {
+    if (dialogState.state.report.type === 'editReport') {
       updateReportMutation.mutate({
-        reportId: selectedReport.id,
+        reportId: dialogState.state.report.report.id,
         operations
       });
     }
@@ -3775,17 +3775,17 @@ export default function AdminDashboard() {
             </DialogDescription>
           </DialogHeader>
 
-          {selectedReportToChangeDate && (
+          {dialogState.state.report.type === 'changeReportDate' && (
             <div className="space-y-4">
               <div className="bg-muted p-4 rounded-lg">
                 <div className="space-y-2">
                   <div>
                     <Label className="text-sm font-medium">Dipendente:</Label>
-                    <p className="text-sm">{selectedReportToChangeDate.employeeName || "Sconosciuto"}</p>
+                    <p className="text-sm">{dialogState.state.report.report.employeeName || "Sconosciuto"}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Data attuale:</Label>
-                    <p className="text-sm">{formatDateToItalian(selectedReportToChangeDate.date)}</p>
+                    <p className="text-sm">{formatDateToItalian(dialogState.state.report.report.date)}</p>
                   </div>
                 </div>
               </div>
@@ -3811,11 +3811,11 @@ export default function AdminDashboard() {
             >
               Annulla
             </Button>
-            <Button 
+            <Button
               onClick={() => {
-                if (selectedReportToChangeDate && newReportDate) {
+                if (dialogState.state.report.type === 'changeReportDate' && newReportDate) {
                   changeDateMutation.mutate({
-                    reportId: selectedReportToChangeDate.id,
+                    reportId: dialogState.state.report.report.id,
                     newDate: newReportDate
                   });
                 }
@@ -3830,7 +3830,12 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* Dialog per modifica rapportino */}
-      <Dialog open={editReportDialogOpen} onOpenChange={setEditReportDialogOpen}>
+      <Dialog
+        open={dialogState.state.report.type === 'editReport'}
+        onOpenChange={(open) => {
+          if (!open) dialogState.closeDialog('report');
+        }}
+      >
         <DialogContent className="sm:max-w-[90vw] md:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modifica Rapportino</DialogTitle>
@@ -3839,13 +3844,13 @@ export default function AdminDashboard() {
             </DialogDescription>
           </DialogHeader>
 
-          {selectedReport && (
+          {dialogState.state.report.type === 'editReport' && (
             <div className="mt-4">
               <DailyReportForm
-                employeeName={selectedReport.employeeName || "Dipendente"}
-                date={formatDateToItalian(selectedReport.date)}
+                employeeName={dialogState.state.report.report.employeeName || "Dipendente"}
+                date={formatDateToItalian(dialogState.state.report.report.date)}
                 onSubmit={handleUpdateReport}
-                initialOperations={reportOperations}
+                initialOperations={dialogState.state.report.operations}
                 isEditing={true}
               />
             </div>
