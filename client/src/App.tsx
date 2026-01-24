@@ -22,6 +22,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateToItalian } from "@/lib/dateUtils";
+import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
 
 type User = {
   username: string;
@@ -188,9 +189,9 @@ function AuthenticatedApp({
               transition={{ duration: 0.3, delay: 0.2 }}
             >
               <img
-                src="/resources/icon.png"
+                src={logoPath}
                 alt="Logo Aziendale"
-                className="h-10 w-10 object-contain"
+                className="h-20 w-20 object-contain"
               />
               <div>
                 <h1 className="text-xl font-semibold text-gradient-primary">
