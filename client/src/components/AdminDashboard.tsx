@@ -228,6 +228,9 @@ export default function AdminDashboard() {
   // State for reports time filter (7 days or all)
   const [showAllReports, setShowAllReports] = useState(false);
 
+  // State for change report date dialog
+  const [newReportDate, setNewReportDate] = useState<string>("");
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
