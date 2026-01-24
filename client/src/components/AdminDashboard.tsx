@@ -1840,29 +1840,6 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        {/* Header con hamburger mobile */}
-        <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-          <div className="flex items-center gap-4 p-4">
-            {isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsMobileSidebarOpen(true)}
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-            )}
-            <div className="flex items-center gap-3">
-              <img
-                src={logoPath}
-                alt="Logo"
-                className="h-8 w-8 object-contain"
-              />
-              <h1 className="text-2xl font-bold">Dashboard</h1>
-            </div>
-          </div>
-        </header>
-
         {/* Content Area */}
         <div className="p-6 space-y-6">
       {/* Tabs - navigation now handled by sidebar */}
