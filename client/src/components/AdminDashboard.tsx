@@ -179,7 +179,7 @@ export default function AdminDashboard() {
   const [selectedEmployeeForReport, setSelectedEmployeeForReport] = useState<any>(null);
 
   // Filtri per commesse
-  const [workOrderStatusFilter, setWorkOrderStatusFilter] = useState("all");
+  const [workOrderStatusFilter, setWorkOrderStatusFilter] = useState("in-corso");
   const [workOrderDateFilter, setWorkOrderDateFilter] = useState("all"); // all, last7days, last30days, last90days
   const [addWorkOrderDialogOpen, setAddWorkOrderDialogOpen] = useState(false);
   const [editWorkOrderDialogOpen, setEditWorkOrderDialogOpen] = useState(false);
