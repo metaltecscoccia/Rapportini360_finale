@@ -4328,7 +4328,7 @@ export default function AdminDashboard() {
           <AlertDialogHeader>
             <AlertDialogTitle>Elimina Cliente</AlertDialogTitle>
             <AlertDialogDescription>
-              Sei sicuro di voler eliminare il cliente "{selectedClientToDelete?.name}"?
+              Sei sicuro di voler eliminare il cliente "{dialogState.state.client.type === 'deleteClient' ? dialogState.state.client.client.name : ''}"?
               {(clientWorkOrdersCount > 0 || clientOperationsCount > 0) && (
                 <span className="block mt-2 font-semibold text-destructive">
                   Questa operazione eliminerà anche:
@@ -4559,7 +4559,7 @@ export default function AdminDashboard() {
           <AlertDialogHeader>
             <AlertDialogTitle>Elimina Commessa</AlertDialogTitle>
             <AlertDialogDescription>
-              Sei sicuro di voler eliminare la commessa "{selectedWorkOrderToDelete?.name}"?
+              Sei sicuro di voler eliminare la commessa "{dialogState.state.workOrder.type === 'deleteWorkOrder' ? dialogState.state.workOrder.workOrder.name : ''}"?
               <span className="block mt-2">
                 Questa azione eliminerà la commessa e tutte le operazioni associate. Questa azione non può essere annullata.
               </span>
