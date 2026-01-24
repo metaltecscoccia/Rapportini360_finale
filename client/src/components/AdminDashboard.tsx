@@ -2187,9 +2187,7 @@ export default function AdminDashboard() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => {
-                                      setSelectedReportToChangeDate(report);
-                                      setNewReportDate(report.date);
-                                      setChangeDateDialogOpen(true);
+                                      dialogState.openReportDialog({ type: 'changeReportDate', report, currentDate: report.date });
                                     }}
                                     data-testid={`button-change-date-${report.id}`}
                                   >
@@ -2210,8 +2208,7 @@ export default function AdminDashboard() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => {
-                                      setSelectedReportToDelete(report);
-                                      setDeleteReportDialogOpen(true);
+                                      dialogState.openReportDialog({ type: 'deleteReport', report });
                                     }}
                                     data-testid={`button-delete-report-${report.id}`}
                                   >
@@ -3769,7 +3766,7 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* Dialog per cambiare data rapportino */}
-      <Dialog open={changeDateDialogOpen} onOpenChange={setChangeDateDialogOpen}>
+      <Dialog open={dialogState.state.report.type === 'changeReportDate'} onOpenChange={(open) => { if (!open) dialogState.closeDialog('report'); }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Modifica Data Rapportino</DialogTitle>
@@ -4172,7 +4169,7 @@ export default function AdminDashboard() {
       {/* Per brevità non li riporto tutti qui, ma sono presenti nel tuo file originale */}
 
       {/* Dialog conferma eliminazione rapportino */}
-      <AlertDialog open={deleteReportDialogOpen} onOpenChange={setDeleteReportDialogOpen}>
+      <AlertDialog open={dialogState.state.report.type === 'deleteReport'} onOpenChange={(open) => { if (!open) dialogState.closeDialog('report'); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Elimina Rapportino</AlertDialogTitle>
@@ -4271,7 +4268,7 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* Dialog per aggiungere nuovo cliente */}
-      <Dialog open={addClientDialogOpen} onOpenChange={setAddClientDialogOpen}>
+      <Dialog open={dialogState.state.client.type === 'addClient'} onOpenChange={(open) => { if (!open) dialogState.closeDialog('client'); else dialogState.openClientDialog({ type: 'addClient' }); }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Aggiungi Nuovo Cliente</DialogTitle>
@@ -4321,7 +4318,7 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* Dialog conferma eliminazione cliente */}
-      <AlertDialog open={deleteClientDialogOpen} onOpenChange={setDeleteClientDialogOpen}>
+      <AlertDialog open={dialogState.state.client.type === 'deleteClient'} onOpenChange={(open) => { if (!open) dialogState.closeDialog('client'); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Elimina Cliente</AlertDialogTitle>
@@ -4358,7 +4355,7 @@ export default function AdminDashboard() {
       </AlertDialog>
 
       {/* Dialog per modificare commessa */}
-      <Dialog open={editWorkOrderDialogOpen} onOpenChange={setEditWorkOrderDialogOpen}>
+      <Dialog open={dialogState.state.workOrder.type === 'editWorkOrder'} onOpenChange={(open) => { if (!open) dialogState.closeDialog('workOrder'); }}>
         <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modifica Commessa</DialogTitle>
@@ -4552,7 +4549,7 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* Dialog conferma eliminazione commessa */}
-      <AlertDialog open={deleteWorkOrderDialogOpen} onOpenChange={setDeleteWorkOrderDialogOpen}>
+      <AlertDialog open={dialogState.state.workOrder.type === 'deleteWorkOrder'} onOpenChange={(open) => { if (!open) dialogState.closeDialog('workOrder'); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Elimina Commessa</AlertDialogTitle>
