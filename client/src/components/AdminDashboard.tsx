@@ -60,7 +60,8 @@ import {
   AlertTriangle,
   Download,
   Copy,
-  Menu
+  Menu,
+  Wallet
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
@@ -223,6 +224,16 @@ export default function AdminDashboard() {
   // State for register absence dialog
   const [registerAbsenceDialogOpen, setRegisterAbsenceDialogOpen] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+
+  // State for quick add expense dialog
+  const [quickAddExpenseDialogOpen, setQuickAddExpenseDialogOpen] = useState(false);
+  const [selectedWorkOrderForExpense, setSelectedWorkOrderForExpense] = useState<string>("");
+  const [quickExpenseData, setQuickExpenseData] = useState({
+    amount: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+    category: 'altro' as 'carburante' | 'materiali' | 'trasferta' | 'altro'
+  });
   const [missingEmployeesDate, setMissingEmployeesDate] = useState<string>(() => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -1050,6 +1061,45 @@ export default function AdminDashboard() {
         variant: "destructive",
       });
     },
+  });
+
+  // Mutation per aggiungere spesa rapida
+  const quickAddExpenseMutation = useMutation({
+    mutationFn: async (data: { workOrderId: string; amount: string; description: string; date: string; category: string }) => {
+      const res = await fetch(`/api/work-orders/${data.workOrderId}/expenses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          amount: data.amount,
+          description: data.description,
+          date: data.date,
+          category: data.category
+        })
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to create expense");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/work-orders'] });
+      toast({
+        title: "Spesa registrata",
+        description: "La spesa è stata registrata con successo."
+      });
+      setQuickExpenseData({ amount: '', description: '', date: new Date().toISOString().split('T')[0], category: 'altro' });
+      setSelectedWorkOrderForExpense("");
+      setQuickAddExpenseDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante la registrazione della spesa.",
+        variant: "destructive"
+      });
+    }
   });
 
   // Quick-add mutations for work order dialog
@@ -1931,7 +1981,7 @@ export default function AdminDashboard() {
         {/* Reports Tab */}
         <TabsContent value="reports" className="space-y-4">
           {/* Quick Actions Grid */}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4">
             <QuickActionCard
               title="Nuova Commessa"
               description="Crea una nuova commessa di lavoro"
@@ -1951,13 +2001,22 @@ export default function AdminDashboard() {
               delay={0.1}
             />
             <QuickActionCard
+              title="Aggiungi Spesa"
+              description="Registra una spesa per commessa"
+              icon={Wallet}
+              gradientFrom="hsl(25, 95%, 53%)"
+              gradientTo="hsl(25, 95%, 68%)"
+              onClick={() => setQuickAddExpenseDialogOpen(true)}
+              delay={0.2}
+            />
+            <QuickActionCard
               title="Registra Assenze"
               description="Registra assenze dipendenti"
               icon={UserX}
               gradientFrom="hsl(280, 65%, 50%)"
               gradientTo="hsl(280, 65%, 65%)"
               onClick={() => setRegisterAbsenceDialogOpen(true)}
-              delay={0.2}
+              delay={0.3}
             />
           </div>
 
@@ -5213,6 +5272,115 @@ export default function AdminDashboard() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog per aggiungere spesa rapida */}
+      <Dialog open={quickAddExpenseDialogOpen} onOpenChange={setQuickAddExpenseDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Aggiungi Spesa</DialogTitle>
+            <DialogDescription>
+              Registra una spesa per una commessa esistente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Commessa</Label>
+              <Select
+                value={selectedWorkOrderForExpense}
+                onValueChange={setSelectedWorkOrderForExpense}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleziona commessa..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {workOrders
+                    .filter((wo: any) => wo.isActive)
+                    .map((workOrder: any) => {
+                      const client = clients.find((c: any) => c.id === workOrder.clientId);
+                      return (
+                        <SelectItem key={workOrder.id} value={workOrder.id}>
+                          {workOrder.name} - {client?.name || 'N/A'}
+                        </SelectItem>
+                      );
+                    })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Importo (€)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={quickExpenseData.amount}
+                onChange={(e) => setQuickExpenseData({ ...quickExpenseData, amount: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Label>Descrizione</Label>
+              <Input
+                type="text"
+                placeholder="Es: Carburante per trasferta..."
+                value={quickExpenseData.description}
+                onChange={(e) => setQuickExpenseData({ ...quickExpenseData, description: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Label>Data</Label>
+              <Input
+                type="date"
+                value={quickExpenseData.date}
+                onChange={(e) => setQuickExpenseData({ ...quickExpenseData, date: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Label>Categoria</Label>
+              <Select
+                value={quickExpenseData.category}
+                onValueChange={(value: any) => setQuickExpenseData({ ...quickExpenseData, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="carburante">Carburante</SelectItem>
+                  <SelectItem value="materiali">Materiali</SelectItem>
+                  <SelectItem value="trasferta">Trasferta</SelectItem>
+                  <SelectItem value="altro">Altro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setQuickAddExpenseDialogOpen(false)}
+            >
+              Annulla
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedWorkOrderForExpense && quickExpenseData.amount && quickExpenseData.description) {
+                  quickAddExpenseMutation.mutate({
+                    workOrderId: selectedWorkOrderForExpense,
+                    ...quickExpenseData
+                  });
+                }
+              }}
+              disabled={!selectedWorkOrderForExpense || !quickExpenseData.amount || !quickExpenseData.description || quickAddExpenseMutation.isPending}
+            >
+              {quickAddExpenseMutation.isPending ? "Salvando..." : "Salva Spesa"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
