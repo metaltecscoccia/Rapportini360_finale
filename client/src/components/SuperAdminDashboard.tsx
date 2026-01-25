@@ -127,6 +127,11 @@ export default function SuperAdminDashboard() {
   const [deleteAdminConfirmOpen, setDeleteAdminConfirmOpen] = useState(false);
   const [adminToDelete, setAdminToDelete] = useState<Admin | null>(null);
 
+  // State per eliminazione organizzazione
+  const [deleteOrgOpen, setDeleteOrgOpen] = useState(false);
+  const [deleteOrgConfirmOpen, setDeleteOrgConfirmOpen] = useState(false);
+  const [orgToDelete, setOrgToDelete] = useState<Organization | null>(null);
+
   const { data: organizations, isLoading } = useQuery<Organization[]>({
     queryKey: ["/api/superadmin/organizations"],
   });
@@ -336,6 +341,32 @@ export default function SuperAdminDashboard() {
     },
   });
 
+  const deleteOrgMutation = useMutation({
+    mutationFn: async (orgId: string) => {
+      const response = await apiRequest("DELETE", `/api/superadmin/organizations/${orgId}`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/organizations/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/pending-signups"] });
+      setDeleteOrgOpen(false);
+      setDeleteOrgConfirmOpen(false);
+      setOrgToDelete(null);
+      toast({
+        title: "Organizzazione eliminata",
+        description: data.message || "L'organizzazione è stata eliminata con tutti i dati correlati.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile eliminare l'organizzazione.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateOrg = () => {
     if (!newOrgName.trim()) {
       toast({
@@ -433,6 +464,28 @@ export default function SuperAdminDashboard() {
     setDeleteAdminOpen(false);
     setDeleteAdminConfirmOpen(false);
     setAdminToDelete(null);
+  };
+
+  // Handler per eliminazione organizzazione
+  const openDeleteOrgDialog = (org: Organization) => {
+    setOrgToDelete(org);
+    setDeleteOrgOpen(true);
+  };
+
+  const handleFirstDeleteOrgConfirm = () => {
+    setDeleteOrgOpen(false);
+    setDeleteOrgConfirmOpen(true);
+  };
+
+  const handleFinalDeleteOrg = () => {
+    if (!orgToDelete) return;
+    deleteOrgMutation.mutate(orgToDelete.id);
+  };
+
+  const cancelDeleteOrg = () => {
+    setDeleteOrgOpen(false);
+    setDeleteOrgConfirmOpen(false);
+    setOrgToDelete(null);
   };
 
   return (
@@ -780,6 +833,15 @@ export default function SuperAdminDashboard() {
                             </>
                           )}
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => openDeleteOrgDialog(org)}
+                          data-testid={`button-delete-org-${org.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Elimina
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1062,6 +1124,85 @@ export default function SuperAdminDashboard() {
             >
               {deleteAdminMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Elimina Definitivamente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Prima Conferma Eliminazione Organizzazione */}
+      <Dialog open={deleteOrgOpen} onOpenChange={(open) => !open && cancelDeleteOrg()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Conferma Eliminazione Organizzazione
+            </DialogTitle>
+            <DialogDescription>
+              {orgToDelete && (
+                <span>
+                  Stai per eliminare l'organizzazione <strong>{orgToDelete.name}</strong>.
+                  <br /><br />
+                  <strong className="text-destructive">ATTENZIONE:</strong> Verranno eliminati TUTTI i dati correlati:
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>Tutti gli utenti e admin</li>
+                    <li>Tutti i rapportini giornalieri</li>
+                    <li>Tutte le presenze</li>
+                    <li>Tutte le commesse</li>
+                    <li>Tutte le attività e componenti</li>
+                  </ul>
+                  <br />
+                  Questa azione è <strong>irreversibile</strong>.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={cancelDeleteOrg}>
+              Annulla
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleFirstDeleteOrgConfirm}
+            >
+              Sì, voglio eliminare
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Seconda Conferma Eliminazione Organizzazione */}
+      <Dialog open={deleteOrgConfirmOpen} onOpenChange={(open) => !open && cancelDeleteOrg()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              ULTIMA CONFERMA
+            </DialogTitle>
+            <DialogDescription>
+              {orgToDelete && (
+                <span>
+                  <strong className="text-destructive text-lg">⚠️ ATTENZIONE ESTREMA!</strong>
+                  <br /><br />
+                  Stai per eliminare <strong>DEFINITIVAMENTE</strong> l'organizzazione <strong>{orgToDelete.name}</strong> con tutti i suoi dati.
+                  <br /><br />
+                  <strong>NON SARÀ POSSIBILE RECUPERARE NULLA.</strong>
+                  <br /><br />
+                  Sei assolutamente sicuro di voler procedere?
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={cancelDeleteOrg}>
+              No, annulla
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleFinalDeleteOrg}
+              disabled={deleteOrgMutation.isPending}
+            >
+              {deleteOrgMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              ELIMINA DEFINITIVAMENTE
             </Button>
           </DialogFooter>
         </DialogContent>

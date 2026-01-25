@@ -626,6 +626,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete any organization (super admin only) - with cascade deletion
+  app.delete("/api/superadmin/organizations/:orgId", requireSuperAdmin, async (req, res) => {
+    try {
+      const { orgId } = req.params;
+
+      // Verifica che l'organizzazione esista
+      const org = await storage.getOrganization(orgId);
+      if (!org) {
+        return res.status(404).json({ error: "Organizzazione non trovata" });
+      }
+
+      // Elimina tutti i dati correlati (cascade)
+
+      // 1. Elimina tutti i rapporti giornalieri
+      const reports = await storage.getAllDailyReports(orgId);
+      for (const report of reports) {
+        await storage.deleteDailyReport(report.id, orgId);
+      }
+
+      // 2. Elimina tutte le presenze
+      const attendances = await storage.getAllAttendances(orgId);
+      for (const att of attendances) {
+        await storage.deleteAttendance(att.id, orgId);
+      }
+
+      // 3. Elimina tutte le commesse
+      const orders = await storage.getAllOrders(orgId);
+      for (const order of orders) {
+        await storage.deleteOrder(order.id, orgId);
+      }
+
+      // 4. Elimina tutti gli utenti
+      const users = await storage.getUsers(orgId);
+      for (const user of users) {
+        await storage.deleteUser(user.id, orgId);
+      }
+
+      // 5. Elimina work types
+      const workTypes = await storage.getAllWorkTypes(orgId);
+      for (const wt of workTypes) {
+        await storage.deleteWorkType(wt.id, orgId);
+      }
+
+      // 6. Elimina materials
+      const materials = await storage.getAllMaterials(orgId);
+      for (const mat of materials) {
+        await storage.deleteMaterial(mat.id, orgId);
+      }
+
+      // 7. Elimina l'organizzazione
+      await storage.deleteOrganization(orgId);
+
+      console.log(`[SUPERADMIN] Deleted organization: ${org.name} (ID: ${orgId}) with all related data`);
+
+      res.json({
+        success: true,
+        message: `Organizzazione "${org.name}" eliminata con successo insieme a tutti i dati correlati.`,
+      });
+    } catch (error) {
+      console.error("Error deleting organization:", error);
+      res.status(500).json({ error: "Failed to delete organization" });
+    }
+  });
+
   // Create admin for organization (super admin only)
   app.post("/api/superadmin/organizations/:id/admin", requireSuperAdmin, async (req, res) => {
     try {
