@@ -637,42 +637,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Organizzazione non trovata" });
       }
 
-      // Elimina tutti i dati correlati (cascade)
+      console.log(`[SUPERADMIN] Starting cascade deletion for organization: ${org.name} (ID: ${orgId})`);
 
-      // 1. Elimina tutti i rapporti giornalieri
+      // Elimina tutti i dati correlati (cascade) - ORDINE IMPORTANTE per foreign keys
+
+      // 1. Elimina fuel tank loads (carichi cisterna)
+      const tankLoads = await storage.getAllFuelTankLoads(orgId);
+      for (const load of tankLoads) {
+        await storage.deleteFuelTankLoad(load.id, orgId);
+      }
+      console.log(`[SUPERADMIN] Deleted ${tankLoads.length} fuel tank loads`);
+
+      // 2. Elimina vehicles (include fuel refills via cascade)
+      const vehicles = await storage.getAllVehicles(orgId);
+      for (const vehicle of vehicles) {
+        await storage.deleteVehicle(vehicle.id, orgId);
+      }
+      console.log(`[SUPERADMIN] Deleted ${vehicles.length} vehicles`);
+
+      // 3. Elimina tutti i rapporti giornalieri
       const reports = await storage.getAllDailyReports(orgId);
       for (const report of reports) {
         await storage.deleteDailyReport(report.id, orgId);
       }
+      console.log(`[SUPERADMIN] Deleted ${reports.length} daily reports`);
 
-      // 2. Elimina tutte le commesse (work orders) - include operations
+      // 4. Elimina tutte le commesse (work orders) - include operations e expenses
       const workOrders = await storage.getAllWorkOrders(orgId);
       for (const wo of workOrders) {
         await storage.deleteWorkOrder(wo.id, orgId);
       }
+      console.log(`[SUPERADMIN] Deleted ${workOrders.length} work orders`);
 
-      // 3. Elimina tutti gli utenti (include attendance entries automaticamente)
+      // 5. Elimina tutti i clienti
+      const clients = await storage.getAllClients(orgId);
+      for (const client of clients) {
+        await storage.deleteClient(client.id, orgId);
+      }
+      console.log(`[SUPERADMIN] Deleted ${clients.length} clients`);
+
+      // 6. Elimina tutti gli utenti (include attendance entries automaticamente)
       const users = await storage.getUsers(orgId);
       for (const user of users) {
         await storage.deleteUser(user.id, orgId);
       }
+      console.log(`[SUPERADMIN] Deleted ${users.length} users`);
 
-      // 4. Elimina work types
+      // 7. Elimina work types
       const workTypes = await storage.getAllWorkTypes(orgId);
       for (const wt of workTypes) {
         await storage.deleteWorkType(wt.id, orgId);
       }
+      console.log(`[SUPERADMIN] Deleted ${workTypes.length} work types`);
 
-      // 5. Elimina materials
+      // 8. Elimina materials
       const materials = await storage.getAllMaterials(orgId);
       for (const mat of materials) {
         await storage.deleteMaterial(mat.id, orgId);
       }
+      console.log(`[SUPERADMIN] Deleted ${materials.length} materials`);
 
-      // 6. Elimina l'organizzazione
+      // 9. Elimina l'organizzazione
       await storage.deleteOrganization(orgId);
 
-      console.log(`[SUPERADMIN] Deleted organization: ${org.name} (ID: ${orgId}) with all related data`);
+      console.log(`[SUPERADMIN] Successfully deleted organization: ${org.name} (ID: ${orgId}) with all related data`);
 
       res.json({
         success: true,
@@ -680,7 +708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error deleting organization:", error);
-      res.status(500).json({ error: "Failed to delete organization" });
+      res.status(500).json({ error: "Failed to delete organization: " + (error instanceof Error ? error.message : String(error)) });
     }
   });
 
