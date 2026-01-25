@@ -2,9 +2,13 @@ import express from 'express';
 import Stripe from 'stripe';
 import { storage } from '../storage';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-12-15.clover',
-});
+// Initialize Stripe only if API key is configured
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-12-15.clover',
+  });
+}
 
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 
@@ -16,6 +20,11 @@ export const stripeWebhookRouter = express.Router();
  * to ensure the raw body is available for signature verification
  */
 stripeWebhookRouter.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  if (!stripe) {
+    console.error('[Stripe Webhook] Stripe not initialized');
+    return res.status(503).send('Stripe not configured');
+  }
+
   const sig = req.headers['stripe-signature'];
 
   if (!sig) {

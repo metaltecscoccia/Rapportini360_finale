@@ -55,9 +55,16 @@ const upload = multer({ storage: multer.memoryStorage() });
 // STRIPE CONFIGURATION
 // ============================================
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-12-15.clover',
-});
+// Initialize Stripe only if API key is configured
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-12-15.clover',
+  });
+  console.log('✓ Stripe initialized');
+} else {
+  console.warn('⚠️  Stripe not configured - payment features disabled');
+}
 
 // ============================================
 // RATE LIMITING - Protezione contro brute force
@@ -573,6 +580,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create Stripe checkout session (admin only)
   app.post("/api/billing/create-checkout-session", requireAuth, requireAdmin, async (req, res) => {
     try {
+      if (!stripe) {
+        return res.status(503).json({ error: "Pagamenti non configurati" });
+      }
+
       const { priceId, planType } = req.body;
 
       if (!priceId || !planType) {
@@ -620,6 +631,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create Stripe customer portal session (admin only)
   app.post("/api/billing/customer-portal", requireAuth, requireAdmin, async (req, res) => {
     try {
+      if (!stripe) {
+        return res.status(503).json({ error: "Pagamenti non configurati" });
+      }
+
       const organizationId = (req as any).session.organizationId;
       const org = await storage.getOrganization(organizationId);
 
