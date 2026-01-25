@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { queryClient } from "./lib/queryClient";
 import {
@@ -18,6 +18,8 @@ import SetPasswordForm from "@/components/SetPasswordForm";
 import DailyReportForm from "@/components/DailyReportForm";
 import AdminDashboard from "@/components/AdminDashboard";
 import SuperAdminDashboard from "@/components/SuperAdminDashboard";
+import BillingDashboard from "@/components/BillingDashboard";
+import SubscriptionBanner from "@/components/SubscriptionBanner";
 import ThemeToggle from "@/components/ThemeToggle";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -232,48 +234,69 @@ function AuthenticatedApp({
         </div>
       </motion.header>
 
+      {/* Subscription Banner */}
+      <div className="container mx-auto px-4 pt-4">
+        <SubscriptionBanner />
+      </div>
+
       {/* Main Content */}
       <main className="container mx-auto">
-        {currentUser.role === "superadmin" ? (
-          <SuperAdminDashboard />
-        ) : currentUser.role === "admin" ? (
-          <AdminDashboard />
-        ) : (
-          <div className="py-6">
-            {loadingTodayReport ? (
-              <div className="flex items-center justify-center p-8">
-                <div className="text-center">
-                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-                  <p className="text-muted-foreground mt-2">Caricamento...</p>
-                </div>
-              </div>
-            ) : hasServerError ? (
-              <div className="flex items-center justify-center p-8">
-                <div className="text-center">
-                  <p className="text-destructive mb-2">Errore di caricamento</p>
-                  <p className="text-muted-foreground text-sm">
-                    Si è verificato un errore durante il caricamento del rapportino. Riprova più tardi.
-                  </p>
-                </div>
-              </div>
+        <Switch>
+          {/* Billing Route (Admin only) */}
+          <Route path="/billing">
+            {currentUser.role === "admin" || currentUser.role === "superadmin" ? (
+              <BillingDashboard />
             ) : (
-              <DailyReportForm
-                employeeName={currentUser.fullName}
-                date={formatDateToItalian(
-                  new Date().toISOString().split("T")[0],
-                )}
-                onSubmit={handleReportSubmit}
-                initialOperations={todayReport?.operations}
-                isEditing={!!todayReport}
-                isSubmitting={
-                  createReportMutation.isPending ||
-                  updateReportMutation.isPending
-                }
-                reportStatus={todayReport?.status ?? null}
-              />
+              <div className="p-6 text-center">
+                <p className="text-destructive">Accesso negato: solo gli amministratori possono accedere a questa pagina.</p>
+              </div>
             )}
-          </div>
-        )}
+          </Route>
+
+          {/* Default Route */}
+          <Route path="/">
+            {currentUser.role === "superadmin" ? (
+              <SuperAdminDashboard />
+            ) : currentUser.role === "admin" ? (
+              <AdminDashboard />
+            ) : (
+              <div className="py-6">
+                {loadingTodayReport ? (
+                  <div className="flex items-center justify-center p-8">
+                    <div className="text-center">
+                      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+                      <p className="text-muted-foreground mt-2">Caricamento...</p>
+                    </div>
+                  </div>
+                ) : hasServerError ? (
+                  <div className="flex items-center justify-center p-8">
+                    <div className="text-center">
+                      <p className="text-destructive mb-2">Errore di caricamento</p>
+                      <p className="text-muted-foreground text-sm">
+                        Si è verificato un errore durante il caricamento del rapportino. Riprova più tardi.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <DailyReportForm
+                    employeeName={currentUser.fullName}
+                    date={formatDateToItalian(
+                      new Date().toISOString().split("T")[0],
+                    )}
+                    onSubmit={handleReportSubmit}
+                    initialOperations={todayReport?.operations}
+                    isEditing={!!todayReport}
+                    isSubmitting={
+                      createReportMutation.isPending ||
+                      updateReportMutation.isPending
+                    }
+                    reportStatus={todayReport?.status ?? null}
+                  />
+                )}
+              </div>
+            )}
+          </Route>
+        </Switch>
       </main>
     </motion.div>
   );
