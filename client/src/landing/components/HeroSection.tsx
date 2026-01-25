@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import screenshotPath from "@assets/app-dashboard.png";
 
 export default function HeroSection() {
   return (
@@ -84,25 +85,19 @@ export default function HeroSection() {
           </motion.div>
         </div>
 
-        {/* Screenshot placeholder */}
+        {/* Screenshot */}
         <motion.div
           className="mt-16 max-w-5xl mx-auto"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.5 }}
         >
-          <div className="relative rounded-xl overflow-hidden shadow-2xl border bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
-            <div className="aspect-[16/9] flex items-center justify-center">
-              <div className="text-center p-8">
-                <div className="text-6xl mb-4">📊</div>
-                <p className="text-lg text-muted-foreground">
-                  Screenshot dell'applicazione
-                </p>
-                <p className="text-sm text-muted-foreground/70 mt-2">
-                  (Sostituire con immagine reale)
-                </p>
-              </div>
-            </div>
+          <div className="relative rounded-xl overflow-hidden shadow-2xl border">
+            <img
+              src={screenshotPath}
+              alt="Dashboard Rapportini360"
+              className="w-full h-auto"
+            />
           </div>
         </motion.div>
       </div>
