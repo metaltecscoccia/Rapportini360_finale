@@ -166,7 +166,7 @@ export class WordService {
             width: { size: 20, type: WidthType.PERCENTAGE }
           }),
           new TableCell({
-            children: [new Paragraph({ text: 'Lavorazione', alignment: AlignmentType.CENTER })],
+            children: [new Paragraph({ text: 'Attività', alignment: AlignmentType.CENTER })],
             shading: { fill: 'E5E7EB' },
             width: { size: 25, type: WidthType.PERCENTAGE }
           }),
@@ -562,12 +562,12 @@ export class WordService {
             width: { size: 18, type: WidthType.PERCENTAGE }
           }),
           new TableCell({
-            children: [new Paragraph({ text: 'Tipo Lavorazione', alignment: AlignmentType.CENTER })],
+            children: [new Paragraph({ text: 'Tipo Attività', alignment: AlignmentType.CENTER })],
             shading: { fill: 'E5E7EB' },
             width: { size: 22, type: WidthType.PERCENTAGE }
           }),
           new TableCell({
-            children: [new Paragraph({ text: 'Materiali', alignment: AlignmentType.CENTER })],
+            children: [new Paragraph({ text: 'Componenti', alignment: AlignmentType.CENTER })],
             shading: { fill: 'E5E7EB' },
             width: { size: 18, type: WidthType.PERCENTAGE }
           }),

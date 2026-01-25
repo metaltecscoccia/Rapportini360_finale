@@ -127,11 +127,11 @@ export class TxtService {
           section += `      Ore: ${parseFloat(op.hours).toFixed(2)}\n`;
           
           if (op.workTypes && op.workTypes.length > 0) {
-            section += `      Lavorazioni: ${op.workTypes.join(', ')}\n`;
+            section += `      Attività: ${op.workTypes.join(', ')}\n`;
           }
           
           if (op.materials && op.materials.length > 0) {
-            section += `      Materiali: ${op.materials.join(', ')}\n`;
+            section += `      Componenti: ${op.materials.join(', ')}\n`;
           }
           
           if (op.notes && op.notes.trim()) {

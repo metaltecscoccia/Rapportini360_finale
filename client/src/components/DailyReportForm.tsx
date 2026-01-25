@@ -198,14 +198,14 @@ function OperationCard({
         </div>
         
         <div className="space-y-2">
-          <Label className="font-semibold text-foreground">Lavorazioni</Label>
+          <Label className="font-semibold text-foreground">Attività</Label>
           {!operation.workOrderId ? (
             <div className="p-3 border rounded-md text-sm text-muted-foreground" data-testid={`worktype-empty-${operation.id}`}>
               Seleziona prima una commessa
             </div>
           ) : availableWorkTypes.length === 0 ? (
             <div className="p-3 border rounded-md text-sm text-muted-foreground" data-testid={`worktype-no-data-${operation.id}`}>
-              Nessuna lavorazione disponibile
+              Nessuna attività disponibile
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 border rounded-md" data-testid={`worktype-container-${operation.id}`}>
@@ -232,14 +232,14 @@ function OperationCard({
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <div className="space-y-2">
-          <Label className="font-semibold text-foreground">Materiali (opzionale)</Label>
+          <Label className="font-semibold text-foreground">Componenti (opzionale)</Label>
           {!operation.workOrderId ? (
             <div className="p-3 border rounded-md text-sm text-muted-foreground" data-testid={`material-empty-${operation.id}`}>
               Seleziona prima una commessa
             </div>
           ) : availableMaterials.length === 0 ? (
             <div className="p-3 border rounded-md text-sm text-muted-foreground" data-testid={`material-no-data-${operation.id}`}>
-              Nessun materiale disponibile
+              Nessun componente disponibile
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 border rounded-md" data-testid={`material-container-${operation.id}`}>
@@ -499,7 +499,7 @@ export default function DailyReportForm({
     operations.forEach((operation, index) => {
       if (!operation.clientId) missingFields.push(`Operazione ${index + 1}: Cliente`);
       if (!operation.workOrderId) missingFields.push(`Operazione ${index + 1}: Commessa`);
-      if (!operation.workTypes || operation.workTypes.length === 0) missingFields.push(`Operazione ${index + 1}: Seleziona almeno una Lavorazione`);
+      if (!operation.workTypes || operation.workTypes.length === 0) missingFields.push(`Operazione ${index + 1}: Seleziona almeno un'Attività`);
       if (!operation.hours || operation.hours <= 0) missingFields.push(`Operazione ${index + 1}: Inserire ore valide (maggiori di 0)`);
       // NOTE: materials are optional, so no validation required
     });

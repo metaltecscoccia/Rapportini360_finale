@@ -1125,7 +1125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res
           .status(400)
           .json({
-            error: "Dati lavorazione non validi",
+            error: "Dati attività non validi",
             issues: result.error.issues,
           });
       }
@@ -1161,12 +1161,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const deleted = await storage.deleteWorkType(id, organizationId);
 
       if (!deleted) {
-        return res.status(404).json({ error: "Lavorazione non trovata" });
+        return res.status(404).json({ error: "Attività non trovata" });
       }
 
       res.json({
         success: true,
-        message: "Lavorazione eliminata con successo",
+        message: "Attività eliminata con successo",
       });
     } catch (error: any) {
       console.error("Error deleting work type:", error);
@@ -1197,7 +1197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res
           .status(400)
           .json({
-            error: "Dati materiale non validi",
+            error: "Dati componente non validi",
             issues: result.error.issues,
           });
       }
@@ -1233,10 +1233,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const deleted = await storage.deleteMaterial(id, organizationId);
 
       if (!deleted) {
-        return res.status(404).json({ error: "Materiale non trovato" });
+        return res.status(404).json({ error: "Componente non trovato" });
       }
 
-      res.json({ success: true, message: "Materiale eliminato con successo" });
+      res.json({ success: true, message: "Componente eliminato con successo" });
     } catch (error: any) {
       console.error("Error deleting material:", error);
       res.status(500).json({ error: "Failed to delete material" });

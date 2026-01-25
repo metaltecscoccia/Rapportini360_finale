@@ -469,8 +469,8 @@ export default function WorkOrderReport({
                   <TableHead className="h-8 px-3 text-xs font-semibold w-[90px]">Data</TableHead>
                   <TableHead className="h-8 px-3 text-xs font-semibold w-[140px]">Dipendente</TableHead>
                   <TableHead className="h-8 px-3 text-xs font-semibold w-[80px]">Ore</TableHead>
-                  <TableHead className="h-8 px-3 text-xs font-semibold min-w-[160px]">Lavorazioni</TableHead>
-                  <TableHead className="h-8 px-3 text-xs font-semibold min-w-[160px]">Materiali</TableHead>
+                  <TableHead className="h-8 px-3 text-xs font-semibold min-w-[160px]">Attività</TableHead>
+                  <TableHead className="h-8 px-3 text-xs font-semibold min-w-[160px]">Componenti</TableHead>
                   <TableHead className="h-8 px-3 text-xs font-semibold min-w-[180px]">Note Dipendente</TableHead>
                   <TableHead className="h-8 px-3 text-xs font-semibold min-w-[180px]">Note Admin</TableHead>
                 </TableRow>

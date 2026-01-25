@@ -895,8 +895,8 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/work-types'] });
       toast({
-        title: "Lavorazione aggiunta",
-        description: "La nuova lavorazione è stata aggiunta con successo.",
+        title: "Attività aggiunta",
+        description: "La nuova attività è stata aggiunta con successo.",
       });
       workTypeForm.reset();
       setAddWorkTypeDialogOpen(false);
@@ -904,7 +904,7 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Errore",
-        description: error.message || "Errore durante l'aggiunta della lavorazione.",
+        description: error.message || "Errore durante l'aggiunta dell'attività.",
         variant: "destructive",
       });
     },
@@ -918,8 +918,8 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/work-types'] });
       toast({
-        title: "Lavorazione aggiornata",
-        description: "La lavorazione è stata aggiornata con successo.",
+        title: "Attività aggiornata",
+        description: "L'attività è stata aggiornata con successo.",
       });
       workTypeForm.reset();
       setEditWorkTypeDialogOpen(false);
@@ -928,7 +928,7 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Errore",
-        description: error.message || "Errore durante l'aggiornamento della lavorazione.",
+        description: error.message || "Errore durante l'aggiornamento dell'attività.",
         variant: "destructive",
       });
     },
@@ -941,8 +941,8 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/work-types'] });
       toast({
-        title: "Lavorazione eliminata",
-        description: "La lavorazione è stata eliminata con successo.",
+        title: "Attività eliminata",
+        description: "L'attività è stata eliminata con successo.",
       });
       setDeleteWorkTypeDialogOpen(false);
       setSelectedWorkType(null);
@@ -950,7 +950,7 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Errore",
-        description: error.message || "Errore durante l'eliminazione della lavorazione.",
+        description: error.message || "Errore durante l'eliminazione dell'attività.",
         variant: "destructive",
       });
     },
@@ -964,8 +964,8 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/materials'] });
       toast({
-        title: "Materiale aggiunto",
-        description: "Il nuovo materiale è stato aggiunto con successo.",
+        title: "Componente aggiunto",
+        description: "Il nuovo componente è stato aggiunto con successo.",
       });
       materialForm.reset();
       setAddMaterialDialogOpen(false);
@@ -973,7 +973,7 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Errore",
-        description: error.message || "Errore durante l'aggiunta del materiale.",
+        description: error.message || "Errore durante l'aggiunta del componente.",
         variant: "destructive",
       });
     },
@@ -987,8 +987,8 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/materials'] });
       toast({
-        title: "Materiale aggiornato",
-        description: "Il materiale è stato aggiornato con successo.",
+        title: "Componente aggiornato",
+        description: "Il componente è stato aggiornato con successo.",
       });
       materialForm.reset();
       setEditMaterialDialogOpen(false);
@@ -997,7 +997,7 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Errore",
-        description: error.message || "Errore durante l'aggiornamento del materiale.",
+        description: error.message || "Errore durante l'aggiornamento del componente.",
         variant: "destructive",
       });
     },
@@ -1010,8 +1010,8 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/materials'] });
       toast({
-        title: "Materiale eliminato",
-        description: "Il materiale è stato eliminato con successo.",
+        title: "Componente eliminato",
+        description: "Il componente è stato eliminato con successo.",
       });
       setDeleteMaterialDialogOpen(false);
       setSelectedMaterial(null);
@@ -1019,7 +1019,7 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Errore",
-        description: error.message || "Errore durante l'eliminazione del materiale.",
+        description: error.message || "Errore durante l'eliminazione del componente.",
         variant: "destructive",
       });
     },
@@ -1153,8 +1153,8 @@ export default function AdminDashboard() {
       // Refetch to get the real data from server
       queryClient.invalidateQueries({ queryKey: ['/api/work-types'] });
       toast({
-        title: "Lavorazione aggiunta",
-        description: "La nuova lavorazione è stata aggiunta con successo.",
+        title: "Attività aggiunta",
+        description: "La nuova attività è stata aggiunta con successo.",
       });
 
       // Reset quick-add form
@@ -1178,7 +1178,7 @@ export default function AdminDashboard() {
 
       toast({
         title: "Errore",
-        description: error.message || "Errore durante l'aggiunta della lavorazione.",
+        description: error.message || "Errore durante l'aggiunta dell'attività.",
         variant: "destructive",
       });
     },
@@ -1233,8 +1233,8 @@ export default function AdminDashboard() {
       // Refetch to get the real data from server
       queryClient.invalidateQueries({ queryKey: ['/api/materials'] });
       toast({
-        title: "Materiale aggiunto",
-        description: "Il nuovo materiale è stato aggiunto con successo.",
+        title: "Componente aggiunto",
+        description: "Il nuovo componente è stato aggiunto con successo.",
       });
 
       // Reset quick-add form
@@ -1258,7 +1258,7 @@ export default function AdminDashboard() {
 
       toast({
         title: "Errore",
-        description: error.message || "Errore durante l'aggiunta del materiale.",
+        description: error.message || "Errore durante l'aggiunta del componente.",
         variant: "destructive",
       });
     },
@@ -2395,7 +2395,7 @@ export default function AdminDashboard() {
                                                   <div className="flex items-center gap-2 flex-wrap">
                                                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                                                       <Package className="h-3 w-3" />
-                                                      Materiali:
+                                                      Componenti:
                                                     </span>
                                                     {operation.materials.map((material: string, idx: number) => (
                                                       <Badge key={idx} variant="outline" className="text-xs">
@@ -3219,24 +3219,24 @@ export default function AdminDashboard() {
           </Card>
         </TabsContent>
 
-        {/* Configurazione Tab (Lavorazioni e Materiali) */}
+        {/* Configurazione Tab (Attività e Componenti) */}
         <TabsContent value="work-types">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Lavorazioni Card */}
+          {/* Attività Card */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Lavorazioni</CardTitle>
+                <CardTitle>Attività</CardTitle>
                 <Button onClick={() => setAddWorkTypeDialogOpen(true)} data-testid="button-add-worktype">
                   <Plus className="h-4 w-4 mr-2" />
-                  Aggiungi Lavorazione
+                  Aggiungi Attività
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
               {isLoadingWorkTypes ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  Caricamento lavorazioni...
+                  Caricamento attività...
                 </div>
               ) : (
                 <div className="overflow-x-auto" data-testid="scroll-table-worktypes">
@@ -3253,10 +3253,10 @@ export default function AdminDashboard() {
                     {(workTypes as any[]).length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={2} className="text-center text-muted-foreground py-8 lg:hidden">
-                          Nessuna lavorazione trovata. Aggiungi la prima lavorazione.
+                          Nessuna attività trovata. Aggiungi la prima attività.
                         </TableCell>
                         <TableCell colSpan={4} className="hidden lg:table-cell text-center text-muted-foreground py-8">
-                          Nessuna lavorazione trovata. Aggiungi la prima lavorazione.
+                          Nessuna attività trovata. Aggiungi la prima attività.
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -3304,21 +3304,21 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Materiali Card */}
+          {/* Componenti Card */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Materiali</CardTitle>
+                <CardTitle>Componenti</CardTitle>
                 <Button onClick={() => setAddMaterialDialogOpen(true)} data-testid="button-add-material">
                   <Plus className="h-4 w-4 mr-2" />
-                  Aggiungi Materiale
+                  Aggiungi Componente
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
               {isLoadingMaterials ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  Caricamento materiali...
+                  Caricamento componenti...
                 </div>
               ) : (
                 <div className="overflow-x-auto" data-testid="scroll-table-materials">
@@ -3335,10 +3335,10 @@ export default function AdminDashboard() {
                     {(materials as any[]).length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={2} className="text-center text-muted-foreground py-8 lg:hidden">
-                          Nessun materiale trovato. Aggiungi il primo materiale.
+                          Nessun componente trovato. Aggiungi il primo componente.
                         </TableCell>
                         <TableCell colSpan={4} className="hidden lg:table-cell text-center text-muted-foreground py-8">
-                          Nessun materiale trovato. Aggiungi il primo materiale.
+                          Nessun componente trovato. Aggiungi il primo componente.
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -4178,7 +4178,7 @@ export default function AdminDashboard() {
                 name="availableWorkTypes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Lavorazioni Disponibili</FormLabel>
+                    <FormLabel>Attività Disponibili</FormLabel>
                     <div className="border rounded-md p-4 max-h-48 overflow-y-auto space-y-2">
                       {(workTypes as any[])
                         .filter((wt: any) => wt.isActive)
@@ -4205,7 +4205,7 @@ export default function AdminDashboard() {
                         ))}
                       {(workTypes as any[]).filter((wt: any) => wt.isActive).length === 0 && (
                         <p className="text-sm text-muted-foreground text-center py-2">
-                          Nessuna lavorazione disponibile. Aggiungile nella tab Configurazione.
+                          Nessuna attività disponibile. Aggiungile nella tab Configurazione.
                         </p>
                       )}
                     </div>
@@ -4218,7 +4218,7 @@ export default function AdminDashboard() {
                 name="availableMaterials"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Materiali Disponibili</FormLabel>
+                    <FormLabel>Componenti Disponibili</FormLabel>
                     <div className="border rounded-md p-4 max-h-48 overflow-y-auto space-y-2">
                       {(materials as any[])
                         .filter((m: any) => m.isActive)
@@ -4245,7 +4245,7 @@ export default function AdminDashboard() {
                         ))}
                       {(materials as any[]).filter((m: any) => m.isActive).length === 0 && (
                         <p className="text-sm text-muted-foreground text-center py-2">
-                          Nessun materiale disponibile. Aggiungili nella tab Configurazione.
+                          Nessun componente disponibile. Aggiungili nella tab Configurazione.
                         </p>
                       )}
                     </div>
@@ -4586,7 +4586,7 @@ export default function AdminDashboard() {
                 name="availableWorkTypes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Lavorazioni Disponibili</FormLabel>
+                    <FormLabel>Attività Disponibili</FormLabel>
                     <div className="border rounded-md p-4 max-h-48 overflow-y-auto space-y-2">
                       {(workTypes as any[])
                         .filter((wt: any) => wt.isActive)
@@ -4613,7 +4613,7 @@ export default function AdminDashboard() {
                         ))}
                       {(workTypes as any[]).filter((wt: any) => wt.isActive).length === 0 && (
                         <p className="text-sm text-muted-foreground text-center py-2">
-                          Nessuna lavorazione disponibile. Aggiungile nella tab Configurazione.
+                          Nessuna attività disponibile. Aggiungile nella tab Configurazione.
                         </p>
                       )}
                     </div>
@@ -4626,7 +4626,7 @@ export default function AdminDashboard() {
                 name="availableMaterials"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Materiali Disponibili</FormLabel>
+                    <FormLabel>Componenti Disponibili</FormLabel>
                     <div className="border rounded-md p-4 max-h-48 overflow-y-auto space-y-2">
                       {(materials as any[])
                         .filter((m: any) => m.isActive)
@@ -4653,7 +4653,7 @@ export default function AdminDashboard() {
                         ))}
                       {(materials as any[]).filter((m: any) => m.isActive).length === 0 && (
                         <p className="text-sm text-muted-foreground text-center py-2">
-                          Nessun materiale disponibile. Aggiungili nella tab Configurazione.
+                          Nessun componente disponibile. Aggiungili nella tab Configurazione.
                         </p>
                       )}
                     </div>
@@ -4732,13 +4732,13 @@ export default function AdminDashboard() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog per aggiungere tipo lavorazione */}
+      {/* Dialog per aggiungere tipo attività */}
       <Dialog open={addWorkTypeDialogOpen} onOpenChange={setAddWorkTypeDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Aggiungi Tipo Lavorazione</DialogTitle>
+            <DialogTitle>Aggiungi Tipo Attività</DialogTitle>
             <DialogDescription>
-              Inserisci i dati del nuovo tipo di lavorazione.
+              Inserisci i dati del nuovo tipo di attività.
             </DialogDescription>
           </DialogHeader>
           <Form {...workTypeForm}>
@@ -4748,7 +4748,7 @@ export default function AdminDashboard() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome Lavorazione</FormLabel>
+                    <FormLabel>Nome Attività</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="Es. Saldatura" 
@@ -4768,7 +4768,7 @@ export default function AdminDashboard() {
                     <FormLabel>Descrizione (opzionale)</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="Descrizione della lavorazione" 
+                        placeholder="Descrizione dell'attività" 
                         {...field} 
                         data-testid="input-work-type-description"
                       />
@@ -4814,7 +4814,7 @@ export default function AdminDashboard() {
                   disabled={createWorkTypeMutation.isPending}
                   data-testid="button-submit-work-type"
                 >
-                  {createWorkTypeMutation.isPending ? "Aggiungendo..." : "Aggiungi Lavorazione"}
+                  {createWorkTypeMutation.isPending ? "Aggiungendo..." : "Aggiungi Attività"}
                 </Button>
               </DialogFooter>
             </form>
@@ -4822,13 +4822,13 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog per modificare tipo lavorazione */}
+      {/* Dialog per modificare tipo attività */}
       <Dialog open={editWorkTypeDialogOpen} onOpenChange={setEditWorkTypeDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Modifica Tipo Lavorazione</DialogTitle>
+            <DialogTitle>Modifica Tipo Attività</DialogTitle>
             <DialogDescription>
-              Modifica i dati del tipo di lavorazione.
+              Modifica i dati del tipo di attività.
             </DialogDescription>
           </DialogHeader>
           <Form {...workTypeForm}>
@@ -4838,7 +4838,7 @@ export default function AdminDashboard() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome Lavorazione</FormLabel>
+                    <FormLabel>Nome Attività</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="Es. Saldatura" 
@@ -4858,7 +4858,7 @@ export default function AdminDashboard() {
                     <FormLabel>Descrizione (opzionale)</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="Descrizione della lavorazione" 
+                        placeholder="Descrizione dell'attività" 
                         {...field} 
                         data-testid="input-edit-work-type-description"
                       />
@@ -4904,7 +4904,7 @@ export default function AdminDashboard() {
                   disabled={updateWorkTypeMutation.isPending}
                   data-testid="button-submit-edit-work-type"
                 >
-                  {updateWorkTypeMutation.isPending ? "Aggiornando..." : "Aggiorna Lavorazione"}
+                  {updateWorkTypeMutation.isPending ? "Aggiornando..." : "Aggiorna Attività"}
                 </Button>
               </DialogFooter>
             </form>
@@ -4912,13 +4912,13 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog conferma eliminazione tipo lavorazione */}
+      {/* Dialog conferma eliminazione tipo attività */}
       <AlertDialog open={deleteWorkTypeDialogOpen} onOpenChange={setDeleteWorkTypeDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Elimina Tipo Lavorazione</AlertDialogTitle>
+            <AlertDialogTitle>Elimina Tipo Attività</AlertDialogTitle>
             <AlertDialogDescription>
-              Sei sicuro di voler eliminare il tipo di lavorazione "{selectedWorkType?.name}"?
+              Sei sicuro di voler eliminare il tipo di attività "{selectedWorkType?.name}"?
               <span className="block mt-2">
                 Questa azione non può essere annullata.
               </span>
@@ -4938,13 +4938,13 @@ export default function AdminDashboard() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog per aggiungere materiale */}
+      {/* Dialog per aggiungere componente */}
       <Dialog open={addMaterialDialogOpen} onOpenChange={setAddMaterialDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Aggiungi Materiale</DialogTitle>
+            <DialogTitle>Aggiungi Componente</DialogTitle>
             <DialogDescription>
-              Inserisci i dati del nuovo materiale.
+              Inserisci i dati del nuovo componente.
             </DialogDescription>
           </DialogHeader>
           <Form {...materialForm}>
@@ -4954,7 +4954,7 @@ export default function AdminDashboard() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome Materiale</FormLabel>
+                    <FormLabel>Nome Componente</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="Es. Acciaio Inox" 
@@ -4974,7 +4974,7 @@ export default function AdminDashboard() {
                     <FormLabel>Descrizione (opzionale)</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="Descrizione del materiale" 
+                        placeholder="Descrizione del componente" 
                         {...field} 
                         data-testid="input-material-description"
                       />
@@ -5020,7 +5020,7 @@ export default function AdminDashboard() {
                   disabled={createMaterialMutation.isPending}
                   data-testid="button-submit-material"
                 >
-                  {createMaterialMutation.isPending ? "Aggiungendo..." : "Aggiungi Materiale"}
+                  {createMaterialMutation.isPending ? "Aggiungendo..." : "Aggiungi Componente"}
                 </Button>
               </DialogFooter>
             </form>
@@ -5028,13 +5028,13 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog per modificare materiale */}
+      {/* Dialog per modificare componente */}
       <Dialog open={editMaterialDialogOpen} onOpenChange={setEditMaterialDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Modifica Materiale</DialogTitle>
+            <DialogTitle>Modifica Componente</DialogTitle>
             <DialogDescription>
-              Modifica i dati del materiale.
+              Modifica i dati del componente.
             </DialogDescription>
           </DialogHeader>
           <Form {...materialForm}>
@@ -5044,7 +5044,7 @@ export default function AdminDashboard() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome Materiale</FormLabel>
+                    <FormLabel>Nome Componente</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="Es. Acciaio Inox" 
@@ -5064,7 +5064,7 @@ export default function AdminDashboard() {
                     <FormLabel>Descrizione (opzionale)</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="Descrizione del materiale" 
+                        placeholder="Descrizione del componente" 
                         {...field} 
                         data-testid="input-edit-material-description"
                       />
@@ -5110,7 +5110,7 @@ export default function AdminDashboard() {
                   disabled={updateMaterialMutation.isPending}
                   data-testid="button-submit-edit-material"
                 >
-                  {updateMaterialMutation.isPending ? "Aggiornando..." : "Aggiorna Materiale"}
+                  {updateMaterialMutation.isPending ? "Aggiornando..." : "Aggiorna Componente"}
                 </Button>
               </DialogFooter>
             </form>
@@ -5118,13 +5118,13 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog conferma eliminazione materiale */}
+      {/* Dialog conferma eliminazione componente */}
       <AlertDialog open={deleteMaterialDialogOpen} onOpenChange={setDeleteMaterialDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Elimina Materiale</AlertDialogTitle>
+            <AlertDialogTitle>Elimina Componente</AlertDialogTitle>
             <AlertDialogDescription>
-              Sei sicuro di voler eliminare il materiale "{selectedMaterial?.name}"?
+              Sei sicuro di voler eliminare il componente "{selectedMaterial?.name}"?
               <span className="block mt-2">
                 Questa azione non può essere annullata.
               </span>
