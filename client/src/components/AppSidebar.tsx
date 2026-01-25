@@ -1,8 +1,9 @@
-import { LayoutDashboard, Users, Building, ClipboardList, Settings, Calendar, BarChart2, Fuel, Menu } from "lucide-react";
+import { LayoutDashboard, Users, Building, ClipboardList, Settings, Calendar, BarChart2, Fuel, Menu, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLocation } from "wouter";
 
 interface SidebarItem {
   id: string;
@@ -20,6 +21,7 @@ const sidebarItems: SidebarItem[] = [
   { id: "attendance", icon: Calendar, label: "Presenze" },
   { id: "absence-stats", icon: BarChart2, label: "Statistiche" },
   { id: "fuel", icon: Fuel, label: "Rifornimenti" },
+  { id: "billing", icon: CreditCard, label: "Abbonamento" },
 ];
 
 interface AppSidebarProps {
@@ -39,6 +41,8 @@ export function AppSidebar({
   isMobile = false,
   pendingReportsCount = 0,
 }: AppSidebarProps) {
+  const [, setLocation] = useLocation();
+
   // Update badge for dashboard if we have pending reports
   const itemsWithBadges = sidebarItems.map(item => {
     if (item.id === "dashboard" && pendingReportsCount > 0) {
@@ -74,6 +78,15 @@ export function AppSidebar({
           const Icon = item.icon;
           const isActive = activeSection === item.id;
 
+          const handleClick = () => {
+            // Navigate to /billing route for billing section
+            if (item.id === "billing") {
+              setLocation("/billing");
+            } else {
+              onSectionChange(item.id);
+            }
+          };
+
           const button = (
             <Button
               key={item.id}
@@ -83,7 +96,7 @@ export function AppSidebar({
                 isCollapsed && "justify-center px-2",
                 isActive && "bg-secondary hover:bg-secondary/80"
               )}
-              onClick={() => onSectionChange(item.id)}
+              onClick={handleClick}
             >
               <Icon className={cn(
                 "h-5 w-5 flex-shrink-0 transition-transform",
