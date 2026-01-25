@@ -169,6 +169,7 @@ export interface IStorage {
   createOrganization(org: InsertOrganization): Promise<Organization>;
   updateOrganization(id: string, updates: Partial<Organization>): Promise<Organization>;
   updateOrganizationStatus(id: string, isActive: boolean): Promise<Organization | undefined>;
+  deleteOrganization(id: string): Promise<boolean>;
   getOrganizationStats(): Promise<{
     totalOrganizations: number;
     trialOrganizations: number;
@@ -444,6 +445,12 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Organization not found");
     }
     return updated;
+  }
+
+  async deleteOrganization(id: string): Promise<boolean> {
+    await this.ensureInitialized();
+    const result = await db.delete(organizations).where(eq(organizations.id, id));
+    return true;
   }
 
   async getOrganizationByStripeCustomerId(customerId: string): Promise<Organization | undefined> {

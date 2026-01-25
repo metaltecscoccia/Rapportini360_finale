@@ -20,6 +20,9 @@ export const organizations = pgTable("organizations", {
   billingEmail: text("billing_email"),
   subscriptionCurrentPeriodEnd: timestamp("subscription_current_period_end"),
   maxEmployees: integer("max_employees").default(5),
+  // Anagrafica aziendale
+  vatNumber: text("vat_number"), // Partita IVA
+  phone: text("phone"), // Telefono
 });
 
 // Users table
@@ -218,7 +221,7 @@ export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   subscriptionId: true, // Managed by Stripe webhooks
   subscriptionCurrentPeriodEnd: true, // Managed by Stripe webhooks
 }).extend({
-  subscriptionStatus: z.enum(['trial', 'active', 'past_due', 'canceled', 'incomplete', 'paused']).optional().default('trial'),
+  subscriptionStatus: z.enum(['trial', 'active', 'past_due', 'canceled', 'incomplete', 'paused', 'pending_approval']).optional().default('trial'),
   subscriptionPlan: z.enum(['free', 'premium_monthly', 'premium_yearly']).optional().default('free'),
   trialEndDate: z.union([z.string(), z.date(), z.null()]).optional().transform(val => {
     if (!val) return null;
@@ -227,6 +230,8 @@ export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   }),
   billingEmail: z.string().email("Email non valida").optional(),
   maxEmployees: z.number().min(1).optional().default(5),
+  vatNumber: z.string().optional(),
+  phone: z.string().optional(),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({

@@ -49,6 +49,11 @@ import {
   AlertCircle,
   Crown,
   ChevronDown,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Phone,
+  Mail,
 } from "lucide-react";
 import { formatDateToItalian } from "@/lib/dateUtils";
 
@@ -85,6 +90,17 @@ type Admin = {
   isActive: boolean;
 };
 
+type PendingSignup = {
+  id: string;
+  name: string;
+  billingEmail: string | null;
+  vatNumber: string | null;
+  phone: string | null;
+  createdAt: string;
+  adminFullName: string;
+  adminUsername: string;
+};
+
 export default function SuperAdminDashboard() {
   const { toast } = useToast();
   const [createOrgOpen, setCreateOrgOpen] = useState(false);
@@ -113,6 +129,10 @@ export default function SuperAdminDashboard() {
 
   const { data: organizations, isLoading } = useQuery<Organization[]>({
     queryKey: ["/api/superadmin/organizations"],
+  });
+
+  const { data: pendingSignups, isLoading: isLoadingPending } = useQuery<PendingSignup[]>({
+    queryKey: ["/api/superadmin/pending-signups"],
   });
 
   const { data: admins, isLoading: isLoadingAdmins } = useQuery<Admin[]>({
@@ -190,6 +210,49 @@ export default function SuperAdminDashboard() {
       toast({
         title: "Errore",
         description: "Impossibile modificare lo stato dell'organizzazione.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const approveSignupMutation = useMutation({
+    mutationFn: async (orgId: string) => {
+      const response = await apiRequest("POST", `/api/superadmin/approve-signup/${orgId}`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/pending-signups"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/organizations"] });
+      toast({
+        title: "Richiesta approvata",
+        description: data.message || "L'organizzazione è stata attivata e le credenziali inviate via email.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile approvare la richiesta.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectSignupMutation = useMutation({
+    mutationFn: async ({ orgId, reason }: { orgId: string; reason?: string }) => {
+      const response = await apiRequest("POST", `/api/superadmin/reject-signup/${orgId}`, { reason });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/superadmin/pending-signups"] });
+      toast({
+        title: "Richiesta rifiutata",
+        description: data.message || "La richiesta è stata rifiutata e rimossa.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile rifiutare la richiesta.",
         variant: "destructive",
       });
     },
@@ -374,8 +437,17 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="p-6 space-y-6">
-      <Tabs defaultValue="organizations" className="space-y-6">
+      <Tabs defaultValue="pending" className="space-y-6">
         <TabsList>
+          <TabsTrigger value="pending" className="relative">
+            <Clock className="h-4 w-4 mr-2" />
+            Richieste
+            {pendingSignups && pendingSignups.length > 0 && (
+              <Badge variant="destructive" className="ml-2 h-5 min-w-5 px-1">
+                {pendingSignups.length}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="organizations">
             <Building2 className="h-4 w-4 mr-2" />
             Organizzazioni
@@ -385,6 +457,118 @@ export default function SuperAdminDashboard() {
             Vista SaaS
           </TabsTrigger>
         </TabsList>
+
+        {/* Tab Richieste Pending */}
+        <TabsContent value="pending" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">
+                Richieste di Attivazione
+              </h2>
+              <p className="text-muted-foreground">
+                Approva o rifiuta le richieste di registrazione in attesa
+              </p>
+            </div>
+          </div>
+
+          {isLoadingPending ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : pendingSignups && pendingSignups.length > 0 ? (
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Azienda</TableHead>
+                      <TableHead>P.IVA</TableHead>
+                      <TableHead>Contatti</TableHead>
+                      <TableHead>Admin</TableHead>
+                      <TableHead>Data Richiesta</TableHead>
+                      <TableHead className="text-right">Azioni</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pendingSignups.map((signup) => (
+                      <TableRow key={signup.id}>
+                        <TableCell className="font-medium">{signup.name}</TableCell>
+                        <TableCell className="font-mono text-sm">{signup.vatNumber || '-'}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 text-sm">
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Mail className="h-3 w-3" />
+                              {signup.billingEmail || '-'}
+                            </div>
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Phone className="h-3 w-3" />
+                              {signup.phone || '-'}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div className="font-medium">{signup.adminFullName}</div>
+                            <div className="text-muted-foreground">@{signup.adminUsername}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDateToItalian(signup.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => approveSignupMutation.mutate(signup.id)}
+                              disabled={approveSignupMutation.isPending}
+                            >
+                              {approveSignupMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Approva
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => rejectSignupMutation.mutate({ orgId: signup.id })}
+                              disabled={rejectSignupMutation.isPending}
+                            >
+                              {rejectSignupMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Rifiuta
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="py-12">
+                <div className="text-center text-muted-foreground">
+                  <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium mb-1">Nessuna richiesta in attesa</h3>
+                  <p className="text-sm">Le nuove richieste di registrazione appariranno qui.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
         <TabsContent value="organizations" className="space-y-6">
           <div className="flex items-center justify-between">

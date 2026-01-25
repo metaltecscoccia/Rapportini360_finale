@@ -12,6 +12,7 @@ import multer from 'multer';
 import streamifier from 'streamifier';
 import { getTodayISO } from "@shared/dateUtils";
 import { workFieldPresets } from "@shared/workFieldPresets";
+import { sendNewSignupRequestEmail, sendApprovalEmail, generateTemporaryPassword } from "./emailService";
 import {
   insertUserSchema,
   updateUserSchema,
@@ -209,13 +210,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Signup route (self-service registration for new organizations)
+  // Supports two activation types: "card" (immediate) and "manual" (pending approval)
   app.post("/api/signup", signupLimiter, async (req, res) => {
     try {
-      const { organizationName, workField, adminUsername, adminPassword, adminFullName, billingEmail } = req.body;
+      const {
+        organizationName,
+        workField,
+        vatNumber,
+        phone,
+        adminUsername,
+        adminPassword,
+        adminFullName,
+        billingEmail,
+        activationType = "manual"
+      } = req.body;
 
-      // Validazione input
-      if (!organizationName || !adminUsername || !adminPassword || !adminFullName || !billingEmail) {
-        return res.status(400).json({ error: "Tutti i campi sono richiesti" });
+      // Validazione input base
+      if (!organizationName || !adminUsername || !adminFullName || !billingEmail) {
+        return res.status(400).json({ error: "Tutti i campi obbligatori devono essere compilati" });
+      }
+
+      // Validazione P.IVA e Telefono
+      if (!vatNumber || !phone) {
+        return res.status(400).json({ error: "Partita IVA e Telefono sono obbligatori" });
       }
 
       // Validazione email
@@ -224,9 +241,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Email non valida" });
       }
 
-      // Validazione password (minimo 8 caratteri)
-      if (adminPassword.length < 8) {
-        return res.status(400).json({ error: "La password deve contenere almeno 8 caratteri" });
+      // Validazione password solo per attivazione immediata con carta
+      if (activationType === "card") {
+        if (!adminPassword || adminPassword.length < 8) {
+          return res.status(400).json({ error: "La password deve contenere almeno 8 caratteri" });
+        }
       }
 
       // Validazione username (minimo 3 caratteri)
@@ -252,17 +271,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Email già registrata" });
       }
 
+      // ===== FLUSSO ATTIVAZIONE MANUALE (pending_approval) =====
+      if (activationType === "manual") {
+        // Crea organizzazione in stato pending_approval (inattiva)
+        const organization = await storage.createOrganization({
+          name: organizationName,
+          subscriptionStatus: 'pending_approval',
+          subscriptionPlan: 'free',
+          billingEmail,
+          vatNumber,
+          phone,
+          maxEmployees: 5,
+          isActive: false, // Non attiva finché non approvata
+        });
+
+        console.log(`[SIGNUP] Created pending organization: ${organization.name} (ID: ${organization.id})`);
+
+        // Crea admin user con password temporanea (non comunicata)
+        const tempPassword = generateTemporaryPassword();
+        const admin = await storage.createUser(
+          {
+            username: adminUsername,
+            password: tempPassword,
+            fullName: adminFullName,
+            role: "admin",
+            isActive: true,
+            mustResetPassword: true, // Dovrà cambiarla al primo accesso
+          },
+          organization.id
+        );
+
+        console.log(`[SIGNUP] Created admin user for pending org: ${admin.username}`);
+
+        // Crea Attivita e Componenti pre-impostati (saranno disponibili dopo l'approvazione)
+        if (workField && workField !== 'altro') {
+          const preset = workFieldPresets[workField as keyof typeof workFieldPresets];
+          if (preset) {
+            for (const activityName of preset.activities) {
+              await storage.createWorkType({
+                name: activityName,
+                organizationId: organization.id,
+              });
+            }
+            for (const componentName of preset.components) {
+              await storage.createMaterial({
+                name: componentName,
+                organizationId: organization.id,
+              });
+            }
+            console.log(`[SIGNUP] Created presets for ${workField}`);
+          }
+        }
+
+        // Invia email di notifica al SuperAdmin
+        await sendNewSignupRequestEmail({
+          organizationName,
+          adminFullName,
+          adminUsername,
+          billingEmail,
+          vatNumber,
+          phone,
+          workField: workField || 'Non specificato',
+        });
+
+        // Non fare auto-login, restituisci messaggio di attesa
+        return res.status(201).json({
+          success: true,
+          message: "Richiesta inviata con successo! Riceverai le credenziali via email dopo la verifica dei dati.",
+          pendingApproval: true,
+        });
+      }
+
+      // ===== FLUSSO ATTIVAZIONE IMMEDIATA CON CARTA =====
       // Calcola data di fine trial (30 giorni)
       const trialEndDate = new Date();
       trialEndDate.setDate(trialEndDate.getDate() + 30);
 
-      // Crea organizzazione con trial 30 giorni
+      // Crea organizzazione con trial 30 giorni (attiva)
       const organization = await storage.createOrganization({
         name: organizationName,
         subscriptionStatus: 'trial',
         subscriptionPlan: 'free',
         trialEndDate,
         billingEmail,
+        vatNumber,
+        phone,
         maxEmployees: 5,
         isActive: true,
       });
@@ -287,7 +380,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (workField && workField !== 'altro') {
         const preset = workFieldPresets[workField as keyof typeof workFieldPresets];
         if (preset) {
-          // Crea le Attivita
           for (const activityName of preset.activities) {
             await storage.createWorkType({
               name: activityName,
@@ -296,7 +388,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           console.log(`[SIGNUP] Created ${preset.activities.length} work types for ${workField}`);
 
-          // Crea i Componenti
           for (const componentName of preset.components) {
             await storage.createMaterial({
               name: componentName,
@@ -391,6 +482,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating organization status:", error);
       res.status(500).json({ error: "Failed to update organization status" });
+    }
+  });
+
+  // ============================================
+  // SUPER ADMIN - GESTIONE RICHIESTE PENDING
+  // ============================================
+
+  // Get all pending signup requests (super admin only)
+  app.get("/api/superadmin/pending-signups", requireSuperAdmin, async (req, res) => {
+    try {
+      const organizations = await storage.getAllOrganizations();
+      // Filtra solo quelle in pending_approval
+      const pendingOrgs = organizations.filter(org => org.subscriptionStatus === 'pending_approval');
+
+      // Per ogni org pending, recupera l'admin user
+      const pendingWithAdmins = await Promise.all(
+        pendingOrgs.map(async (org) => {
+          const users = await storage.getUsers(org.id);
+          const admin = users.find(u => u.role === 'admin');
+          return {
+            ...org,
+            adminFullName: admin?.fullName || 'N/A',
+            adminUsername: admin?.username || 'N/A',
+          };
+        })
+      );
+
+      res.json(pendingWithAdmins);
+    } catch (error) {
+      console.error("Error fetching pending signups:", error);
+      res.status(500).json({ error: "Failed to fetch pending signups" });
+    }
+  });
+
+  // Approve a pending signup request (super admin only)
+  app.post("/api/superadmin/approve-signup/:orgId", requireSuperAdmin, async (req, res) => {
+    try {
+      const { orgId } = req.params;
+
+      // Verifica che l'organizzazione esista e sia in pending
+      const org = await storage.getOrganization(orgId);
+      if (!org) {
+        return res.status(404).json({ error: "Organizzazione non trovata" });
+      }
+
+      if (org.subscriptionStatus !== 'pending_approval') {
+        return res.status(400).json({ error: "Questa organizzazione non è in attesa di approvazione" });
+      }
+
+      // Calcola data di fine trial (30 giorni da ora)
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 30);
+
+      // Attiva l'organizzazione
+      await storage.updateOrganization(orgId, {
+        isActive: true,
+        subscriptionStatus: 'trial',
+        trialEndDate,
+      });
+
+      // Genera nuova password temporanea per l'admin
+      const tempPassword = generateTemporaryPassword();
+
+      // Trova l'admin dell'organizzazione
+      const users = await storage.getUsers(orgId);
+      const admin = users.find(u => u.role === 'admin');
+
+      if (admin) {
+        // Aggiorna la password dell'admin e imposta mustResetPassword
+        await storage.updateUser(admin.id, {
+          password: tempPassword,
+          mustResetPassword: true,
+        }, orgId);
+
+        // Invia email con credenziali
+        await sendApprovalEmail({
+          organizationName: org.name,
+          adminFullName: admin.fullName,
+          adminUsername: admin.username,
+          billingEmail: org.billingEmail || '',
+          temporaryPassword: tempPassword,
+        });
+      }
+
+      console.log(`[SUPERADMIN] Approved signup for organization: ${org.name} (ID: ${orgId})`);
+
+      res.json({
+        success: true,
+        message: `Organizzazione "${org.name}" approvata. Email con credenziali inviata.`,
+      });
+    } catch (error) {
+      console.error("Error approving signup:", error);
+      res.status(500).json({ error: "Failed to approve signup" });
+    }
+  });
+
+  // Reject a pending signup request (super admin only)
+  app.post("/api/superadmin/reject-signup/:orgId", requireSuperAdmin, async (req, res) => {
+    try {
+      const { orgId } = req.params;
+      const { reason } = req.body;
+
+      // Verifica che l'organizzazione esista e sia in pending
+      const org = await storage.getOrganization(orgId);
+      if (!org) {
+        return res.status(404).json({ error: "Organizzazione non trovata" });
+      }
+
+      if (org.subscriptionStatus !== 'pending_approval') {
+        return res.status(400).json({ error: "Questa organizzazione non è in attesa di approvazione" });
+      }
+
+      // Elimina gli utenti associati
+      const users = await storage.getUsers(orgId);
+      for (const user of users) {
+        await storage.deleteUser(user.id, orgId);
+      }
+
+      // Elimina work types e materials associati
+      const workTypes = await storage.getAllWorkTypes(orgId);
+      for (const wt of workTypes) {
+        await storage.deleteWorkType(wt.id, orgId);
+      }
+
+      const materials = await storage.getAllMaterials(orgId);
+      for (const mat of materials) {
+        await storage.deleteMaterial(mat.id, orgId);
+      }
+
+      // Elimina l'organizzazione
+      await storage.deleteOrganization(orgId);
+
+      console.log(`[SUPERADMIN] Rejected signup for organization: ${org.name} (ID: ${orgId})`);
+
+      res.json({
+        success: true,
+        message: `Richiesta per "${org.name}" rifiutata e rimossa.`,
+      });
+    } catch (error) {
+      console.error("Error rejecting signup:", error);
+      res.status(500).json({ error: "Failed to reject signup" });
     }
   });
 
