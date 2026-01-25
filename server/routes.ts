@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
+import Stripe from "stripe";
 import { storage } from "./storage";
 import { WordService } from "./wordService";
 import { txtService } from "./txtService";
@@ -51,6 +52,14 @@ cloudinary.config({
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ============================================
+// STRIPE CONFIGURATION
+// ============================================
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2025-12-15.clover',
+});
+
+// ============================================
 // RATE LIMITING - Protezione contro brute force
 // ============================================
 
@@ -59,6 +68,16 @@ const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: { error: "Troppi richieste. Riprova più tardi." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => process.env.NODE_ENV === "development",
+});
+
+// Rate limiter specifico per signup: max 5 registrazioni per IP per ora
+const signupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  message: { error: "Troppi tentativi di registrazione. Riprova tra un'ora." },
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => process.env.NODE_ENV === "development",
@@ -179,6 +198,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({ success: true, message: "Logout effettuato con successo" });
     });
+  });
+
+  // Signup route (self-service registration for new organizations)
+  app.post("/api/signup", signupLimiter, async (req, res) => {
+    try {
+      const { organizationName, adminUsername, adminPassword, adminFullName, billingEmail } = req.body;
+
+      // Validazione input
+      if (!organizationName || !adminUsername || !adminPassword || !adminFullName || !billingEmail) {
+        return res.status(400).json({ error: "Tutti i campi sono richiesti" });
+      }
+
+      // Validazione email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(billingEmail)) {
+        return res.status(400).json({ error: "Email non valida" });
+      }
+
+      // Validazione password (minimo 8 caratteri)
+      if (adminPassword.length < 8) {
+        return res.status(400).json({ error: "La password deve contenere almeno 8 caratteri" });
+      }
+
+      // Validazione username (minimo 3 caratteri)
+      if (adminUsername.length < 3) {
+        return res.status(400).json({ error: "Lo username deve contenere almeno 3 caratteri" });
+      }
+
+      // Verifica che il nome dell'organizzazione non esista già
+      const existingOrg = await storage.getOrganizationByName(organizationName);
+      if (existingOrg) {
+        return res.status(400).json({ error: "Nome organizzazione già in uso" });
+      }
+
+      // Verifica che l'username non esista già
+      const existingUser = await storage.getUserByUsername(adminUsername);
+      if (existingUser) {
+        return res.status(400).json({ error: "Username già in uso" });
+      }
+
+      // Verifica che l'email billing non esista già
+      const existingEmail = await storage.getOrganizationByBillingEmail(billingEmail);
+      if (existingEmail) {
+        return res.status(400).json({ error: "Email già registrata" });
+      }
+
+      // Calcola data di fine trial (30 giorni)
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 30);
+
+      // Crea organizzazione con trial 30 giorni
+      const organization = await storage.createOrganization({
+        name: organizationName,
+        subscriptionStatus: 'trial',
+        subscriptionPlan: 'free',
+        trialEndDate,
+        billingEmail,
+        maxEmployees: 5,
+        isActive: true,
+      });
+
+      console.log(`[SIGNUP] Created organization: ${organization.name} (ID: ${organization.id})`);
+
+      // Crea admin user
+      const admin = await storage.createUser(
+        {
+          username: adminUsername,
+          password: adminPassword,
+          fullName: adminFullName,
+          role: "admin",
+          isActive: true,
+        },
+        organization.id
+      );
+
+      console.log(`[SIGNUP] Created admin user: ${admin.username} (ID: ${admin.id})`);
+
+      // Auto-login: crea session
+      (req as any).session.userId = admin.id;
+      (req as any).session.userRole = admin.role;
+      (req as any).session.organizationId = organization.id;
+
+      // Return success response
+      const { password: _, ...adminWithoutPassword } = admin;
+      res.status(201).json({
+        success: true,
+        message: "Registrazione completata con successo! Trial di 30 giorni attivato.",
+        organization: {
+          id: organization.id,
+          name: organization.name,
+          subscriptionStatus: organization.subscriptionStatus,
+          trialEndDate: organization.trialEndDate,
+        },
+        user: adminWithoutPassword,
+      });
+    } catch (error) {
+      console.error("Error during signup:", error);
+      res.status(500).json({ error: "Errore durante la registrazione" });
+    }
   });
 
   // Applica rate limiting generale a tutte le altre API
@@ -405,6 +523,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching organization:", error);
       res.status(500).json({ error: "Failed to fetch organization" });
+    }
+  });
+
+  // ============================================
+  // BILLING & SUBSCRIPTIONS
+  // ============================================
+
+  // Get billing/subscription status
+  app.get("/api/billing/status", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const org = await storage.getOrganization(organizationId);
+
+      if (!org) {
+        return res.status(404).json({ error: "Organizzazione non trovata" });
+      }
+
+      const now = new Date();
+      const isTrialActive = org.subscriptionStatus === 'trial' &&
+                            org.trialEndDate && org.trialEndDate > now;
+
+      let daysUntilTrialEnd = 0;
+      if (isTrialActive && org.trialEndDate) {
+        daysUntilTrialEnd = Math.ceil((org.trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      }
+
+      // Get active employee count
+      const activeUsers = await storage.getActiveUsers(organizationId);
+      const currentEmployeeCount = activeUsers.length;
+
+      res.json({
+        subscriptionStatus: org.subscriptionStatus,
+        subscriptionPlan: org.subscriptionPlan,
+        isTrialActive,
+        daysUntilTrialEnd,
+        trialEndDate: org.trialEndDate,
+        maxEmployees: org.maxEmployees || 5,
+        currentEmployeeCount,
+        billingEmail: org.billingEmail,
+        hasStripeCustomer: !!org.stripeCustomerId,
+      });
+    } catch (error) {
+      console.error("Error fetching billing status:", error);
+      res.status(500).json({ error: "Errore durante il recupero dello stato di fatturazione" });
+    }
+  });
+
+  // Create Stripe checkout session (admin only)
+  app.post("/api/billing/create-checkout-session", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { priceId, planType } = req.body;
+
+      if (!priceId || !planType) {
+        return res.status(400).json({ error: "priceId e planType sono richiesti" });
+      }
+
+      const organizationId = (req as any).session.organizationId;
+      const org = await storage.getOrganization(organizationId);
+
+      if (!org) {
+        return res.status(404).json({ error: "Organizzazione non trovata" });
+      }
+
+      // Create or retrieve Stripe customer
+      let customerId = org.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: org.billingEmail || undefined,
+          metadata: { organizationId: org.id },
+        });
+        customerId = customer.id;
+        await storage.updateOrganization(org.id, { stripeCustomerId: customerId });
+      }
+
+      // Create Checkout Session
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: 'subscription',
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: `${process.env.APP_URL || 'http://localhost:5173'}/billing?success=true`,
+        cancel_url: `${process.env.APP_URL || 'http://localhost:5173'}/billing?canceled=true`,
+        metadata: {
+          organizationId: org.id,
+          planType
+        },
+      });
+
+      res.json({ sessionId: session.id, url: session.url });
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      res.status(500).json({ error: "Errore durante la creazione della sessione di pagamento" });
+    }
+  });
+
+  // Create Stripe customer portal session (admin only)
+  app.post("/api/billing/customer-portal", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const org = await storage.getOrganization(organizationId);
+
+      if (!org) {
+        return res.status(404).json({ error: "Organizzazione non trovata" });
+      }
+
+      if (!org.stripeCustomerId) {
+        return res.status(400).json({ error: "Nessun cliente Stripe associato" });
+      }
+
+      const session = await stripe.billingPortal.sessions.create({
+        customer: org.stripeCustomerId,
+        return_url: `${process.env.APP_URL || 'http://localhost:5173'}/billing`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error("Error creating customer portal session:", error);
+      res.status(500).json({ error: "Errore durante la creazione del portale clienti" });
     }
   });
 

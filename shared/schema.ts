@@ -11,6 +11,15 @@ export const organizations = pgTable("organizations", {
   logo: text("logo"), // URL del logo aziendale
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  // Subscription fields for SaaS
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  subscriptionStatus: varchar("subscription_status", { length: 50 }).notNull().default('trial'),
+  subscriptionPlan: varchar("subscription_plan", { length: 50 }).notNull().default('free'),
+  subscriptionId: varchar("subscription_id", { length: 255 }),
+  trialEndDate: timestamp("trial_end_date"),
+  billingEmail: text("billing_email"),
+  subscriptionCurrentPeriodEnd: timestamp("subscription_current_period_end"),
+  maxEmployees: integer("max_employees").default(5),
 });
 
 // Users table
@@ -205,6 +214,19 @@ export const fuelTankLoads = pgTable("fuel_tank_loads", {
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   id: true,
   createdAt: true,
+  stripeCustomerId: true, // Managed by Stripe webhooks
+  subscriptionId: true, // Managed by Stripe webhooks
+  subscriptionCurrentPeriodEnd: true, // Managed by Stripe webhooks
+}).extend({
+  subscriptionStatus: z.enum(['trial', 'active', 'past_due', 'canceled', 'incomplete', 'paused']).optional().default('trial'),
+  subscriptionPlan: z.enum(['free', 'premium_monthly', 'premium_yearly']).optional().default('free'),
+  trialEndDate: z.union([z.string(), z.date(), z.null()]).optional().transform(val => {
+    if (!val) return null;
+    if (typeof val === 'string') return new Date(val);
+    return val;
+  }),
+  billingEmail: z.string().email("Email non valida").optional(),
+  maxEmployees: z.number().min(1).optional().default(5),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({

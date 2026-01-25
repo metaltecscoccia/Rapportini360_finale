@@ -164,7 +164,10 @@ export interface IStorage {
   getAllOrganizations(): Promise<Organization[]>;
   getOrganization(id: string): Promise<Organization | undefined>;
   getOrganizationByName(name: string): Promise<Organization | undefined>;
+  getOrganizationByStripeCustomerId(customerId: string): Promise<Organization | undefined>;
+  getOrganizationByBillingEmail(email: string): Promise<Organization | undefined>;
   createOrganization(org: InsertOrganization): Promise<Organization>;
+  updateOrganization(id: string, updates: Partial<Organization>): Promise<Organization>;
   updateOrganizationStatus(id: string, isActive: boolean): Promise<Organization | undefined>;
 
   // Users
@@ -381,7 +384,6 @@ export class DatabaseStorage implements IStorage {
       await db.insert(users).values({
         username: "admin",
         password: hashedPassword,
-        plainPassword: null,
         role: "admin",
         fullName: "Amministratore",
         organizationId: defaultOrgId
@@ -421,6 +423,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(organizations.id, id))
       .returning();
     return updated || undefined;
+  }
+
+  async updateOrganization(id: string, updates: Partial<Organization>): Promise<Organization> {
+    await this.ensureInitialized();
+    const [updated] = await db.update(organizations)
+      .set(updates)
+      .where(eq(organizations.id, id))
+      .returning();
+    if (!updated) {
+      throw new Error("Organization not found");
+    }
+    return updated;
+  }
+
+  async getOrganizationByStripeCustomerId(customerId: string): Promise<Organization | undefined> {
+    await this.ensureInitialized();
+    const [org] = await db.select().from(organizations).where(eq(organizations.stripeCustomerId, customerId));
+    return org || undefined;
+  }
+
+  async getOrganizationByBillingEmail(email: string): Promise<Organization | undefined> {
+    await this.ensureInitialized();
+    const [org] = await db.select().from(organizations).where(eq(organizations.billingEmail, email));
+    return org || undefined;
   }
 
   // Users
