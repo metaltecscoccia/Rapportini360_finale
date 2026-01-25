@@ -499,7 +499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Per ogni org pending, recupera l'admin user
       const pendingWithAdmins = await Promise.all(
         pendingOrgs.map(async (org) => {
-          const users = await storage.getUsers(org.id);
+          const users = await storage.getAllUsers(org.id);
           const admin = users.find(u => u.role === 'admin');
           return {
             ...org,
@@ -546,7 +546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tempPassword = generateTemporaryPassword();
 
       // Trova l'admin dell'organizzazione
-      const users = await storage.getUsers(orgId);
+      const users = await storage.getAllUsers(orgId);
       const admin = users.find(u => u.role === 'admin');
 
       if (admin) {
@@ -595,7 +595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Elimina gli utenti associati
-      const users = await storage.getUsers(orgId);
+      const users = await storage.getAllUsers(orgId);
       for (const user of users) {
         await storage.deleteUser(user.id, orgId);
       }
@@ -681,7 +681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[SUPERADMIN] Deleted all advances`);
 
       // 7. Elimina tutti gli utenti (include attendance entries automaticamente)
-      const users = await storage.getUsers(orgId);
+      const users = await storage.getAllUsers(orgId);
       for (const user of users) {
         await storage.deleteUser(user.id, orgId);
       }
