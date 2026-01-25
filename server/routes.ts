@@ -645,37 +645,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.deleteDailyReport(report.id, orgId);
       }
 
-      // 2. Elimina tutte le presenze
-      const attendances = await storage.getAllAttendances(orgId);
-      for (const att of attendances) {
-        await storage.deleteAttendance(att.id, orgId);
+      // 2. Elimina tutte le commesse (work orders) - include operations
+      const workOrders = await storage.getAllWorkOrders(orgId);
+      for (const wo of workOrders) {
+        await storage.deleteWorkOrder(wo.id, orgId);
       }
 
-      // 3. Elimina tutte le commesse
-      const orders = await storage.getAllOrders(orgId);
-      for (const order of orders) {
-        await storage.deleteOrder(order.id, orgId);
-      }
-
-      // 4. Elimina tutti gli utenti
+      // 3. Elimina tutti gli utenti (include attendance entries automaticamente)
       const users = await storage.getUsers(orgId);
       for (const user of users) {
         await storage.deleteUser(user.id, orgId);
       }
 
-      // 5. Elimina work types
+      // 4. Elimina work types
       const workTypes = await storage.getAllWorkTypes(orgId);
       for (const wt of workTypes) {
         await storage.deleteWorkType(wt.id, orgId);
       }
 
-      // 6. Elimina materials
+      // 5. Elimina materials
       const materials = await storage.getAllMaterials(orgId);
       for (const mat of materials) {
         await storage.deleteMaterial(mat.id, orgId);
       }
 
-      // 7. Elimina l'organizzazione
+      // 6. Elimina l'organizzazione
       await storage.deleteOrganization(orgId);
 
       console.log(`[SUPERADMIN] Deleted organization: ${org.name} (ID: ${orgId}) with all related data`);
