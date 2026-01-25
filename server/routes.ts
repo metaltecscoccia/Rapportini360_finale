@@ -11,6 +11,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import streamifier from 'streamifier';
 import { getTodayISO } from "@shared/dateUtils";
+import { workFieldPresets } from "@shared/workFieldPresets";
 import {
   insertUserSchema,
   updateUserSchema,
@@ -210,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Signup route (self-service registration for new organizations)
   app.post("/api/signup", signupLimiter, async (req, res) => {
     try {
-      const { organizationName, adminUsername, adminPassword, adminFullName, billingEmail } = req.body;
+      const { organizationName, workField, adminUsername, adminPassword, adminFullName, billingEmail } = req.body;
 
       // Validazione input
       if (!organizationName || !adminUsername || !adminPassword || !adminFullName || !billingEmail) {
@@ -281,6 +282,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       console.log(`[SIGNUP] Created admin user: ${admin.username} (ID: ${admin.id})`);
+
+      // Crea Attivita e Componenti pre-impostati in base al settore di lavoro
+      if (workField && workField !== 'altro') {
+        const preset = workFieldPresets[workField as keyof typeof workFieldPresets];
+        if (preset) {
+          // Crea le Attivita
+          for (const activityName of preset.activities) {
+            await storage.createWorkType({
+              name: activityName,
+              organizationId: organization.id,
+            });
+          }
+          console.log(`[SIGNUP] Created ${preset.activities.length} work types for ${workField}`);
+
+          // Crea i Componenti
+          for (const componentName of preset.components) {
+            await storage.createMaterial({
+              name: componentName,
+              organizationId: organization.id,
+            });
+          }
+          console.log(`[SIGNUP] Created ${preset.components.length} materials for ${workField}`);
+        }
+      }
 
       // Auto-login: crea session
       (req as any).session.userId = admin.id;

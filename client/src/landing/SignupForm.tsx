@@ -7,9 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { ArrowLeft, Loader2, CheckCircle, Building, User, Mail, Lock } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle, Building, User, Mail, Lock, Briefcase } from "lucide-react";
 import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
+import { workFields } from "../../../shared/workFieldPresets";
 
 export default function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -18,6 +20,7 @@ export default function SignupForm() {
 
   const [formData, setFormData] = useState({
     organizationName: "",
+    workField: "",
     adminFullName: "",
     adminUsername: "",
     billingEmail: "",
@@ -67,6 +70,7 @@ export default function SignupForm() {
         credentials: "include",
         body: JSON.stringify({
           organizationName: formData.organizationName,
+          workField: formData.workField,
           adminFullName: formData.adminFullName,
           adminUsername: formData.adminUsername,
           adminPassword: formData.adminPassword,
@@ -145,6 +149,32 @@ export default function SignupForm() {
                         required
                       />
                     </div>
+                  </div>
+
+                  {/* Settore di Lavoro */}
+                  <div className="space-y-2">
+                    <Label htmlFor="workField">Settore di Lavoro</Label>
+                    <div className="relative">
+                      <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                      <Select
+                        value={formData.workField}
+                        onValueChange={(value) => setFormData((prev) => ({ ...prev, workField: value }))}
+                      >
+                        <SelectTrigger className="pl-10">
+                          <SelectValue placeholder="Seleziona il tuo settore" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workFields.map((field) => (
+                            <SelectItem key={field.id} value={field.id}>
+                              {field.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Pre-imposteremo Attivita e Componenti per il tuo settore
+                    </p>
                   </div>
 
                   {/* Nome Completo Admin */}
