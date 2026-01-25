@@ -14,7 +14,7 @@ export default function Footer() {
               <img
                 src={logoPath}
                 alt="Rapportini360"
-                className="h-10 w-10 object-contain"
+                className="h-[92px] w-[92px] object-contain"
               />
               <span className="text-xl font-bold text-white">Rapportini360</span>
             </Link>

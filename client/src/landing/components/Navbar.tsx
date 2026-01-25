@@ -21,7 +21,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/home" className="flex items-center gap-2">
-            <img src={logoPath} alt="Rapportini360" className="h-10 w-10 object-contain" />
+            <img src={logoPath} alt="Rapportini360" className="h-[92px] w-[92px] object-contain" />
             <span className="text-xl font-bold text-primary">Rapportini360</span>
           </Link>
 

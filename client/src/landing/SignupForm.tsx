@@ -115,7 +115,7 @@ export default function SignupForm() {
             <Card>
               <CardHeader className="text-center">
                 <div className="flex justify-center mb-4">
-                  <img src={logoPath} alt="Rapportini360" className="h-16 w-16 object-contain" />
+                  <img src={logoPath} alt="Rapportini360" className="h-[147px] w-[147px] object-contain" />
                 </div>
                 <CardTitle className="text-2xl">Crea il tuo account</CardTitle>
                 <CardDescription>
