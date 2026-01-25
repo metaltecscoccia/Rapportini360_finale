@@ -3,8 +3,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useLocation } from "wouter";
-
 interface SidebarItem {
   id: string;
   icon: typeof LayoutDashboard;
@@ -41,8 +39,6 @@ export function AppSidebar({
   isMobile = false,
   pendingReportsCount = 0,
 }: AppSidebarProps) {
-  const [, setLocation] = useLocation();
-
   // Update badge for dashboard if we have pending reports
   const itemsWithBadges = sidebarItems.map(item => {
     if (item.id === "dashboard" && pendingReportsCount > 0) {
@@ -79,12 +75,7 @@ export function AppSidebar({
           const isActive = activeSection === item.id;
 
           const handleClick = () => {
-            // Navigate to /billing route for billing section
-            if (item.id === "billing") {
-              setLocation("/billing");
-            } else {
-              onSectionChange(item.id);
-            }
+            onSectionChange(item.id);
           };
 
           const button = (

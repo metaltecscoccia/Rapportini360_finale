@@ -18,7 +18,6 @@ import SetPasswordForm from "@/components/SetPasswordForm";
 import DailyReportForm from "@/components/DailyReportForm";
 import AdminDashboard from "@/components/AdminDashboard";
 import SuperAdminDashboard from "@/components/SuperAdminDashboard";
-import BillingDashboard from "@/components/BillingDashboard";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
 import ThemeToggle from "@/components/ThemeToggle";
 import { apiRequest } from "@/lib/queryClient";
@@ -242,17 +241,6 @@ function AuthenticatedApp({
       {/* Main Content */}
       <main className="container mx-auto">
         <Switch>
-          {/* Billing Route (Admin only) */}
-          <Route path="/billing">
-            {currentUser.role === "admin" || currentUser.role === "superadmin" ? (
-              <BillingDashboard />
-            ) : (
-              <div className="p-6 text-center">
-                <p className="text-destructive">Accesso negato: solo gli amministratori possono accedere a questa pagina.</p>
-              </div>
-            )}
-          </Route>
-
           {/* Default Route */}
           <Route path="/">
             {currentUser.role === "superadmin" ? (

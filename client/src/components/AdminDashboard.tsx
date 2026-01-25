@@ -75,6 +75,7 @@ import { HoursAdjustmentDialog } from "./HoursAdjustmentDialog";
 import VehiclesManagement from "./VehiclesManagement";
 import FuelRefillsManagement from "./FuelRefillsManagement";
 import FuelStatistics from "./FuelStatistics";
+import BillingDashboard from "./BillingDashboard";
 import { AppSidebar, sidebarItems } from "./AppSidebar";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -1831,6 +1832,7 @@ export default function AdminDashboard() {
       "attendance": { mainSection: "rapportini", tab: "attendance" },
       "absence-stats": { mainSection: "rapportini", tab: "absence-stats" },
       "fuel": { mainSection: "rifornimenti", tab: "refills" },
+      "billing": { mainSection: "billing", tab: "billing" },
     };
     return sectionMap[activeSection] || { mainSection: "rapportini", tab: "reports" };
   };
@@ -1888,6 +1890,12 @@ export default function AdminDashboard() {
       <main className="flex-1 overflow-auto">
         {/* Content Area */}
         <div className="p-6 space-y-6">
+
+      {/* Billing Section - rendered separately from Tabs */}
+      {activeSection === "billing" ? (
+        <BillingDashboard />
+      ) : (
+      <>
       {/* Tabs - navigation now handled by sidebar */}
       <Tabs value={mainSection} onValueChange={setMainSection}>
         <TabsList className="hidden">
@@ -5658,6 +5666,8 @@ export default function AdminDashboard() {
           </Tabs>
         </TabsContent>
       </Tabs>
+      </>
+      )}
 
       {/* Lightbox for photo gallery */}
       <Lightbox
