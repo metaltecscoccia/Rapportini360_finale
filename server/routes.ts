@@ -512,7 +512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const organization = await storage.getOrganization(id);
-      
+
       if (!organization) {
         return res.status(404).json({ error: "Organizzazione non trovata" });
       }
@@ -530,6 +530,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching organization:", error);
       res.status(500).json({ error: "Failed to fetch organization" });
+    }
+  });
+
+  // Get SaaS statistics (Super Admin only)
+  app.get("/api/superadmin/organizations/stats", requireSuperAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getOrganizationStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching organization stats:", error);
+      res.status(500).json({ error: "Failed to fetch statistics" });
+    }
+  });
+
+  // Update organization (full update with SaaS fields) (Super Admin only)
+  app.put("/api/superadmin/organizations/:id", requireSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      // Validate organization exists
+      const org = await storage.getOrganization(id);
+      if (!org) {
+        return res.status(404).json({ error: "Organizzazione non trovata" });
+      }
+
+      // Validate fields (basic validation - SuperAdmin has full control)
+      if (updates.maxEmployees !== undefined && updates.maxEmployees < 1) {
+        return res.status(400).json({ error: "Max employees must be at least 1" });
+      }
+
+      if (updates.billingEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updates.billingEmail)) {
+        return res.status(400).json({ error: "Invalid billing email" });
+      }
+
+      // Handle trialEndDate (convert string to Date if provided)
+      if (updates.trialEndDate !== undefined) {
+        if (updates.trialEndDate === null || updates.trialEndDate === '') {
+          updates.trialEndDate = null;
+        } else if (typeof updates.trialEndDate === 'string') {
+          updates.trialEndDate = new Date(updates.trialEndDate);
+        }
+      }
+
+      // SuperAdmin can update any field, including activating orgs without Stripe
+      const updated = await storage.updateOrganization(id, updates);
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating organization:", error);
+      res.status(500).json({ error: "Failed to update organization" });
     }
   });
 

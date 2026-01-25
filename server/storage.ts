@@ -169,6 +169,15 @@ export interface IStorage {
   createOrganization(org: InsertOrganization): Promise<Organization>;
   updateOrganization(id: string, updates: Partial<Organization>): Promise<Organization>;
   updateOrganizationStatus(id: string, isActive: boolean): Promise<Organization | undefined>;
+  getOrganizationStats(): Promise<{
+    totalOrganizations: number;
+    trialOrganizations: number;
+    activeOrganizations: number;
+    canceledOrganizations: number;
+    pastDueOrganizations: number;
+    estimatedMRR: number;
+    estimatedARR: number;
+  }>;
 
   // Users
   getAllUsers(organizationId: string): Promise<User[]>;
@@ -447,6 +456,48 @@ export class DatabaseStorage implements IStorage {
     await this.ensureInitialized();
     const [org] = await db.select().from(organizations).where(eq(organizations.billingEmail, email));
     return org || undefined;
+  }
+
+  async getOrganizationStats(): Promise<{
+    totalOrganizations: number;
+    trialOrganizations: number;
+    activeOrganizations: number;
+    canceledOrganizations: number;
+    pastDueOrganizations: number;
+    estimatedMRR: number;
+    estimatedARR: number;
+  }> {
+    await this.ensureInitialized();
+    const allOrgs = await this.getAllOrganizations();
+
+    const stats = {
+      totalOrganizations: allOrgs.length,
+      trialOrganizations: allOrgs.filter(o => o.subscriptionStatus === 'trial').length,
+      activeOrganizations: allOrgs.filter(o => o.subscriptionStatus === 'active').length,
+      canceledOrganizations: allOrgs.filter(o => o.subscriptionStatus === 'canceled').length,
+      pastDueOrganizations: allOrgs.filter(o => o.subscriptionStatus === 'past_due').length,
+      estimatedMRR: 0,
+      estimatedARR: 0,
+    };
+
+    // Calculate revenue from active organizations
+    allOrgs.forEach(org => {
+      if (org.subscriptionStatus === 'active') {
+        if (org.subscriptionPlan === 'premium_monthly') {
+          stats.estimatedMRR += 49;
+        } else if (org.subscriptionPlan === 'premium_yearly') {
+          stats.estimatedMRR += 470 / 12; // 39.17€/month
+          stats.estimatedARR += 470;
+        }
+      }
+    });
+
+    // If ARR not set from yearly plans, calculate from MRR
+    if (stats.estimatedARR === 0) {
+      stats.estimatedARR = stats.estimatedMRR * 12;
+    }
+
+    return stats;
   }
 
   // Users
