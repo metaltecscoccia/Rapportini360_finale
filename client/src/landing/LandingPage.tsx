@@ -1,5 +1,6 @@
 import Navbar from "./components/Navbar";
 import HeroSection from "./components/HeroSection";
+import DemoSection from "./components/DemoSection";
 import FeaturesSection from "./components/FeaturesSection";
 import PricingSection from "./components/PricingSection";
 import TestimonialsSection from "./components/TestimonialsSection";
@@ -15,6 +16,7 @@ export default function LandingPage() {
         <Navbar />
         <main>
           <HeroSection />
+          <DemoSection />
           <FeaturesSection />
           <PricingSection />
           <TestimonialsSection />
