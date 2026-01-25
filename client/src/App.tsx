@@ -371,25 +371,29 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Switch>
-            {/* Public Routes */}
-            <Route path="/login">
+            {/* Landing Page */}
+            <Route path="/home">
+              <LandingPage />
+              <Toaster />
+            </Route>
+            {/* Signup */}
+            <Route path="/signup">
+              <SignupForm />
+              <Toaster />
+            </Route>
+            {/* Login (default) */}
+            <Route path="/">
               <ThemeProvider>
                 <LoginForm onLogin={handleLogin} />
                 <Toaster />
               </ThemeProvider>
             </Route>
-            <Route path="/signup">
-              <SignupForm />
-              <Toaster />
-            </Route>
-            <Route path="/">
-              <LandingPage />
-              <Toaster />
-            </Route>
-            {/* Fallback to landing */}
+            {/* Fallback to login */}
             <Route>
-              <LandingPage />
-              <Toaster />
+              <ThemeProvider>
+                <LoginForm onLogin={handleLogin} />
+                <Toaster />
+              </ThemeProvider>
             </Route>
           </Switch>
         </TooltipProvider>

@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
           <div className="md:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-4">
+            <Link href="/home" className="flex items-center gap-2 mb-4">
               <img
                 src={logoPath}
                 alt="Rapportini360"

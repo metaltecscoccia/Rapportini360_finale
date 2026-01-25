@@ -20,7 +20,7 @@ export default function Navbar() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/home" className="flex items-center gap-2">
             <img src={logoPath} alt="Rapportini360" className="h-10 w-10 object-contain" />
             <span className="text-xl font-bold text-primary">Rapportini360</span>
           </Link>
@@ -55,7 +55,7 @@ export default function Navbar() {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login">
+            <Link href="/">
               <Button variant="ghost">Accedi</Button>
             </Link>
             <Link href="/signup">
@@ -101,7 +101,7 @@ export default function Navbar() {
                 FAQ
               </button>
               <div className="flex flex-col gap-2 pt-4 border-t">
-                <Link href="/login">
+                <Link href="/">
                   <Button variant="ghost" className="w-full">Accedi</Button>
                 </Link>
                 <Link href="/signup">

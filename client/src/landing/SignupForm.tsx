@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,6 @@ import { ArrowLeft, Loader2, CheckCircle, Building, User, Mail, Lock } from "luc
 import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
 
 export default function SignupForm() {
-  const [, setLocation] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -98,7 +97,7 @@ export default function SignupForm() {
         {/* Header */}
         <header className="p-4">
           <div className="container mx-auto">
-            <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/home" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="h-4 w-4" />
               Torna alla home
             </Link>
@@ -281,7 +280,7 @@ export default function SignupForm() {
                   {/* Login Link */}
                   <p className="text-center text-sm text-muted-foreground">
                     Hai gia un account?{" "}
-                    <Link href="/login" className="text-primary hover:underline">
+                    <Link href="/" className="text-primary hover:underline">
                       Accedi
                     </Link>
                   </p>
