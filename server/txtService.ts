@@ -16,7 +16,7 @@ export class TxtService {
     // Get all related data
     const clients = await storage.getAllClients(organizationId);
     const clientsMap = new Map(clients.map(c => [c.id, c]));
-    
+
     // Get all work orders
     const allWorkOrders: WorkOrder[] = [];
     for (const client of clients) {
@@ -24,6 +24,12 @@ export class TxtService {
       allWorkOrders.push(...workOrders);
     }
     const workOrdersMap = new Map(allWorkOrders.map(wo => [wo.id, wo]));
+
+    // Get work types and materials for name resolution
+    const allWorkTypes = await storage.getAllWorkTypes(organizationId);
+    const allMaterials = await storage.getAllMaterials(organizationId);
+    const workTypeMap = new Map(allWorkTypes.map(wt => [wt.id, wt.name]));
+    const materialMap = new Map(allMaterials.map(m => [m.id, m.name]));
 
     // Get all hours adjustments for these reports
     const adjustmentsPromises = reports.map(r => storage.getHoursAdjustment(r.id, organizationId));
@@ -57,6 +63,8 @@ export class TxtService {
           operations,
           clientsMap,
           workOrdersMap,
+          workTypeMap,
+          materialMap,
           adjustment
         );
         
@@ -86,12 +94,14 @@ export class TxtService {
     operations: Operation[],
     clientsMap: Map<string, Client>,
     workOrdersMap: Map<string, WorkOrder>,
+    workTypeMap: Map<string, string>,
+    materialMap: Map<string, string>,
     adjustment?: any
   ): string {
-    
+
     let totalHours = operations.reduce((sum, op) => sum + this.parseHours(op.hours), 0);
     const originalHours = totalHours;
-    
+
     // Apply hours adjustment if exists
     if (adjustment) {
       const adjustmentValue = parseFloat(adjustment.adjustment);
@@ -101,11 +111,11 @@ export class TxtService {
     }
 
     let section = '';
-    
+
     // Employee header
     section += `DIPENDENTE: ${user.fullName}\n`;
     section += `ORE TOTALI: ${totalHours.toFixed(2)}`;
-    
+
     if (adjustment) {
       const adjustmentValue = parseFloat(adjustment.adjustment);
       section += ` (Originali: ${originalHours.toFixed(2)}, Aggiustamento: ${adjustmentValue >= 0 ? '+' : ''}${adjustmentValue.toFixed(2)})`;
@@ -114,30 +124,34 @@ export class TxtService {
 
     // Group operations by client and work order
     const groupedOps = this.groupOperationsByClientAndWorkOrder(operations, clientsMap, workOrdersMap);
-    
+
     for (const [clientName, workOrders] of Array.from(groupedOps)) {
       section += `Cliente: ${clientName}\n`;
-      
+
       for (const [workOrderName, ops] of Array.from(workOrders)) {
         section += `  Commessa: ${workOrderName}\n`;
-        
+
         for (let i = 0; i < ops.length; i++) {
           const op = ops[i];
           section += `    Operazione ${i + 1}:\n`;
           section += `      Ore: ${parseFloat(op.hours).toFixed(2)}\n`;
-          
+
           if (op.workTypes && op.workTypes.length > 0) {
-            section += `      Attività: ${op.workTypes.join(', ')}\n`;
+            // Resolve IDs to names
+            const workTypeNames = op.workTypes.map((id: string) => workTypeMap.get(id) || id);
+            section += `      Attività: ${workTypeNames.join(', ')}\n`;
           }
-          
+
           if (op.materials && op.materials.length > 0) {
-            section += `      Componenti: ${op.materials.join(', ')}\n`;
+            // Resolve IDs to names
+            const materialNames = op.materials.map((id: string) => materialMap.get(id) || id);
+            section += `      Componenti: ${materialNames.join(', ')}\n`;
           }
-          
+
           if (op.notes && op.notes.trim()) {
             section += `      Note: ${op.notes}\n`;
           }
-          
+
           section += '\n';
         }
       }
@@ -242,7 +256,7 @@ export class TxtService {
     // Get all related data
     const clients = await storage.getAllClients(organizationId);
     const clientsMap = new Map(clients.map(c => [c.id, c]));
-    
+
     // Get all work orders
     const allWorkOrders: WorkOrder[] = [];
     for (const client of clients) {
@@ -250,6 +264,12 @@ export class TxtService {
       allWorkOrders.push(...workOrders);
     }
     const workOrdersMap = new Map(allWorkOrders.map(wo => [wo.id, wo]));
+
+    // Get work types and materials for name resolution
+    const allWorkTypes = await storage.getAllWorkTypes(organizationId);
+    const allMaterials = await storage.getAllMaterials(organizationId);
+    const workTypeMap = new Map(allWorkTypes.map(wt => [wt.id, wt.name]));
+    const materialMap = new Map(allMaterials.map(m => [m.id, m.name]));
 
     // Get all hours adjustments for these reports
     const adjustmentsPromises = filteredReports.map(r => storage.getHoursAdjustment(r.id, organizationId));
@@ -310,6 +330,8 @@ export class TxtService {
           operations,
           clientsMap,
           workOrdersMap,
+          workTypeMap,
+          materialMap,
           adjustment
         );
         

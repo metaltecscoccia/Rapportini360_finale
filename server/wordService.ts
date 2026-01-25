@@ -22,7 +22,7 @@ export class WordService {
     // Get all related data
     const clients = await storage.getAllClients(organizationId);
     const clientsMap = new Map(clients.map(c => [c.id, c]));
-    
+
     // Get all work orders
     const allWorkOrders: WorkOrder[] = [];
     for (const client of clients) {
@@ -30,6 +30,12 @@ export class WordService {
       allWorkOrders.push(...workOrders);
     }
     const workOrdersMap = new Map(allWorkOrders.map(wo => [wo.id, wo]));
+
+    // Get work types and materials for name resolution
+    const allWorkTypes = await storage.getAllWorkTypes(organizationId);
+    const allMaterials = await storage.getAllMaterials(organizationId);
+    const workTypeMap = new Map(allWorkTypes.map(wt => [wt.id, wt.name]));
+    const materialMap = new Map(allMaterials.map(m => [m.id, m.name]));
 
     // Get all hours adjustments for these reports
     const adjustmentsPromises = reports.map(r => storage.getHoursAdjustment(r.id, organizationId));
@@ -72,6 +78,8 @@ export class WordService {
           operations,
           clientsMap,
           workOrdersMap,
+          workTypeMap,
+          materialMap,
           adjustment
         );
         documentSections.push(...employeeSection);
@@ -111,12 +119,14 @@ export class WordService {
     operations: Operation[],
     clientsMap: Map<string, Client>,
     workOrdersMap: Map<string, WorkOrder>,
+    workTypeMap: Map<string, string>,
+    materialMap: Map<string, string>,
     adjustment?: any
   ): Promise<Paragraph[]> {
-    
+
     let totalHours = operations.reduce((sum, op) => sum + this.parseHours(op.hours), 0);
     const originalHours = totalHours;
-    
+
     // Apply hours adjustment if exists
     if (adjustment) {
       const adjustmentValue = parseFloat(adjustment.adjustment);
@@ -124,9 +134,9 @@ export class WordService {
         totalHours += adjustmentValue;
       }
     }
-    
+
     const sections: Paragraph[] = [];
-    
+
     // Employee name and status
     sections.push(
       new Paragraph({
@@ -149,7 +159,7 @@ export class WordService {
 
     // Create operations table
     const tableRows: TableRow[] = [];
-    
+
     // Header row
     tableRows.push(
       new TableRow({
@@ -189,7 +199,10 @@ export class WordService {
       const client = clientsMap.get(op.clientId);
       const workOrder = workOrdersMap.get(op.workOrderId);
       const hours = this.parseHours(op.hours);
-      
+
+      // Resolve IDs to names
+      const workTypeNames = (op.workTypes || []).map((id: string) => workTypeMap.get(id) || id);
+
       tableRows.push(
         new TableRow({
           children: [
@@ -200,7 +213,7 @@ export class WordService {
               children: [new Paragraph({ text: workOrder?.name || 'N/A' })]
             }),
             new TableCell({
-              children: [new Paragraph({ text: op.workTypes.join(', ') })]
+              children: [new Paragraph({ text: workTypeNames.join(', ') })]
             }),
             new TableCell({
               children: [new Paragraph({ text: hours.toFixed(1) + 'h', alignment: AlignmentType.CENTER })]
@@ -387,6 +400,12 @@ export class WordService {
     const operations = await storage.getOperationsByWorkOrderId(workOrderId, organizationId);
     const expenses = await storage.getWorkOrderExpenses(workOrderId, organizationId);
 
+    // Fetch work types and materials for name resolution
+    const allWorkTypes = await storage.getAllWorkTypes(organizationId);
+    const allMaterials = await storage.getAllMaterials(organizationId);
+    const workTypeMap = new Map(allWorkTypes.map(wt => [wt.id, wt.name]));
+    const materialMap = new Map(allMaterials.map(m => [m.id, m.name]));
+
     // Filter only operations from approved reports
     const dailyReports = await storage.getAllDailyReports(organizationId);
     const approvedOperations = operations.filter(op => {
@@ -398,13 +417,24 @@ export class WordService {
       throw new Error(`Nessuna operazione approvata trovata per la commessa "${workOrder.name}"`);
     }
 
-    // Get employee data for each operation
+    // Get employee data for each operation and resolve workTypes/materials to names
     const enrichedOperations = await Promise.all(
       approvedOperations.map(async (op) => {
         const report = dailyReports.find(r => r.id === op.dailyReportId);
         const employee = report ? await storage.getUser(report.employeeId) : null;
+
+        // Resolve IDs to names
+        const workTypeNames = (op.workTypes || []).map(
+          (id: string) => workTypeMap.get(id) || id
+        );
+        const materialNames = (op.materials || []).map(
+          (id: string) => materialMap.get(id) || id
+        );
+
         return {
           ...op,
+          workTypes: workTypeNames,
+          materials: materialNames,
           employeeName: employee?.fullName || 'Dipendente sconosciuto',
           date: report?.date || 'N/A'
         };
@@ -838,7 +868,7 @@ export class WordService {
     // Get all related data
     const clients = await storage.getAllClients(organizationId);
     const clientsMap = new Map(clients.map(c => [c.id, c]));
-    
+
     // Get all work orders
     const allWorkOrders: WorkOrder[] = [];
     for (const client of clients) {
@@ -846,6 +876,12 @@ export class WordService {
       allWorkOrders.push(...workOrders);
     }
     const workOrdersMap = new Map(allWorkOrders.map(wo => [wo.id, wo]));
+
+    // Get work types and materials for name resolution
+    const allWorkTypes = await storage.getAllWorkTypes(organizationId);
+    const allMaterials = await storage.getAllMaterials(organizationId);
+    const workTypeMap = new Map(allWorkTypes.map(wt => [wt.id, wt.name]));
+    const materialMap = new Map(allMaterials.map(m => [m.id, m.name]));
 
     // Get all hours adjustments for these reports
     const adjustmentsPromises = filteredReports.map(r => storage.getHoursAdjustment(r.id, organizationId));
@@ -899,6 +935,8 @@ export class WordService {
           operations,
           clientsMap,
           workOrdersMap,
+          workTypeMap,
+          materialMap,
           adjustment
         );
         documentSections.push(...employeeSection);

@@ -2217,6 +2217,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           organizationId,
         );
 
+        // Fetch work types and materials for name resolution
+        const allWorkTypes = await storage.getAllWorkTypes(organizationId);
+        const allMaterials = await storage.getAllMaterials(organizationId);
+
+        // Create lookup maps
+        const workTypeMap = new Map(allWorkTypes.map(wt => [wt.id, wt.name]));
+        const materialMap = new Map(allMaterials.map(m => [m.id, m.name]));
+
         const enrichedOperations = await Promise.all(
           operations.map(async (op) => {
             const dailyReport = await storage
@@ -2234,8 +2242,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .getWorkOrdersByClient(op.clientId, organizationId)
               .then((orders) => orders.find((wo) => wo.id === op.workOrderId));
 
+            // Resolve workTypes and materials IDs to names
+            const workTypeNames = (op.workTypes || []).map(
+              (id: string) => workTypeMap.get(id) || id
+            );
+            const materialNames = (op.materials || []).map(
+              (id: string) => materialMap.get(id) || id
+            );
+
             return {
               ...op,
+              workTypes: workTypeNames,
+              materials: materialNames,
               employeeName: employee?.fullName || "Dipendente sconosciuto",
               employeeId: dailyReport?.employeeId,
               date: dailyReport?.date,
