@@ -1,6 +1,17 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization - Resend viene creato solo quando serve
+let resendInstance: Resend | null = null;
+
+function getResend(): Resend | null {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+  if (!resendInstance) {
+    resendInstance = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendInstance;
+}
 
 const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'admin@example.com';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Rapportini360 <noreply@rapportini360.it>';
@@ -31,6 +42,9 @@ export async function sendNewSignupRequestEmail(data: SignupRequestData): Promis
       console.log('[EMAIL] Would send signup request notification:', data);
       return true;
     }
+
+    const resend = getResend();
+    if (!resend) return false;
 
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -114,6 +128,9 @@ export async function sendApprovalEmail(data: ApprovalEmailData): Promise<boolea
       return true;
     }
 
+    const resend = getResend();
+    if (!resend) return false;
+
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.billingEmail,
@@ -186,6 +203,9 @@ export async function sendRejectionEmail(email: string, organizationName: string
       console.log('[EMAIL] Resend API key not configured, skipping email');
       return true;
     }
+
+    const resend = getResend();
+    if (!resend) return false;
 
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
