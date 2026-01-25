@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import LoginForm from "@/components/LoginForm";
+import LandingPage from "@/landing/LandingPage";
+import SignupForm from "@/landing/SignupForm";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import DailyReportForm from "@/components/DailyReportForm";
 import AdminDashboard from "@/components/AdminDashboard";
@@ -363,15 +365,33 @@ function App() {
     );
   }
 
-  // Show login form if not authenticated
+  // Show public pages if not authenticated
   if (!currentUser) {
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <ThemeProvider>
-            <LoginForm onLogin={handleLogin} />
-            <Toaster />
-          </ThemeProvider>
+          <Switch>
+            {/* Public Routes */}
+            <Route path="/login">
+              <ThemeProvider>
+                <LoginForm onLogin={handleLogin} />
+                <Toaster />
+              </ThemeProvider>
+            </Route>
+            <Route path="/signup">
+              <SignupForm />
+              <Toaster />
+            </Route>
+            <Route path="/">
+              <LandingPage />
+              <Toaster />
+            </Route>
+            {/* Fallback to landing */}
+            <Route>
+              <LandingPage />
+              <Toaster />
+            </Route>
+          </Switch>
         </TooltipProvider>
       </QueryClientProvider>
     );
