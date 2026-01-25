@@ -676,28 +676,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.log(`[SUPERADMIN] Deleted ${clients.length} clients`);
 
-      // 6. Elimina tutti gli utenti (include attendance entries automaticamente)
+      // 6. Elimina tutti gli acconti (advances) - PRIMA degli utenti
+      await storage.deleteAllAdvancesByOrganization(orgId);
+      console.log(`[SUPERADMIN] Deleted all advances`);
+
+      // 7. Elimina tutti gli utenti (include attendance entries automaticamente)
       const users = await storage.getUsers(orgId);
       for (const user of users) {
         await storage.deleteUser(user.id, orgId);
       }
       console.log(`[SUPERADMIN] Deleted ${users.length} users`);
 
-      // 7. Elimina work types
+      // 8. Elimina work types
       const workTypes = await storage.getAllWorkTypes(orgId);
       for (const wt of workTypes) {
         await storage.deleteWorkType(wt.id, orgId);
       }
       console.log(`[SUPERADMIN] Deleted ${workTypes.length} work types`);
 
-      // 8. Elimina materials
+      // 9. Elimina materials
       const materials = await storage.getAllMaterials(orgId);
       for (const mat of materials) {
         await storage.deleteMaterial(mat.id, orgId);
       }
       console.log(`[SUPERADMIN] Deleted ${materials.length} materials`);
 
-      // 9. Elimina l'organizzazione
+      // 10. Elimina l'organizzazione
       await storage.deleteOrganization(orgId);
 
       console.log(`[SUPERADMIN] Successfully deleted organization: ${org.name} (ID: ${orgId}) with all related data`);

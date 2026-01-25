@@ -1475,6 +1475,12 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
+  async deleteAllAdvancesByOrganization(organizationId: string): Promise<boolean> {
+    await this.ensureInitialized();
+    const result = await db.delete(advances).where(eq(advances.organizationId, organizationId));
+    return result.rowCount !== null && result.rowCount >= 0;
+  }
+
   // Vehicles (Mezzi)
   async getAllVehicles(organizationId: string): Promise<Vehicle[]> {
     await this.ensureInitialized();
