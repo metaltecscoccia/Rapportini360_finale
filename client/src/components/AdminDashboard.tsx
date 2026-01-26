@@ -1889,7 +1889,7 @@ export default function AdminDashboard({
             }
           }}
         >
-          <SheetContent side="left" className="p-0 w-[250px]">
+          <SheetContent side="top" className="p-0 h-auto max-h-[80vh] overflow-y-auto">
             <AppSidebar
               activeSection={activeSection}
               onSectionChange={(section) => {
