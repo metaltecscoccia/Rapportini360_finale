@@ -145,7 +145,15 @@ type RegisterAbsenceForm = z.infer<typeof registerAbsenceSchema>;
 
 // Mock data removed - now using real data from API
 
-export default function AdminDashboard() {
+interface AdminDashboardProps {
+  mobileMenuOpen?: boolean;
+  onMobileMenuClose?: () => void;
+}
+
+export default function AdminDashboard({
+  mobileMenuOpen,
+  onMobileMenuClose,
+}: AdminDashboardProps = {}) {
   // Initialize consolidated dialog state management
   const dialogState = useDialogState();
 
@@ -1867,41 +1875,44 @@ export default function AdminDashboard() {
         />
       )}
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer - controllato da props esterne o stato interno */}
       {isMobile && (
-        <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+        <Sheet
+          open={mobileMenuOpen ?? isMobileSidebarOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              if (onMobileMenuClose) {
+                onMobileMenuClose();
+              } else {
+                setIsMobileSidebarOpen(false);
+              }
+            }
+          }}
+        >
           <SheetContent side="left" className="p-0 w-[250px]">
             <AppSidebar
               activeSection={activeSection}
               onSectionChange={(section) => {
                 setActiveSection(section);
-                setIsMobileSidebarOpen(false);
+                if (onMobileMenuClose) {
+                  onMobileMenuClose();
+                } else {
+                  setIsMobileSidebarOpen(false);
+                }
               }}
               isCollapsed={false}
-              onToggleCollapse={() => setIsMobileSidebarOpen(false)}
+              onToggleCollapse={() => {
+                if (onMobileMenuClose) {
+                  onMobileMenuClose();
+                } else {
+                  setIsMobileSidebarOpen(false);
+                }
+              }}
               isMobile
               pendingReportsCount={pendingReportsCount}
             />
           </SheetContent>
         </Sheet>
-      )}
-
-      {/* Linguetta MENU verticale per mobile */}
-      {isMobile && (
-        <button
-          className="fixed left-0 top-1/2 -translate-y-1/2 z-50
-                     bg-primary text-primary-foreground
-                     py-8 px-2 rounded-r-lg shadow-lg
-                     hover:bg-primary/90 hover:px-3
-                     active:scale-95 transition-all duration-200"
-          onClick={() => setIsMobileSidebarOpen(true)}
-          aria-label="Apri menu"
-        >
-          <span className="text-xs font-bold tracking-wider"
-                style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
-            MENU
-          </span>
-        </button>
       )}
 
       {/* Main Content */}

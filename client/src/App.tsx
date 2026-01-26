@@ -53,6 +53,7 @@ function AuthenticatedApp({
   onLogout: () => void;
 }) {
   const { toast } = useToast();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -235,6 +236,18 @@ function AuthenticatedApp({
         </div>
       </motion.header>
 
+      {/* Tasto MENU full-width per mobile admin */}
+      {currentUser.role === "admin" && (
+        <button
+          className="md:hidden w-full bg-primary text-primary-foreground py-3
+                     border-b shadow-sm hover:bg-primary/90 active:bg-primary/80
+                     transition-colors font-medium"
+          onClick={() => setMobileMenuOpen(true)}
+        >
+          MENU
+        </button>
+      )}
+
       {/* Subscription Banner */}
       <div className="container mx-auto px-4 pt-4">
         <SubscriptionBanner />
@@ -248,7 +261,10 @@ function AuthenticatedApp({
             {currentUser.role === "superadmin" ? (
               <SuperAdminDashboard />
             ) : currentUser.role === "admin" ? (
-              <AdminDashboard />
+              <AdminDashboard
+                mobileMenuOpen={mobileMenuOpen}
+                onMobileMenuClose={() => setMobileMenuOpen(false)}
+              />
             ) : (
               <div className="py-6">
                 {loadingTodayReport ? (
