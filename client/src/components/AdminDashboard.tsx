@@ -1886,6 +1886,18 @@ export default function AdminDashboard() {
         </Sheet>
       )}
 
+      {/* Hamburger button per mobile */}
+      {isMobile && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed top-4 left-4 z-50 bg-background/80 backdrop-blur-sm shadow-md border"
+          onClick={() => setIsMobileSidebarOpen(true)}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+      )}
+
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
         {/* Content Area */}
