@@ -1886,16 +1886,17 @@ export default function AdminDashboard() {
         </Sheet>
       )}
 
-      {/* Hamburger button per mobile */}
+      {/* Linguetta hamburger per mobile - stile orecchietta cartella */}
       {isMobile && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="fixed top-4 left-4 z-50 bg-background/80 backdrop-blur-sm shadow-md border"
+        <button
+          className="fixed left-0 top-20 z-50 bg-primary text-primary-foreground
+                     py-3 px-2 rounded-r-lg shadow-lg
+                     hover:bg-primary/90 active:scale-95 transition-all"
           onClick={() => setIsMobileSidebarOpen(true)}
+          aria-label="Apri menu"
         >
           <Menu className="h-5 w-5" />
-        </Button>
+        </button>
       )}
 
       {/* Main Content */}
