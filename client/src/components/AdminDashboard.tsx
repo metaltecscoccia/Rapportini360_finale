@@ -1886,16 +1886,21 @@ export default function AdminDashboard() {
         </Sheet>
       )}
 
-      {/* Linguetta hamburger per mobile - stile orecchietta cartella */}
+      {/* Linguetta MENU verticale per mobile */}
       {isMobile && (
         <button
-          className="fixed left-0 top-20 z-50 bg-primary text-primary-foreground
-                     py-3 px-2 rounded-r-lg shadow-lg
-                     hover:bg-primary/90 active:scale-95 transition-all"
+          className="fixed -left-3 top-1/2 -translate-y-1/2 z-50
+                     bg-primary text-primary-foreground
+                     py-6 px-1.5 rounded-r-lg shadow-lg
+                     hover:left-0 hover:bg-primary/90
+                     active:scale-95 transition-all duration-200"
           onClick={() => setIsMobileSidebarOpen(true)}
           aria-label="Apri menu"
         >
-          <Menu className="h-5 w-5" />
+          <span className="text-xs font-bold tracking-wider"
+                style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
+            MENU
+          </span>
         </button>
       )}
 
