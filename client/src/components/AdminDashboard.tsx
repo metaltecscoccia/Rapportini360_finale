@@ -1875,7 +1875,7 @@ export default function AdminDashboard({
         />
       )}
 
-      {/* Mobile Drawer - controllato da props esterne o stato interno */}
+      {/* Mobile Drawer - menu a discesa dall'alto */}
       {isMobile && (
         <Sheet
           open={mobileMenuOpen ?? isMobileSidebarOpen}
@@ -1889,28 +1889,38 @@ export default function AdminDashboard({
             }
           }}
         >
-          <SheetContent side="top" className="p-0 h-auto max-h-[80vh] overflow-y-auto">
-            <AppSidebar
-              activeSection={activeSection}
-              onSectionChange={(section) => {
-                setActiveSection(section);
-                if (onMobileMenuClose) {
-                  onMobileMenuClose();
-                } else {
-                  setIsMobileSidebarOpen(false);
-                }
-              }}
-              isCollapsed={false}
-              onToggleCollapse={() => {
-                if (onMobileMenuClose) {
-                  onMobileMenuClose();
-                } else {
-                  setIsMobileSidebarOpen(false);
-                }
-              }}
-              isMobile
-              pendingReportsCount={pendingReportsCount}
-            />
+          <SheetContent side="top" className="p-4">
+            <div className="grid grid-cols-3 gap-3 pt-6">
+              {sidebarItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeSection === item.id;
+                const hasBadge = item.id === "dashboard" && pendingReportsCount > 0;
+
+                return (
+                  <Button
+                    key={item.id}
+                    variant={isActive ? "secondary" : "outline"}
+                    className="flex flex-col h-auto py-3 gap-1 relative"
+                    onClick={() => {
+                      setActiveSection(item.id);
+                      if (onMobileMenuClose) {
+                        onMobileMenuClose();
+                      } else {
+                        setIsMobileSidebarOpen(false);
+                      }
+                    }}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="text-xs">{item.label}</span>
+                    {hasBadge && (
+                      <Badge variant="default" className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                        {pendingReportsCount}
+                      </Badge>
+                    )}
+                  </Button>
+                );
+              })}
+            </div>
           </SheetContent>
         </Sheet>
       )}
