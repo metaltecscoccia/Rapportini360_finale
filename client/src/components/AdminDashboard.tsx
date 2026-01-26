@@ -1889,10 +1889,10 @@ export default function AdminDashboard() {
       {/* Linguetta MENU verticale per mobile */}
       {isMobile && (
         <button
-          className="fixed -left-3 top-1/2 -translate-y-1/2 z-50
+          className="fixed left-0 top-1/2 -translate-y-1/2 z-50
                      bg-primary text-primary-foreground
-                     py-6 px-1.5 rounded-r-lg shadow-lg
-                     hover:left-0 hover:bg-primary/90
+                     py-8 px-2 rounded-r-lg shadow-lg
+                     hover:bg-primary/90 hover:px-3
                      active:scale-95 transition-all duration-200"
           onClick={() => setIsMobileSidebarOpen(true)}
           aria-label="Apri menu"
