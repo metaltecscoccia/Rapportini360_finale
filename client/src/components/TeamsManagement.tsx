@@ -96,7 +96,7 @@ export default function TeamsManagement() {
 
   // Fetch all employees (active only)
   const { data: employees } = useQuery<User[]>({
-    queryKey: ["/api/employees"],
+    queryKey: ["/api/users/active"],
   });
 
   // Fetch team members when managing members
