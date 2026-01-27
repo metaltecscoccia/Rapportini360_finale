@@ -3591,6 +3591,331 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =====================================================
+  // TEAMS (SQUADRE) ROUTES
+  // =====================================================
+
+  // Get all teams for organization
+  app.get("/api/teams", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const teams = await storage.getAllTeams(organizationId);
+      res.json(teams);
+    } catch (error) {
+      console.error("Error fetching teams:", error);
+      res.status(500).json({ error: "Failed to fetch teams" });
+    }
+  });
+
+  // Get single team
+  app.get("/api/teams/:id", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const team = await storage.getTeam(req.params.id, organizationId);
+      if (!team) {
+        return res.status(404).json({ error: "Team not found" });
+      }
+      res.json(team);
+    } catch (error) {
+      console.error("Error fetching team:", error);
+      res.status(500).json({ error: "Failed to fetch team" });
+    }
+  });
+
+  // Get team by leader ID (for teamleader role)
+  app.get("/api/teams/by-leader/:leaderId", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const team = await storage.getTeamByLeaderId(req.params.leaderId, organizationId);
+      if (!team) {
+        return res.status(404).json({ error: "No team found for this leader" });
+      }
+      res.json(team);
+    } catch (error) {
+      console.error("Error fetching team by leader:", error);
+      res.status(500).json({ error: "Failed to fetch team" });
+    }
+  });
+
+  // Create team
+  app.post("/api/teams", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const { name, teamLeaderId, memberIds } = req.body;
+
+      if (!name || !teamLeaderId) {
+        return res.status(400).json({ error: "Name and team leader are required" });
+      }
+
+      // Check if leader already has a team
+      const existingTeam = await storage.getTeamByLeaderId(teamLeaderId, organizationId);
+      if (existingTeam) {
+        return res.status(400).json({ error: "This user is already a team leader" });
+      }
+
+      // Create the team
+      const team = await storage.createTeam({
+        name,
+        teamLeaderId,
+        isActive: true
+      }, organizationId);
+
+      // Add members if provided
+      if (memberIds && Array.isArray(memberIds) && memberIds.length > 0) {
+        await storage.updateTeamMembers(team.id, memberIds);
+      }
+
+      // Update user role to teamleader
+      await storage.updateUser(teamLeaderId, { role: "teamleader" }, organizationId);
+
+      res.status(201).json(team);
+    } catch (error) {
+      console.error("Error creating team:", error);
+      res.status(500).json({ error: "Failed to create team" });
+    }
+  });
+
+  // Update team
+  app.patch("/api/teams/:id", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const { name, teamLeaderId, memberIds, isActive } = req.body;
+
+      const existingTeam = await storage.getTeam(req.params.id, organizationId);
+      if (!existingTeam) {
+        return res.status(404).json({ error: "Team not found" });
+      }
+
+      // If changing team leader
+      if (teamLeaderId && teamLeaderId !== existingTeam.teamLeaderId) {
+        // Check if new leader already has a team
+        const otherTeam = await storage.getTeamByLeaderId(teamLeaderId, organizationId);
+        if (otherTeam && otherTeam.id !== req.params.id) {
+          return res.status(400).json({ error: "This user is already a team leader" });
+        }
+
+        // Demote old leader to employee
+        await storage.updateUser(existingTeam.teamLeaderId, { role: "employee" }, organizationId);
+        // Promote new leader
+        await storage.updateUser(teamLeaderId, { role: "teamleader" }, organizationId);
+      }
+
+      // Update team
+      const updates: any = {};
+      if (name !== undefined) updates.name = name;
+      if (teamLeaderId !== undefined) updates.teamLeaderId = teamLeaderId;
+      if (isActive !== undefined) updates.isActive = isActive;
+
+      const team = await storage.updateTeam(req.params.id, updates, organizationId);
+
+      // Update members if provided
+      if (memberIds !== undefined && Array.isArray(memberIds)) {
+        await storage.updateTeamMembers(team.id, memberIds);
+      }
+
+      res.json(team);
+    } catch (error) {
+      console.error("Error updating team:", error);
+      res.status(500).json({ error: "Failed to update team" });
+    }
+  });
+
+  // Delete team
+  app.delete("/api/teams/:id", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+
+      const team = await storage.getTeam(req.params.id, organizationId);
+      if (!team) {
+        return res.status(404).json({ error: "Team not found" });
+      }
+
+      // Demote team leader to employee
+      await storage.updateUser(team.teamLeaderId, { role: "employee" }, organizationId);
+
+      const success = await storage.deleteTeam(req.params.id, organizationId);
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "Team not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting team:", error);
+      res.status(500).json({ error: "Failed to delete team" });
+    }
+  });
+
+  // =====================================================
+  // TEAM MEMBERS ROUTES
+  // =====================================================
+
+  // Get team members with user details
+  app.get("/api/teams/:teamId/members", requireAuth, async (req, res) => {
+    try {
+      const members = await storage.getTeamMembersWithUsers(req.params.teamId);
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+      res.status(500).json({ error: "Failed to fetch team members" });
+    }
+  });
+
+  // Update team members (bulk)
+  app.put("/api/teams/:teamId/members", requireAdmin, async (req, res) => {
+    try {
+      const { memberIds } = req.body;
+      if (!Array.isArray(memberIds)) {
+        return res.status(400).json({ error: "memberIds must be an array" });
+      }
+
+      const members = await storage.updateTeamMembers(req.params.teamId, memberIds);
+      res.json(members);
+    } catch (error) {
+      console.error("Error updating team members:", error);
+      res.status(500).json({ error: "Failed to update team members" });
+    }
+  });
+
+  // =====================================================
+  // TEAM SUBMISSIONS ROUTES
+  // =====================================================
+
+  // Get all team submissions for organization
+  app.get("/api/team-submissions", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const submissions = await storage.getTeamSubmissions(organizationId);
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching team submissions:", error);
+      res.status(500).json({ error: "Failed to fetch team submissions" });
+    }
+  });
+
+  // Get team submissions for a specific team
+  app.get("/api/team-submissions/team/:teamId", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const submissions = await storage.getTeamSubmissionsByTeam(req.params.teamId, organizationId);
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching team submissions:", error);
+      res.status(500).json({ error: "Failed to fetch team submissions" });
+    }
+  });
+
+  // Check if team has submission for today (for teamleader)
+  app.get("/api/team-submissions/today", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const userId = (req.session as any).userId;
+
+      // Get team for this leader
+      const team = await storage.getTeamByLeaderId(userId, organizationId);
+      if (!team) {
+        return res.status(404).json({ error: "No team found for this user" });
+      }
+
+      const today = new Date().toISOString().split("T")[0];
+      const submission = await storage.getTeamSubmissionByTeamAndDate(team.id, today, organizationId);
+
+      if (submission) {
+        res.json(submission);
+      } else {
+        res.status(404).json({ error: "No submission for today" });
+      }
+    } catch (error) {
+      console.error("Error fetching today's team submission:", error);
+      res.status(500).json({ error: "Failed to fetch team submission" });
+    }
+  });
+
+  // Create team report (creates submission + daily reports for all selected members)
+  app.post("/api/team-submissions", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const userId = (req.session as any).userId;
+      const userRole = (req.session as any).role;
+
+      // Only teamleaders can create team reports
+      if (userRole !== "teamleader" && userRole !== "admin") {
+        return res.status(403).json({ error: "Only team leaders can create team reports" });
+      }
+
+      const { clientId, workOrderId, hours, selectedMemberIds, notes } = req.body;
+
+      if (!clientId || !workOrderId || !hours || !selectedMemberIds || selectedMemberIds.length === 0) {
+        return res.status(400).json({
+          error: "Client, work order, hours, and at least one member are required"
+        });
+      }
+
+      const today = new Date().toISOString().split("T")[0];
+
+      const result = await storage.createTeamReport(
+        userId,
+        clientId,
+        workOrderId,
+        today,
+        parseFloat(hours),
+        selectedMemberIds,
+        notes || null,
+        organizationId
+      );
+
+      res.status(201).json(result);
+    } catch (error: any) {
+      console.error("Error creating team report:", error);
+      res.status(400).json({ error: error.message || "Failed to create team report" });
+    }
+  });
+
+  // Approve team submission (approves all linked daily reports)
+  app.post("/api/team-submissions/:id/approve", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+
+      const submission = await storage.getTeamSubmission(req.params.id, organizationId);
+      if (!submission) {
+        return res.status(404).json({ error: "Team submission not found" });
+      }
+
+      await storage.approveTeamSubmission(req.params.id, organizationId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error approving team submission:", error);
+      res.status(500).json({ error: "Failed to approve team submission" });
+    }
+  });
+
+  // Get team members with their absence status for a specific date
+  app.get("/api/teams/:teamId/members-status", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const { date } = req.query;
+      const checkDate = (date as string) || new Date().toISOString().split("T")[0];
+
+      // Get team members
+      const members = await storage.getTeamMembersWithUsers(req.params.teamId);
+
+      // Get absences for this date
+      const absences = await storage.getAttendanceEntriesByDate(checkDate, organizationId);
+      const absenceMap = new Map(absences.map(a => [a.userId, a.absenceType]));
+
+      // Map members with their absence status
+      const membersWithStatus = members.map(m => ({
+        ...m,
+        absenceType: absenceMap.get(m.userId) || null,
+        isAvailable: !absenceMap.has(m.userId)
+      }));
+
+      res.json(membersWithStatus);
+    } catch (error) {
+      console.error("Error fetching team members status:", error);
+      res.status(500).json({ error: "Failed to fetch team members status" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

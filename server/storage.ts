@@ -14,6 +14,9 @@ import {
   fuelRefills,
   fuelTankLoads,
   organizations,
+  teams,
+  teamMembers,
+  teamSubmissions,
   type User,
   type InsertUser,
   type Client,
@@ -51,10 +54,16 @@ import {
   type UpdateDailyReport,
   type UpdateOperation,
   type Organization,
-  type InsertOrganization
+  type InsertOrganization,
+  type Team,
+  type InsertTeam,
+  type TeamMember,
+  type InsertTeamMember,
+  type TeamSubmission,
+  type InsertTeamSubmission
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray, ne, sql } from "drizzle-orm";
 import { hashPassword } from "./auth";
 
 // Helper functions for strategic absences detection
@@ -359,6 +368,45 @@ export interface IStorage {
     strategicAbsences: number;
     strategicPercentage: number;
   }>;
+
+  // Teams (Squadre)
+  getAllTeams(organizationId: string): Promise<Team[]>;
+  getTeam(id: string, organizationId: string): Promise<Team | undefined>;
+  getTeamByLeaderId(teamLeaderId: string, organizationId: string): Promise<Team | undefined>;
+  createTeam(team: InsertTeam, organizationId: string): Promise<Team>;
+  updateTeam(id: string, updates: Partial<InsertTeam>, organizationId: string): Promise<Team>;
+  deleteTeam(id: string, organizationId: string): Promise<boolean>;
+
+  // Team Members (Membri Squadra)
+  getTeamMembers(teamId: string): Promise<TeamMember[]>;
+  getTeamMembersWithUsers(teamId: string): Promise<Array<TeamMember & { user: User }>>;
+  addTeamMember(teamId: string, userId: string): Promise<TeamMember>;
+  removeTeamMember(teamId: string, userId: string): Promise<boolean>;
+  updateTeamMembers(teamId: string, memberUserIds: string[]): Promise<TeamMember[]>;
+
+  // Team Submissions (Invii Rapportini Squadra)
+  getTeamSubmissions(organizationId: string): Promise<TeamSubmission[]>;
+  getTeamSubmissionsByTeam(teamId: string, organizationId: string): Promise<TeamSubmission[]>;
+  getTeamSubmission(id: string, organizationId: string): Promise<TeamSubmission | undefined>;
+  getTeamSubmissionByTeamAndDate(teamId: string, date: string, organizationId: string): Promise<TeamSubmission | undefined>;
+  createTeamSubmission(submission: InsertTeamSubmission, organizationId: string): Promise<TeamSubmission>;
+  updateTeamSubmissionStatus(id: string, status: string, organizationId: string): Promise<TeamSubmission>;
+  deleteTeamSubmission(id: string, organizationId: string): Promise<boolean>;
+
+  // Team Report Creation (crea rapportini per tutti i membri presenti)
+  createTeamReport(
+    teamLeaderId: string,
+    clientId: string,
+    workOrderId: string,
+    date: string,
+    hours: number,
+    selectedMemberIds: string[],
+    notes: string | null,
+    organizationId: string
+  ): Promise<{ teamSubmission: TeamSubmission; reportsCreated: number }>;
+
+  // Approve team submission (approva tutti i rapportini collegati)
+  approveTeamSubmission(teamSubmissionId: string, organizationId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2284,12 +2332,324 @@ export class DatabaseStorage implements IStorage {
     const date = new Date(dateStr + 'T12:00:00');
     const year = date.getFullYear();
     const allHolidays = new Set<string>();
-    
+
     [year - 1, year, year + 1].forEach(y => {
       getItalianHolidays(y).forEach(h => allHolidays.add(h));
     });
-    
+
     return allHolidays;
+  }
+
+  // =====================================================
+  // TEAMS (SQUADRE) METHODS
+  // =====================================================
+
+  async getAllTeams(organizationId: string): Promise<Team[]> {
+    return db.select().from(teams)
+      .where(eq(teams.organizationId, organizationId))
+      .orderBy(desc(teams.createdAt));
+  }
+
+  async getTeam(id: string, organizationId: string): Promise<Team | undefined> {
+    const result = await db.select().from(teams)
+      .where(and(eq(teams.id, id), eq(teams.organizationId, organizationId)));
+    return result[0];
+  }
+
+  async getTeamByLeaderId(teamLeaderId: string, organizationId: string): Promise<Team | undefined> {
+    const result = await db.select().from(teams)
+      .where(and(
+        eq(teams.teamLeaderId, teamLeaderId),
+        eq(teams.organizationId, organizationId),
+        eq(teams.isActive, true)
+      ));
+    return result[0];
+  }
+
+  async createTeam(team: InsertTeam, organizationId: string): Promise<Team> {
+    const result = await db.insert(teams).values({
+      ...team,
+      organizationId
+    }).returning();
+    return result[0];
+  }
+
+  async updateTeam(id: string, updates: Partial<InsertTeam>, organizationId: string): Promise<Team> {
+    const result = await db.update(teams)
+      .set(updates)
+      .where(and(eq(teams.id, id), eq(teams.organizationId, organizationId)))
+      .returning();
+    return result[0];
+  }
+
+  async deleteTeam(id: string, organizationId: string): Promise<boolean> {
+    // First delete all team members
+    await db.delete(teamMembers).where(eq(teamMembers.teamId, id));
+    // Then delete the team
+    const result = await db.delete(teams)
+      .where(and(eq(teams.id, id), eq(teams.organizationId, organizationId)));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // =====================================================
+  // TEAM MEMBERS (MEMBRI SQUADRA) METHODS
+  // =====================================================
+
+  async getTeamMembers(teamId: string): Promise<TeamMember[]> {
+    return db.select().from(teamMembers)
+      .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.isActive, true)));
+  }
+
+  async getTeamMembersWithUsers(teamId: string): Promise<Array<TeamMember & { user: User }>> {
+    const result = await db.select({
+      teamMember: teamMembers,
+      user: users
+    }).from(teamMembers)
+      .innerJoin(users, eq(teamMembers.userId, users.id))
+      .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.isActive, true)));
+
+    return result.map(r => ({
+      ...r.teamMember,
+      user: r.user
+    }));
+  }
+
+  async addTeamMember(teamId: string, userId: string): Promise<TeamMember> {
+    // Check if member already exists (even if inactive)
+    const existing = await db.select().from(teamMembers)
+      .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)));
+
+    if (existing.length > 0) {
+      // Reactivate if inactive
+      if (!existing[0].isActive) {
+        const result = await db.update(teamMembers)
+          .set({ isActive: true })
+          .where(eq(teamMembers.id, existing[0].id))
+          .returning();
+        return result[0];
+      }
+      return existing[0];
+    }
+
+    const result = await db.insert(teamMembers).values({
+      teamId,
+      userId,
+      isActive: true
+    }).returning();
+    return result[0];
+  }
+
+  async removeTeamMember(teamId: string, userId: string): Promise<boolean> {
+    const result = await db.update(teamMembers)
+      .set({ isActive: false })
+      .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async updateTeamMembers(teamId: string, memberUserIds: string[]): Promise<TeamMember[]> {
+    // Get current active members
+    const currentMembers = await this.getTeamMembers(teamId);
+    const currentUserIds = currentMembers.map(m => m.userId);
+
+    // Members to add (in new list but not in current)
+    const toAdd = memberUserIds.filter(id => !currentUserIds.includes(id));
+    // Members to remove (in current but not in new list)
+    const toRemove = currentUserIds.filter(id => !memberUserIds.includes(id));
+
+    // Add new members
+    for (const userId of toAdd) {
+      await this.addTeamMember(teamId, userId);
+    }
+
+    // Remove old members
+    for (const userId of toRemove) {
+      await this.removeTeamMember(teamId, userId);
+    }
+
+    // Return updated list
+    return this.getTeamMembers(teamId);
+  }
+
+  // =====================================================
+  // TEAM SUBMISSIONS (INVII RAPPORTINI SQUADRA) METHODS
+  // =====================================================
+
+  async getTeamSubmissions(organizationId: string): Promise<TeamSubmission[]> {
+    return db.select().from(teamSubmissions)
+      .where(eq(teamSubmissions.organizationId, organizationId))
+      .orderBy(desc(teamSubmissions.createdAt));
+  }
+
+  async getTeamSubmissionsByTeam(teamId: string, organizationId: string): Promise<TeamSubmission[]> {
+    return db.select().from(teamSubmissions)
+      .where(and(
+        eq(teamSubmissions.teamId, teamId),
+        eq(teamSubmissions.organizationId, organizationId)
+      ))
+      .orderBy(desc(teamSubmissions.date));
+  }
+
+  async getTeamSubmission(id: string, organizationId: string): Promise<TeamSubmission | undefined> {
+    const result = await db.select().from(teamSubmissions)
+      .where(and(eq(teamSubmissions.id, id), eq(teamSubmissions.organizationId, organizationId)));
+    return result[0];
+  }
+
+  async getTeamSubmissionByTeamAndDate(teamId: string, date: string, organizationId: string): Promise<TeamSubmission | undefined> {
+    const result = await db.select().from(teamSubmissions)
+      .where(and(
+        eq(teamSubmissions.teamId, teamId),
+        eq(teamSubmissions.date, date),
+        eq(teamSubmissions.organizationId, organizationId)
+      ));
+    return result[0];
+  }
+
+  async createTeamSubmission(submission: InsertTeamSubmission, organizationId: string): Promise<TeamSubmission> {
+    const result = await db.insert(teamSubmissions).values({
+      ...submission,
+      organizationId
+    }).returning();
+    return result[0];
+  }
+
+  async updateTeamSubmissionStatus(id: string, status: string, organizationId: string): Promise<TeamSubmission> {
+    const result = await db.update(teamSubmissions)
+      .set({ status })
+      .where(and(eq(teamSubmissions.id, id), eq(teamSubmissions.organizationId, organizationId)))
+      .returning();
+    return result[0];
+  }
+
+  async deleteTeamSubmission(id: string, organizationId: string): Promise<boolean> {
+    const result = await db.delete(teamSubmissions)
+      .where(and(eq(teamSubmissions.id, id), eq(teamSubmissions.organizationId, organizationId)));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // =====================================================
+  // TEAM REPORT CREATION (TRANSACTIONAL)
+  // =====================================================
+
+  async createTeamReport(
+    teamLeaderId: string,
+    clientId: string,
+    workOrderId: string,
+    date: string,
+    hours: number,
+    selectedMemberIds: string[],
+    notes: string | null,
+    organizationId: string
+  ): Promise<{ teamSubmission: TeamSubmission; reportsCreated: number }> {
+    // Get the team for this leader
+    const team = await this.getTeamByLeaderId(teamLeaderId, organizationId);
+    if (!team) {
+      throw new Error("Nessuna squadra associata a questo caposquadra");
+    }
+
+    // Validate that selected members belong to this team
+    const teamMembersList = await this.getTeamMembers(team.id);
+    const teamMemberUserIds = teamMembersList.map(m => m.userId);
+    const invalidMembers = selectedMemberIds.filter(id => !teamMemberUserIds.includes(id));
+    if (invalidMembers.length > 0) {
+      throw new Error("Alcuni dipendenti selezionati non appartengono alla squadra");
+    }
+
+    // Check for existing reports for selected employees on this date
+    const existingReports = await db.select().from(dailyReports)
+      .where(and(
+        eq(dailyReports.date, date),
+        eq(dailyReports.organizationId, organizationId),
+        inArray(dailyReports.employeeId, selectedMemberIds)
+      ));
+
+    if (existingReports.length > 0) {
+      const employeeNames = await Promise.all(
+        existingReports.map(async r => {
+          const user = await this.getUser(r.employeeId);
+          return user?.fullName || r.employeeId;
+        })
+      );
+      throw new Error(`Rapportini già esistenti per: ${employeeNames.join(', ')}`);
+    }
+
+    // Check if team already has a submission for this date
+    const existingSubmission = await this.getTeamSubmissionByTeamAndDate(team.id, date, organizationId);
+    if (existingSubmission) {
+      throw new Error("La squadra ha già un rapportino per questa data");
+    }
+
+    // Use transaction for atomic creation
+    return await db.transaction(async (tx) => {
+      // 1. Create team submission (audit trail)
+      const [teamSubmission] = await tx.insert(teamSubmissions).values({
+        organizationId,
+        teamId: team.id,
+        teamLeaderId,
+        clientId,
+        workOrderId,
+        date,
+        hours: String(hours),
+        status: "In attesa",
+        notes
+      }).returning();
+
+      // 2. Create daily reports for each selected member
+      let reportsCreated = 0;
+      for (const memberId of selectedMemberIds) {
+        // Create daily report
+        const [report] = await tx.insert(dailyReports).values({
+          organizationId,
+          employeeId: memberId,
+          date,
+          status: "In attesa",
+          createdBy: "caposquadra",
+          teamSubmissionId: teamSubmission.id,
+          submittedById: teamLeaderId
+        }).returning();
+
+        // Create operation for this report
+        await tx.insert(operations).values({
+          dailyReportId: report.id,
+          clientId,
+          workOrderId,
+          workTypes: [], // Team reports don't use work types
+          materials: [],
+          hours: String(hours),
+          notes
+        });
+
+        reportsCreated++;
+      }
+
+      return {
+        teamSubmission,
+        reportsCreated
+      };
+    });
+  }
+
+  // =====================================================
+  // APPROVE TEAM SUBMISSION
+  // =====================================================
+
+  async approveTeamSubmission(teamSubmissionId: string, organizationId: string): Promise<boolean> {
+    return await db.transaction(async (tx) => {
+      // 1. Update team submission status
+      await tx.update(teamSubmissions)
+        .set({ status: "Approvato" })
+        .where(and(
+          eq(teamSubmissions.id, teamSubmissionId),
+          eq(teamSubmissions.organizationId, organizationId)
+        ));
+
+      // 2. Update all linked daily reports
+      await tx.update(dailyReports)
+        .set({ status: "Approvato" })
+        .where(eq(dailyReports.teamSubmissionId, teamSubmissionId));
+
+      return true;
+    });
   }
 }
 

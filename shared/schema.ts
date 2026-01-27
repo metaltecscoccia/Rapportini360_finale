@@ -32,7 +32,7 @@ export const users = pgTable("users", {
   username: text("username").notNull(),
   password: text("password").notNull(),
   mustResetPassword: boolean("must_reset_password").notNull().default(false), // true = must set new password at next login
-  role: text("role").notNull().default("employee"), // employee, admin, or superadmin
+  role: text("role").notNull().default("employee"), // employee, admin, superadmin, or teamleader
   fullName: text("full_name").notNull(),
   isActive: boolean("is_active").notNull().default(true), // true = attivo, false = licenziato
 });
@@ -102,12 +102,16 @@ export const dailyReports = pgTable("daily_reports", {
   employeeId: varchar("employee_id").notNull().references(() => users.id),
   date: text("date").notNull(), // YYYY-MM-DD format
   status: text("status").notNull().default("In attesa"), // "In attesa" or "Approvato"
-  createdBy: text("created_by").notNull().default("employee"), // "employee" (mobile) or "admin" (dashboard)
+  createdBy: text("created_by").notNull().default("utente"), // "utente", "ufficio", "caposquadra"
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+  // Campi per rapportini di squadra
+  teamSubmissionId: varchar("team_submission_id").references(() => teamSubmissions.id),
+  submittedById: varchar("submitted_by_id").references(() => users.id), // Chi ha compilato (caposquadra)
 }, (table) => ({
   orgDateIdx: index("daily_reports_org_date_idx").on(table.organizationId, table.date),
   employeeDateIdx: index("daily_reports_employee_date_idx").on(table.employeeId, table.date),
+  teamSubmissionIdx: index("daily_reports_team_submission_idx").on(table.teamSubmissionId),
 }));
 
 // Operations table (multiple operations per daily report)
@@ -197,6 +201,50 @@ export const fuelRefills = pgTable("fuel_refills", {
 }, (table) => ({
   vehicleIdx: index("fuel_refills_vehicle_idx").on(table.vehicleId),
   orgDateIdx: index("fuel_refills_org_date_idx").on(table.organizationId, table.refillDate),
+}));
+
+// Teams table (Squadre con caposquadra)
+export const teams = pgTable("teams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  name: text("name").notNull(),
+  teamLeaderId: varchar("team_leader_id").notNull().references(() => users.id),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+}, (table) => ({
+  orgIdx: index("teams_org_idx").on(table.organizationId),
+  leaderIdx: index("teams_leader_idx").on(table.teamLeaderId),
+}));
+
+// Team members table (Membri squadra)
+export const teamMembers = pgTable("team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teamId: varchar("team_id").notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  isActive: boolean("is_active").notNull().default(true),
+  joinedAt: timestamp("joined_at").notNull().default(sql`now()`),
+}, (table) => ({
+  teamIdx: index("team_members_team_idx").on(table.teamId),
+  userIdx: index("team_members_user_idx").on(table.userId),
+}));
+
+// Team submissions table (Invii rapportini di squadra - audit trail)
+export const teamSubmissions = pgTable("team_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  teamId: varchar("team_id").notNull().references(() => teams.id),
+  teamLeaderId: varchar("team_leader_id").notNull().references(() => users.id),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  workOrderId: varchar("work_order_id").notNull().references(() => workOrders.id),
+  date: text("date").notNull(), // YYYY-MM-DD format
+  hours: numeric("hours").notNull(), // Ore standard per tutti i dipendenti
+  status: text("status").notNull().default("In attesa"), // "In attesa" or "Approvato"
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+}, (table) => ({
+  orgDateIdx: index("team_submissions_org_date_idx").on(table.organizationId, table.date),
+  teamIdx: index("team_submissions_team_idx").on(table.teamId),
+  teamDateIdx: index("team_submissions_team_date_idx").on(table.teamId, table.date),
 }));
 
 // Fuel tank loads table (Carichi cisterna carburante)
@@ -289,8 +337,10 @@ export const insertDailyReportSchema = createInsertSchema(dailyReports).omit({
   organizationId: true, // Will be set automatically from session
   createdAt: true,
   updatedAt: true,
+  teamSubmissionId: true, // Set automatically when created by team leader
+  submittedById: true, // Set automatically when created by team leader
 }).extend({
-  createdBy: z.enum(["employee", "admin"]).optional().default("employee")
+  createdBy: z.enum(["utente", "ufficio", "caposquadra"]).optional().default("utente")
 });
 
 export const insertOperationSchema = createInsertSchema(operations).omit({
@@ -372,6 +422,26 @@ export const insertFuelTankLoadSchema = createInsertSchema(fuelTankLoads).omit({
   }),
   liters: z.union([z.string(), z.number()]).transform(val => String(val)),
   totalCost: z.union([z.string(), z.number(), z.null()]).optional().transform(val => val ? String(val) : null),
+});
+
+// Teams insert schemas
+export const insertTeamSchema = createInsertSchema(teams).omit({
+  id: true,
+  organizationId: true, // Will be set automatically from session
+  createdAt: true,
+});
+
+export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
+  id: true,
+  joinedAt: true,
+});
+
+export const insertTeamSubmissionSchema = createInsertSchema(teamSubmissions).omit({
+  id: true,
+  organizationId: true, // Will be set automatically from session
+  createdAt: true,
+}).extend({
+  hours: z.union([z.string(), z.number()]).transform(val => String(val)),
 });
 
 // Update schemas for editing
@@ -462,6 +532,15 @@ export type InsertFuelTankLoad = z.infer<typeof insertFuelTankLoadSchema>;
 export type FuelTankLoad = typeof fuelTankLoads.$inferSelect;
 export type UpdateFuelTankLoad = z.infer<typeof updateFuelTankLoadSchema>;
 
+export type InsertTeam = z.infer<typeof insertTeamSchema>;
+export type Team = typeof teams.$inferSelect;
+
+export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
+export type TeamMember = typeof teamMembers.$inferSelect;
+
+export type InsertTeamSubmission = z.infer<typeof insertTeamSubmissionSchema>;
+export type TeamSubmission = typeof teamSubmissions.$inferSelect;
+
 export type UpdateDailyReport = z.infer<typeof updateDailyReportSchema>;
 export type UpdateOperation = z.infer<typeof updateOperationSchema>;
 
@@ -472,3 +551,11 @@ export type Status = z.infer<typeof StatusEnum>;
 // Absence type enum - AGGIORNATO CON "A"
 export const AbsenceTypeEnum = z.enum(["A", "F", "P", "M", "CP", "L104"]);
 export type AbsenceType = z.infer<typeof AbsenceTypeEnum>;
+
+// Created by enum - Chi ha creato il rapportino
+export const CreatedByEnum = z.enum(["utente", "ufficio", "caposquadra"]);
+export type CreatedBy = z.infer<typeof CreatedByEnum>;
+
+// User role enum
+export const UserRoleEnum = z.enum(["employee", "admin", "superadmin", "teamleader"]);
+export type UserRole = z.infer<typeof UserRoleEnum>;

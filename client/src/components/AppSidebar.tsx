@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Building, ClipboardList, Settings, Calendar, BarChart2, Fuel, Menu, CreditCard } from "lucide-react";
+import { LayoutDashboard, Users, Building, ClipboardList, Settings, Calendar, BarChart2, Fuel, Menu, CreditCard, UsersRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ interface SidebarItem {
 const sidebarItems: SidebarItem[] = [
   { id: "dashboard", icon: LayoutDashboard, label: "Rapportini" },
   { id: "employees", icon: Users, label: "Dipendenti" },
+  { id: "teams", icon: UsersRound, label: "Squadre" },
   { id: "clients", icon: Building, label: "Clienti" },
   { id: "workorders", icon: ClipboardList, label: "Commesse" },
   { id: "configuration", icon: Settings, label: "Configurazione" },

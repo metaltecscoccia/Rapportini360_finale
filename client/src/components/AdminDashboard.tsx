@@ -76,6 +76,7 @@ import VehiclesManagement from "./VehiclesManagement";
 import FuelRefillsManagement from "./FuelRefillsManagement";
 import FuelStatistics from "./FuelStatistics";
 import BillingDashboard from "./BillingDashboard";
+import TeamsManagement from "./TeamsManagement";
 import { AppSidebar, sidebarItems } from "./AppSidebar";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -1834,6 +1835,7 @@ export default function AdminDashboard({
     const sectionMap: Record<string, { mainSection: string; tab: string }> = {
       "dashboard": { mainSection: "rapportini", tab: "reports" },
       "employees": { mainSection: "rapportini", tab: "employees" },
+      "teams": { mainSection: "teams", tab: "teams" },
       "clients": { mainSection: "rapportini", tab: "clients" },
       "workorders": { mainSection: "rapportini", tab: "work-orders" },
       "configuration": { mainSection: "rapportini", tab: "work-types" },
@@ -1933,6 +1935,8 @@ export default function AdminDashboard({
       {/* Billing Section - rendered separately from Tabs */}
       {activeSection === "billing" ? (
         <BillingDashboard />
+      ) : activeSection === "teams" ? (
+        <TeamsManagement />
       ) : (
       <>
       {/* Tabs - navigation now handled by sidebar */}

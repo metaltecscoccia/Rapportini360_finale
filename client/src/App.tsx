@@ -18,6 +18,7 @@ import LandingPage from "@/landing/LandingPage";
 import SignupForm from "@/landing/SignupForm";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import DailyReportForm from "@/components/DailyReportForm";
+import TeamReportForm from "@/components/TeamReportForm";
 import AdminDashboard from "@/components/AdminDashboard";
 import SuperAdminDashboard from "@/components/SuperAdminDashboard";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
@@ -28,8 +29,9 @@ import { formatDateToItalian } from "@/lib/dateUtils";
 import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
 
 type User = {
+  id: string;
   username: string;
-  role: "employee" | "admin" | "superadmin";
+  role: "employee" | "admin" | "superadmin" | "teamleader";
   fullName: string;
 };
 
@@ -203,6 +205,8 @@ function AuthenticatedApp({
                     ? "Super Admin"
                     : currentUser.role === "admin"
                     ? "Dashboard Amministratore"
+                    : currentUser.role === "teamleader"
+                    ? "Rapportino Squadra"
                     : "Rapportini Giornalieri"}
                 </h1>
                 <p className="text-sm text-muted-foreground">
@@ -265,6 +269,13 @@ function AuthenticatedApp({
                 mobileMenuOpen={mobileMenuOpen}
                 onMobileMenuClose={() => setMobileMenuOpen(false)}
               />
+            ) : currentUser.role === "teamleader" ? (
+              <div className="py-6">
+                <TeamReportForm
+                  teamLeaderId={currentUser.id}
+                  teamLeaderName={currentUser.fullName}
+                />
+              </div>
             ) : (
               <div className="py-6">
                 {loadingTodayReport ? (
