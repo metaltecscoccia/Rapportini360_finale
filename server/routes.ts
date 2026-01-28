@@ -1976,7 +1976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         employeeId: actualEmployeeId,
         date: date || new Date().toISOString().split("T")[0],
         status: "In attesa",
-        createdBy: (employeeId && employeeId !== userId) ? "admin" : "employee",
+        createdBy: (employeeId && employeeId !== userId) ? "ufficio" : "utente",
       };
 
       // LOG DEBUG - Verificare che createdBy sia impostato correttamente
