@@ -116,7 +116,8 @@
     "ws": "^8.18.0",
     "yet-another-react-lightbox": "^3.28.0",
     "zod": "^3.24.2",
-    "zod-validation-error": "^3.4.0"
+    "zod-validation-error": "^3.4.0",
+    "react-markdown": "^9.0.1"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
