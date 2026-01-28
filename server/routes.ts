@@ -39,7 +39,6 @@ import {
   insertOrganizationSchema,
 } from "@shared/schema";
 import { validatePassword, verifyPassword, hashPassword } from "./auth";
-import { generateTemporaryPassword } from "./utils/passwordGenerator";
 
 // ============================================
 // CLOUDINARY & MULTER CONFIGURATION
@@ -283,6 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone,
           maxEmployees: 5,
           isActive: false, // Non attiva finché non approvata
+          trialEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 giorni (sarà attivato dopo approvazione)
         });
 
         console.log(`[SIGNUP] Created pending organization: ${organization.name} (ID: ${organization.id})`);
@@ -310,14 +310,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             for (const activityName of preset.activities) {
               await storage.createWorkType({
                 name: activityName,
-                organizationId: organization.id,
-              });
+              }, organization.id);
             }
             for (const componentName of preset.components) {
               await storage.createMaterial({
                 name: componentName,
-                organizationId: organization.id,
-              });
+              }, organization.id);
             }
             console.log(`[SIGNUP] Created presets for ${workField}`);
           }
@@ -383,16 +381,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const activityName of preset.activities) {
             await storage.createWorkType({
               name: activityName,
-              organizationId: organization.id,
-            });
+            }, organization.id);
           }
           console.log(`[SIGNUP] Created ${preset.activities.length} work types for ${workField}`);
 
           for (const componentName of preset.components) {
             await storage.createMaterial({
               name: componentName,
-              organizationId: organization.id,
-            });
+            }, organization.id);
           }
           console.log(`[SIGNUP] Created ${preset.components.length} materials for ${workField}`);
         }
