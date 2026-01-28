@@ -8,6 +8,7 @@ import {
   Users,
   Camera,
   CloudOff,
+  UsersRound,
 } from "lucide-react";
 
 const features = [
@@ -52,6 +53,12 @@ const features = [
     title: "Multi-Dipendente",
     description: "Aggiungi tutto il team. Ogni utente ha il suo accesso personale.",
     gradient: "from-indigo-500 to-indigo-600",
+  },
+  {
+    icon: UsersRound,
+    title: "Gestione Squadre",
+    description: "Organizza il team in squadre. Il caposquadra compila 1 rapportino per tutti i dipendenti.",
+    gradient: "from-teal-500 to-teal-600",
   },
   {
     icon: CloudOff,
