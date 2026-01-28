@@ -4,7 +4,78 @@ import { Button } from "@/components/ui/button";
 import { Check, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-const plans = [  {    name: "Starter",    price: "9.90",    period: "/mese",    priceYearly: "99",    description: "Perfetto per piccole attività",    features: [      "Fino a 5 dipendenti",      "Rapportini illimitati",      "Gestione commesse",      "Tracking presenze",      "Supporto email",    ],    cta: "Inizia ora",    highlighted: false,  },  {    name: "Business",    price: "19.90",    period: "/mese",    priceYearly: "199",    description: "Per aziende in crescita",    features: [      "Fino a 15 dipendenti",      "Rapportini illimitati",      "Gestione commesse avanzata",      "Tracking presenze",      "Gestione rifornimenti",      "Dashboard avanzate",      "Supporto prioritario",    ],    cta: "Inizia ora",    highlighted: true,    badge: "Più popolare",  },  {    name: "Professional",    price: "49.90",    period: "/mese",    priceYearly: "499",    description: "Per aziende strutturate",    features: [      "Fino a 30 dipendenti",      "Rapportini illimitati",      "Gestione commesse completa",      "Tracking presenze avanzato",      "Gestione rifornimenti",      "Dashboard avanzate",      "Supporto prioritario",      "Backup automatici",      "API personalizzate",    ],    cta: "Inizia ora",    highlighted: false,  },  {    name: "Custom",    price: "Su misura",    period: "",    description: "Soluzione personalizzata per grandi aziende",    features: [      "Oltre 30 dipendenti",      "Tutte le funzionalità Professional",      "Personalizzazioni dedicate",      "Account manager dedicato",      "SLA garantito",      "Formazione on-site",    ],    cta: "Contattaci",    highlighted: false,  },];
+const plans = [
+  {
+    name: "Starter",
+    price: "9.90",
+    period: "/mese",
+    priceYearly: "99",
+    description: "Perfetto per piccole attività",
+    features: [
+      "Fino a 5 dipendenti",
+      "Rapportini illimitati",
+      "Gestione commesse",
+      "Tracking presenze",
+      "Supporto email",
+    ],
+    cta: "Inizia ora",
+    highlighted: false,
+  },
+  {
+    name: "Business",
+    price: "19.90",
+    period: "/mese",
+    priceYearly: "199",
+    description: "Per aziende in crescita",
+    features: [
+      "Fino a 15 dipendenti",
+      "Rapportini illimitati",
+      "Gestione commesse avanzata",
+      "Tracking presenze",
+      "Gestione rifornimenti",
+      "Dashboard avanzate",
+      "Supporto prioritario",
+    ],
+    cta: "Inizia ora",
+    highlighted: true,
+    badge: "Più popolare",
+  },
+  {
+    name: "Professional",
+    price: "49.90",
+    period: "/mese",
+    priceYearly: "499",
+    description: "Per aziende strutturate",
+    features: [
+      "Fino a 30 dipendenti",
+      "Rapportini illimitati",
+      "Gestione commesse completa",
+      "Tracking presenze avanzato",
+      "Gestione rifornimenti",
+      "Dashboard avanzate",
+      "Supporto prioritario",
+      "Backup automatici",
+      "API personalizzate",
+    ],
+    cta: "Inizia ora",
+    highlighted: false,
+  },
+  {
+    name: "Custom",
+    price: "Su misura",
+    period: "",
+    description: "Soluzione personalizzata per grandi aziende",
+    features: [
+      "Oltre 30 dipendenti",
+      "Tutte le funzionalità Professional",
+      "Personalizzazioni dedicate",
+      "Account manager dedicato",
+      "SLA garantito",
+      "Formazione on-site",
+    ],
+    cta: "Contattaci",
+    highlighted: false,
+  },
 ];
 
 export default function PricingSection() {
@@ -38,7 +109,7 @@ export default function PricingSection() {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <Sparkles className="h-4 w-4" />
-            <span className="text-sm font-medium">Con l abbonamento annuale ricevi 2 mesi gratis!</span>
+            <span className="text-sm font-medium">Con l'abbonamento annuale ricevi 2 mesi gratis!</span>
           </motion.div>
         </div>
 
@@ -73,11 +144,13 @@ export default function PricingSection() {
                   <span className={`text-4xl font-bold ${plan.price === "Su misura" ? "text-2xl" : ""}`}>
                     {plan.price === "Su misura" ? plan.price : `€${plan.price}`}
                   </span>
-                  <span className={`text-sm ${
-                    plan.highlighted ? "text-primary-foreground/80" : "text-muted-foreground"
-                  }`}>
-                    {plan.period}
-                  </span>
+                  {plan.period && (
+                    <span className={`text-sm ${
+                      plan.highlighted ? "text-primary-foreground/80" : "text-muted-foreground"
+                    }`}>
+                      {plan.period}
+                    </span>
+                  )}
                 </div>
                 {plan.priceYearly && (
                   <p className={`text-xs mt-1 ${
@@ -130,16 +203,6 @@ export default function PricingSection() {
         >
           Tutti i prezzi sono IVA esclusa. Puoi cancellare in qualsiasi momento.
         </motion.p>
-          <motion.div
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 text-green-700 dark:text-green-400 rounded-full"
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Sparkles className="h-4 w-4" />
-            <span className="text-sm font-medium">Con l abbonamento annuale ricevi 2 mesi gratis!</span>
-          </motion.div>
       </div>
     </section>
   );
