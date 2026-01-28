@@ -61,7 +61,8 @@ import {
   Download,
   Copy,
   Menu,
-  Wallet
+  Wallet,
+  History
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
@@ -222,6 +223,9 @@ export default function AdminDashboard({
   // State for expandable report rows
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
   const [expandedReportData, setExpandedReportData] = useState<any>(null);
+  const [auditLogData, setAuditLogData] = useState<any[]>([]);
+  const [auditLogOpen, setAuditLogOpen] = useState(false);
+  const [auditLogLoading, setAuditLogLoading] = useState(false);
 
   // State for hours adjustment dialog
   const [hoursAdjustmentDialogOpen, setHoursAdjustmentDialogOpen] = useState(false);
@@ -358,6 +362,7 @@ export default function AdminDashboard({
   });
 
   // Query per recuperare tutti i rapportini
+  // Override staleTime e refetch per vedere subito i rapportini ri-modificati dai dipendenti
   const { data: reports = [], isLoading: isLoadingReports } = useQuery<any[]>({
     queryKey: ['/api/daily-reports', showAllReports ? 'all' : '7'],
     queryFn: async () => {
@@ -368,6 +373,9 @@ export default function AdminDashboard({
       if (!res.ok) throw new Error('Failed to fetch daily reports');
       return res.json();
     },
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   // Query per recuperare tutti i clienti
@@ -1567,10 +1575,29 @@ export default function AdminDashboard({
       // Collassa se già espanso
       setExpandedReportId(null);
       setExpandedReportData(null);
+      setAuditLogData([]);
+      setAuditLogOpen(false);
     } else {
       // Espandi e carica i dettagli
       setExpandedReportId(reportId);
+      setAuditLogData([]);
+      setAuditLogOpen(false);
       fetchReportDetailsMutation.mutate(reportId);
+    }
+  };
+
+  const fetchAuditLog = async (reportId: string) => {
+    setAuditLogLoading(true);
+    try {
+      const res = await fetch(`/api/daily-reports/${reportId}/audit-log`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setAuditLogData(data);
+      }
+    } catch (err) {
+      console.error("Error fetching audit log:", err);
+    } finally {
+      setAuditLogLoading(false);
     }
   };
 
@@ -2533,6 +2560,75 @@ export default function AdminDashboard({
                                           <p className="text-sm text-muted-foreground">{reportDetails.notes}</p>
                                         </div>
                                       )}
+
+                                      {/* Storico Modifiche (Audit Log) */}
+                                      <div className="mt-4">
+                                        <button
+                                          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (!auditLogOpen) {
+                                              fetchAuditLog(report.id);
+                                            }
+                                            setAuditLogOpen(!auditLogOpen);
+                                          }}
+                                        >
+                                          <History className="h-4 w-4" />
+                                          {auditLogOpen ? "▾" : "▸"} Storico Modifiche
+                                          {auditLogData.length > 0 && (
+                                            <Badge variant="secondary" className="text-xs">{auditLogData.length}</Badge>
+                                          )}
+                                        </button>
+
+                                        {auditLogOpen && (
+                                          <div className="mt-3 pl-2 border-l-2 border-muted space-y-3">
+                                            {auditLogLoading ? (
+                                              <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                                Caricamento...
+                                              </div>
+                                            ) : auditLogData.length === 0 ? (
+                                              <p className="text-sm text-muted-foreground py-2">Nessuna modifica registrata</p>
+                                            ) : (
+                                              auditLogData.map((entry: any) => (
+                                                <div key={entry.id} className="relative pl-4">
+                                                  <div className={`absolute left-[-9px] top-1 w-4 h-4 rounded-full border-2 border-background ${
+                                                    entry.changeType === 'creato' ? 'bg-green-500'
+                                                    : entry.changeType === 'approvato' ? 'bg-blue-500'
+                                                    : entry.changeType === 'riaperto' ? 'bg-orange-500'
+                                                    : 'bg-yellow-500'
+                                                  }`} />
+                                                  <div className="text-sm">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                      <span className="font-medium">
+                                                        {entry.changedByName}
+                                                      </span>
+                                                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                                        entry.changeType === 'creato' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                                        : entry.changeType === 'approvato' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                                                        : entry.changeType === 'riaperto' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
+                                                        : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                                                      }`}>
+                                                        {entry.changeType}
+                                                      </span>
+                                                      <span className="text-xs text-muted-foreground">
+                                                        {new Date(entry.createdAt).toLocaleDateString("it-IT", {
+                                                          day: '2-digit', month: '2-digit'
+                                                        })} {new Date(entry.createdAt).toLocaleTimeString("it-IT", {
+                                                          hour: '2-digit', minute: '2-digit'
+                                                        })}
+                                                      </span>
+                                                    </div>
+                                                    {entry.summary && (
+                                                      <p className="text-xs text-muted-foreground mt-0.5">{entry.summary}</p>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              ))
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   ) : (
                                     <div className="text-center text-muted-foreground py-4">

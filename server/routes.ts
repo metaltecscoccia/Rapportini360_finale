@@ -2025,6 +2025,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         organizationId
       );
 
+      // Audit log: registra creazione
+      try {
+        const opsSnapshot = finalOperations.map((op: any) => ({
+          hours: op.hours,
+          clientId: op.clientId,
+          workOrderId: op.workOrderId,
+          workTypes: op.workTypes,
+          materials: op.materials,
+          notes: op.notes,
+        }));
+        await storage.createAuditLogEntry({
+          dailyReportId: newReport.id,
+          organizationId,
+          changedById: userId,
+          changeType: "creato",
+          newData: { status: newReport.status, operations: opsSnapshot },
+          summary: `Rapportino creato (${reportData.createdBy})`,
+        });
+      } catch (auditErr) {
+        console.error("[AUDIT LOG] Errore creazione log:", auditErr);
+      }
+
       res.status(201).json({
         ...newReport,
         operations: finalOperations,
@@ -2333,10 +2355,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ error: "Non autorizzato a modificare questo rapportino" });
       }
 
+      // Snapshot PRIMA della modifica (per audit log)
+      const previousStatus = currentReport.status;
+      const previousOps = await storage.getOperationsByReportId(id, organizationId);
+      const prevOpsSnapshot = previousOps.map((op: any) => ({
+        hours: op.hours,
+        clientId: op.clientId,
+        workOrderId: op.workOrderId,
+        workTypes: op.workTypes,
+        materials: op.materials,
+        notes: op.notes,
+      }));
+
       // 3. RESET STATUS: Solo se dipendente modifica report approvato
+      let statusChanged = false;
       if (session.userRole !== "admin" && currentReport.status === "Approvato") {
         console.log(`🔄 Dipendente sta modificando rapportino approvato - cambio status da "Approvato" a "In attesa"`);
         currentReport = await storage.updateDailyReportStatus(id, "In attesa");
+        statusChanged = true;
         console.log(`✅ Status cambiato con successo: ${currentReport.status}`);
       }
 
@@ -2359,6 +2395,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 5. Recupera operazioni aggiornate
       const finalOperations = await storage.getOperationsByReportId(id, organizationId);
 
+      // Audit log: registra modifica
+      try {
+        const newOpsSnapshot = finalOperations.map((op: any) => ({
+          hours: op.hours,
+          clientId: op.clientId,
+          workOrderId: op.workOrderId,
+          workTypes: op.workTypes,
+          materials: op.materials,
+          notes: op.notes,
+        }));
+
+        // Genera summary leggibile
+        const summaryParts: string[] = [];
+        if (statusChanged) {
+          summaryParts.push(`Status: ${previousStatus} → In attesa`);
+        }
+        // Confronta ore totali
+        const prevTotalHours = prevOpsSnapshot.reduce((sum: number, op: any) => sum + parseFloat(op.hours || "0"), 0);
+        const newTotalHours = newOpsSnapshot.reduce((sum: number, op: any) => sum + parseFloat(op.hours || "0"), 0);
+        if (prevTotalHours !== newTotalHours) {
+          summaryParts.push(`Ore: ${prevTotalHours} → ${newTotalHours}`);
+        }
+        if (prevOpsSnapshot.length !== newOpsSnapshot.length) {
+          summaryParts.push(`Operazioni: ${prevOpsSnapshot.length} → ${newOpsSnapshot.length}`);
+        }
+
+        await storage.createAuditLogEntry({
+          dailyReportId: id,
+          organizationId,
+          changedById: session.userId,
+          changeType: statusChanged ? "riaperto" : "modificato",
+          previousData: { status: previousStatus, operations: prevOpsSnapshot },
+          newData: { status: currentReport.status, operations: newOpsSnapshot },
+          summary: summaryParts.length > 0 ? summaryParts.join(" | ") : "Operazioni aggiornate",
+        });
+      } catch (auditErr) {
+        console.error("[AUDIT LOG] Errore creazione log:", auditErr);
+      }
+
       // IMPORTANTE: Usa currentReport (aggiornato), non existingReport!
       res.json({
         ...currentReport,
@@ -2375,10 +2450,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireAdmin,
     async (req, res) => {
       try {
+        const organizationId = (req as any).session.organizationId;
+        const adminId = (req as any).session.userId;
+
         const updatedReport = await storage.updateDailyReportStatus(
           req.params.id,
           "Approvato",
         );
+
+        // Audit log: registra approvazione
+        try {
+          await storage.createAuditLogEntry({
+            dailyReportId: req.params.id,
+            organizationId,
+            changedById: adminId,
+            changeType: "approvato",
+            previousData: { status: "In attesa" },
+            newData: { status: "Approvato" },
+            summary: "Rapportino approvato",
+          });
+        } catch (auditErr) {
+          console.error("[AUDIT LOG] Errore creazione log:", auditErr);
+        }
+
         res.json(updatedReport);
       } catch (error) {
         console.error("Error approving report:", error);
@@ -2386,6 +2480,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
+  // Audit log per rapportino
+  app.get("/api/daily-reports/:id/audit-log", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = (req as any).session.organizationId;
+      const entries = await storage.getAuditLogByReportId(id, organizationId);
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching audit log:", error);
+      res.status(500).json({ error: "Failed to fetch audit log" });
+    }
+  });
 
   app.patch(
     "/api/daily-reports/:id/change-date",

@@ -60,7 +60,9 @@ import {
   type TeamMember,
   type InsertTeamMember,
   type TeamSubmission,
-  type InsertTeamSubmission
+  type InsertTeamSubmission,
+  type ReportAuditLog,
+  reportAuditLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, inArray, ne, sql } from "drizzle-orm";
@@ -407,6 +409,18 @@ export interface IStorage {
 
   // Approve team submission (approva tutti i rapportini collegati)
   approveTeamSubmission(teamSubmissionId: string, organizationId: string): Promise<boolean>;
+
+  // Audit log
+  createAuditLogEntry(entry: {
+    dailyReportId: string;
+    organizationId: string;
+    changedById: string;
+    changeType: string;
+    previousData?: any;
+    newData?: any;
+    summary?: string;
+  }): Promise<ReportAuditLog>;
+  getAuditLogByReportId(reportId: string, organizationId: string): Promise<(ReportAuditLog & { changedByName: string })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2650,6 +2664,53 @@ export class DatabaseStorage implements IStorage {
 
       return true;
     });
+  }
+
+  // Audit log methods
+  async createAuditLogEntry(entry: {
+    dailyReportId: string;
+    organizationId: string;
+    changedById: string;
+    changeType: string;
+    previousData?: any;
+    newData?: any;
+    summary?: string;
+  }): Promise<ReportAuditLog> {
+    await this.ensureInitialized();
+    const [logEntry] = await db.insert(reportAuditLog).values({
+      dailyReportId: entry.dailyReportId,
+      organizationId: entry.organizationId,
+      changedById: entry.changedById,
+      changeType: entry.changeType,
+      previousData: entry.previousData ?? null,
+      newData: entry.newData ?? null,
+      summary: entry.summary ?? null,
+    }).returning();
+    return logEntry;
+  }
+
+  async getAuditLogByReportId(reportId: string, organizationId: string): Promise<(ReportAuditLog & { changedByName: string })[]> {
+    await this.ensureInitialized();
+    const entries = await db.select({
+      id: reportAuditLog.id,
+      dailyReportId: reportAuditLog.dailyReportId,
+      organizationId: reportAuditLog.organizationId,
+      changedById: reportAuditLog.changedById,
+      changeType: reportAuditLog.changeType,
+      previousData: reportAuditLog.previousData,
+      newData: reportAuditLog.newData,
+      summary: reportAuditLog.summary,
+      createdAt: reportAuditLog.createdAt,
+      changedByName: users.fullName,
+    })
+      .from(reportAuditLog)
+      .innerJoin(users, eq(reportAuditLog.changedById, users.id))
+      .where(and(
+        eq(reportAuditLog.dailyReportId, reportId),
+        eq(reportAuditLog.organizationId, organizationId)
+      ))
+      .orderBy(desc(reportAuditLog.createdAt));
+    return entries;
   }
 }
 

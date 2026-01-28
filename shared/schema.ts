@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, numeric, index, date } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, numeric, index, date, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -259,6 +259,22 @@ export const fuelTankLoads = pgTable("fuel_tank_loads", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 }, (table) => ({
   orgDateIdx: index("fuel_tank_loads_org_date_idx").on(table.organizationId, table.loadDate),
+}));
+
+// Report audit log table (Storico modifiche rapportini)
+export const reportAuditLog = pgTable("report_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  dailyReportId: varchar("daily_report_id").notNull().references(() => dailyReports.id, { onDelete: 'cascade' }),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  changedById: varchar("changed_by_id").notNull().references(() => users.id),
+  changeType: text("change_type").notNull(), // "creato", "modificato", "approvato", "riaperto"
+  previousData: jsonb("previous_data"), // snapshot prima della modifica
+  newData: jsonb("new_data"), // snapshot dopo la modifica
+  summary: text("summary"), // descrizione leggibile (es. "Ore cambiate da 6 a 8")
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+}, (table) => ({
+  reportIdx: index("report_audit_log_report_idx").on(table.dailyReportId),
+  orgIdx: index("report_audit_log_org_idx").on(table.organizationId),
 }));
 
 // Insert schemas
@@ -543,6 +559,8 @@ export type TeamSubmission = typeof teamSubmissions.$inferSelect;
 
 export type UpdateDailyReport = z.infer<typeof updateDailyReportSchema>;
 export type UpdateOperation = z.infer<typeof updateOperationSchema>;
+
+export type ReportAuditLog = typeof reportAuditLog.$inferSelect;
 
 // Status enum
 export const StatusEnum = z.enum(["In attesa", "Approvato"]);
