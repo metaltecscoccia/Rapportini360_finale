@@ -115,9 +115,25 @@ function AuthenticatedApp({
     },
     onError: (error: any) => {
       console.error("Error creating report:", error);
+      // Mostra il messaggio di errore reale dal server
+      let errorMsg = "Impossibile creare il rapportino. Riprova più tardi.";
+      try {
+        const errorText = error.message || "";
+        // Il formato è "400: {json}" - estraiamo il JSON
+        const jsonStart = errorText.indexOf("{");
+        if (jsonStart !== -1) {
+          const parsed = JSON.parse(errorText.substring(jsonStart));
+          errorMsg = parsed.error || errorMsg;
+          if (parsed.details) {
+            errorMsg += ` | Dettagli: ${parsed.details}`;
+          }
+        }
+      } catch (e) {
+        // usa messaggio generico
+      }
       toast({
         title: "Errore",
-        description: "Impossibile creare il rapportino. Riprova più tardi.",
+        description: errorMsg,
         variant: "destructive",
       });
     },

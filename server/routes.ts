@@ -1947,6 +1947,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userRole = (req as any).session.userRole;
       const organizationId = (req as any).session.organizationId;
 
+      console.log(`[CREATE REPORT] req.body keys: ${Object.keys(req.body)}, userId: ${userId}, orgId: ${organizationId}`);
+
       let actualEmployeeId = userId;
 
       if (employeeId && employeeId !== userId) {
@@ -1975,30 +1977,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: (employeeId && employeeId !== userId) ? "ufficio" : "utente",
       };
 
-      // LOG DEBUG - Verificare che createdBy sia impostato correttamente
-      console.log(`🔍 [CREATE REPORT] userId: ${userId}, employeeId: ${employeeId}, actualEmployeeId: ${actualEmployeeId}`);
-      console.log(`🔍 [BEFORE VALIDATION] createdBy: ${reportData.createdBy}`);
+      console.log(`[CREATE REPORT] reportData:`, JSON.stringify(reportData));
 
       const reportResult = insertDailyReportSchema.safeParse(reportData);
       if (!reportResult.success) {
+        console.error(`[CREATE REPORT] VALIDATION FAILED:`, JSON.stringify(reportResult.error.issues));
         return res
           .status(400)
           .json({
             error: "Dati rapportino non validi",
-            issues: reportResult.error.issues,
+            details: JSON.stringify(reportResult.error.issues),
+            reportData,
           });
       }
 
-      // LOG DEBUG - Verificare che createdBy sia preservato dopo la validazione
-      console.log(`✅ [AFTER VALIDATION] createdBy: ${reportResult.data.createdBy}`);
+      console.log(`[CREATE REPORT] Validation OK, creating report...`);
 
       const newReport = await storage.createDailyReport(
         reportResult.data,
         organizationId,
       );
 
+      console.log(`[CREATE REPORT] Report created: ${newReport.id}`);
+
       if (operations && Array.isArray(operations)) {
-        for (const operation of operations) {
+        for (let i = 0; i < operations.length; i++) {
+          const operation = operations[i];
           const operationData = {
             ...operation,
             dailyReportId: newReport.id,
@@ -2009,6 +2013,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           if (operationResult.success) {
             await storage.createOperation(operationResult.data, organizationId);
+          } else {
+            console.error(`[CREATE REPORT] Operation ${i} validation failed:`, JSON.stringify(operationResult.error.issues));
+            console.error(`[CREATE REPORT] Operation ${i} data:`, JSON.stringify(operationData));
           }
         }
       }
@@ -2022,9 +2029,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...newReport,
         operations: finalOperations,
       });
-    } catch (error) {
-      console.error("Error creating daily report:", error);
-      res.status(500).json({ error: "Failed to create daily report" });
+    } catch (error: any) {
+      console.error("[CREATE REPORT] EXCEPTION:", error.message, error.stack);
+      res.status(500).json({ error: `Errore server: ${error.message}` });
     }
   });
 
