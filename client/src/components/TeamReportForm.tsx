@@ -131,9 +131,9 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
     queryKey: ["/api/clients"],
   });
 
-  // Fetch work orders
+  // Fetch work orders (using /active endpoint accessible to all authenticated users)
   const { data: workOrders } = useQuery<WorkOrder[]>({
-    queryKey: ["/api/work-orders"],
+    queryKey: ["/api/work-orders/active"],
   });
 
   // Filter work orders by selected client
