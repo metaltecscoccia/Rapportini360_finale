@@ -3952,11 +3952,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Only team leaders can create team reports" });
       }
 
-      const { clientId, workOrderId, hours, selectedMemberIds, notes } = req.body;
+      const { clientId, workOrderId, hours, selectedMemberIds, notes, workTypes, materials } = req.body;
 
       if (!clientId || !workOrderId || !hours || !selectedMemberIds || selectedMemberIds.length === 0) {
         return res.status(400).json({
           error: "Client, work order, hours, and at least one member are required"
+        });
+      }
+
+      if (!workTypes || workTypes.length === 0) {
+        return res.status(400).json({
+          error: "Seleziona almeno un'attività"
         });
       }
 
@@ -3970,7 +3976,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parseFloat(hours),
         selectedMemberIds,
         notes || null,
-        organizationId
+        organizationId,
+        workTypes || [],
+        materials || []
       );
 
       res.status(201).json(result);
@@ -3999,11 +4007,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get team members with their absence status for a specific date
+  // Include also the team leader (caposquadra compiles report for himself too)
   app.get("/api/teams/:teamId/members-status", requireAuth, async (req, res) => {
     try {
       const organizationId = (req.session as any).organizationId;
       const { date } = req.query;
       const checkDate = (date as string) || new Date().toISOString().split("T")[0];
+
+      // Get team info to include the team leader
+      const team = await storage.getTeam(req.params.teamId, organizationId);
+      if (!team) {
+        return res.status(404).json({ error: "Team not found" });
+      }
+
+      // Get team leader user info
+      const teamLeader = await storage.getUser(team.teamLeaderId);
 
       // Get team members
       const members = await storage.getTeamMembersWithUsers(req.params.teamId);
@@ -4012,14 +4030,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const absences = await storage.getAttendanceEntriesByDate(checkDate, organizationId);
       const absenceMap = new Map(absences.map(a => [a.userId, a.absenceType]));
 
-      // Map members with their absence status
+      // Start with team leader as first member
+      const allMembersWithStatus: any[] = [];
+
+      // Add team leader first (if exists and not already in members list)
+      if (teamLeader) {
+        const leaderAlreadyInMembers = members.some(m => m.userId === team.teamLeaderId);
+        if (!leaderAlreadyInMembers) {
+          allMembersWithStatus.push({
+            id: `leader-${team.teamLeaderId}`,
+            teamId: team.id,
+            userId: team.teamLeaderId,
+            isActive: true,
+            user: {
+              id: teamLeader.id,
+              fullName: teamLeader.fullName,
+              username: teamLeader.username
+            },
+            absenceType: absenceMap.get(team.teamLeaderId) || null,
+            isAvailable: !absenceMap.has(team.teamLeaderId),
+            isTeamLeader: true
+          });
+        }
+      }
+
+      // Map other members with their absence status
       const membersWithStatus = members.map(m => ({
         ...m,
         absenceType: absenceMap.get(m.userId) || null,
-        isAvailable: !absenceMap.has(m.userId)
+        isAvailable: !absenceMap.has(m.userId),
+        isTeamLeader: m.userId === team.teamLeaderId
       }));
 
-      res.json(membersWithStatus);
+      allMembersWithStatus.push(...membersWithStatus);
+
+      res.json(allMembersWithStatus);
     } catch (error) {
       console.error("Error fetching team members status:", error);
       res.status(500).json({ error: "Failed to fetch team members status" });

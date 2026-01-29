@@ -404,7 +404,9 @@ export interface IStorage {
     hours: number,
     selectedMemberIds: string[],
     notes: string | null,
-    organizationId: string
+    organizationId: string,
+    workTypes: string[],
+    materials: string[]
   ): Promise<{ teamSubmission: TeamSubmission; reportsCreated: number }>;
 
   // Approve team submission (approva tutti i rapportini collegati)
@@ -2553,7 +2555,9 @@ export class DatabaseStorage implements IStorage {
     hours: number,
     selectedMemberIds: string[],
     notes: string | null,
-    organizationId: string
+    organizationId: string,
+    workTypes: string[] = [],
+    materials: string[] = []
   ): Promise<{ teamSubmission: TeamSubmission; reportsCreated: number }> {
     // Get the team for this leader
     const team = await this.getTeamByLeaderId(teamLeaderId, organizationId);
@@ -2561,10 +2565,12 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Nessuna squadra associata a questo caposquadra");
     }
 
-    // Validate that selected members belong to this team
+    // Validate that selected members belong to this team (including the team leader)
     const teamMembersList = await this.getTeamMembers(team.id);
     const teamMemberUserIds = teamMembersList.map(m => m.userId);
-    const invalidMembers = selectedMemberIds.filter(id => !teamMemberUserIds.includes(id));
+    // Team leader is also a valid member
+    const validUserIds = [...teamMemberUserIds, team.teamLeaderId];
+    const invalidMembers = selectedMemberIds.filter(id => !validUserIds.includes(id));
     if (invalidMembers.length > 0) {
       throw new Error("Alcuni dipendenti selezionati non appartengono alla squadra");
     }
@@ -2627,8 +2633,8 @@ export class DatabaseStorage implements IStorage {
           dailyReportId: report.id,
           clientId,
           workOrderId,
-          workTypes: [], // Team reports don't use work types
-          materials: [],
+          workTypes,
+          materials,
           hours: String(hours),
           notes
         });

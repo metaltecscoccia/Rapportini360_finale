@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Users, Briefcase, CheckCircle2, AlertCircle, UserX } from "lucide-react";
+import { Loader2, Users, Briefcase, CheckCircle2, AlertCircle, UserX, Crown } from "lucide-react";
 
 type Client = {
   id: string;
@@ -29,6 +29,18 @@ type WorkOrder = {
   id: string;
   name: string;
   clientId: string;
+  availableWorkTypes: string[];
+  availableMaterials: string[];
+};
+
+type WorkType = {
+  id: string;
+  name: string;
+};
+
+type Material = {
+  id: string;
+  name: string;
 };
 
 type TeamMemberWithStatus = {
@@ -43,6 +55,7 @@ type TeamMemberWithStatus = {
   };
   absenceType: string | null;
   isAvailable: boolean;
+  isTeamLeader?: boolean;
 };
 
 type Team = {
@@ -88,6 +101,8 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
   const [notes, setNotes] = useState<string>("");
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>("lavorazione");
+  const [selectedWorkTypes, setSelectedWorkTypes] = useState<string[]>([]);
+  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
 
   // Fetch team for this leader
   const { data: team, isLoading: isLoadingTeam } = useQuery<Team>({
@@ -136,10 +151,53 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
     queryKey: ["/api/work-orders/active"],
   });
 
+  // Fetch work types (global list for name lookup)
+  const { data: workTypes } = useQuery<WorkType[]>({
+    queryKey: ["/api/work-types"],
+  });
+
+  // Fetch materials (global list for name lookup)
+  const { data: materials } = useQuery<Material[]>({
+    queryKey: ["/api/materials"],
+  });
+
   // Filter work orders by selected client
   const filteredWorkOrders = workOrders?.filter(
     (wo) => wo.clientId === selectedClientId
   ) || [];
+
+  // Get selected work order details
+  const selectedWorkOrder = workOrders?.find((wo) => wo.id === selectedWorkOrderId);
+  const availableWorkTypes = selectedWorkOrder?.availableWorkTypes || [];
+  const availableMaterials = selectedWorkOrder?.availableMaterials || [];
+
+  // Helper functions to get names from IDs
+  const getWorkTypeName = (id: string) => {
+    const wt = workTypes?.find((w) => w.id === id);
+    return wt?.name || id;
+  };
+
+  const getMaterialName = (id: string) => {
+    const m = materials?.find((mat) => mat.id === id);
+    return m?.name || id;
+  };
+
+  // Toggle functions for work types and materials
+  const toggleWorkType = (workTypeId: string) => {
+    setSelectedWorkTypes((prev) =>
+      prev.includes(workTypeId)
+        ? prev.filter((id) => id !== workTypeId)
+        : [...prev, workTypeId]
+    );
+  };
+
+  const toggleMaterial = (materialId: string) => {
+    setSelectedMaterials((prev) =>
+      prev.includes(materialId)
+        ? prev.filter((id) => id !== materialId)
+        : [...prev, materialId]
+    );
+  };
 
   // Initialize selected members when members load
   useEffect(() => {
@@ -160,6 +218,8 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
       hours: string;
       selectedMemberIds: string[];
       notes: string;
+      workTypes: string[];
+      materials: string[];
     }) => {
       const response = await apiRequest("POST", "/api/team-submissions", data);
       return response.json();
@@ -220,12 +280,23 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
       return;
     }
 
+    if (selectedWorkTypes.length === 0 && availableWorkTypes.length > 0) {
+      toast({
+        title: "Errore",
+        description: "Seleziona almeno un'attività.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     createReportMutation.mutate({
       clientId: selectedClientId,
       workOrderId: selectedWorkOrderId,
       hours,
       selectedMemberIds,
       notes,
+      workTypes: selectedWorkTypes,
+      materials: selectedMaterials,
     });
   };
 
@@ -325,6 +396,8 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
               <Select value={selectedClientId} onValueChange={(val) => {
                 setSelectedClientId(val);
                 setSelectedWorkOrderId(""); // Reset work order when client changes
+                setSelectedWorkTypes([]); // Reset work types
+                setSelectedMaterials([]); // Reset materials
               }}>
                 <SelectTrigger id="client">
                   <SelectValue placeholder="Seleziona cliente..." />
@@ -344,7 +417,11 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
               <Label htmlFor="workOrder">Commessa</Label>
               <Select
                 value={selectedWorkOrderId}
-                onValueChange={setSelectedWorkOrderId}
+                onValueChange={(val) => {
+                  setSelectedWorkOrderId(val);
+                  setSelectedWorkTypes([]); // Reset work types when work order changes
+                  setSelectedMaterials([]); // Reset materials when work order changes
+                }}
                 disabled={!selectedClientId}
               >
                 <SelectTrigger id="workOrder">
@@ -358,6 +435,70 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Attività */}
+            <div className="space-y-2">
+              <Label>Attività</Label>
+              {!selectedWorkOrderId ? (
+                <div className="p-3 border rounded-md text-sm text-muted-foreground">
+                  Seleziona prima una commessa
+                </div>
+              ) : availableWorkTypes.length === 0 ? (
+                <div className="p-3 border rounded-md text-sm text-muted-foreground">
+                  Nessuna attività disponibile per questa commessa
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 border rounded-md">
+                  {availableWorkTypes.map((workTypeId) => (
+                    <div key={workTypeId} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`worktype-${workTypeId}`}
+                        checked={selectedWorkTypes.includes(workTypeId)}
+                        onCheckedChange={() => toggleWorkType(workTypeId)}
+                      />
+                      <Label
+                        htmlFor={`worktype-${workTypeId}`}
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        {getWorkTypeName(workTypeId)}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Componenti */}
+            <div className="space-y-2">
+              <Label>Componenti (opzionale)</Label>
+              {!selectedWorkOrderId ? (
+                <div className="p-3 border rounded-md text-sm text-muted-foreground">
+                  Seleziona prima una commessa
+                </div>
+              ) : availableMaterials.length === 0 ? (
+                <div className="p-3 border rounded-md text-sm text-muted-foreground">
+                  Nessun componente disponibile per questa commessa
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 border rounded-md">
+                  {availableMaterials.map((materialId) => (
+                    <div key={materialId} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`material-${materialId}`}
+                        checked={selectedMaterials.includes(materialId)}
+                        onCheckedChange={() => toggleMaterial(materialId)}
+                      />
+                      <Label
+                        htmlFor={`material-${materialId}`}
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        {getMaterialName(materialId)}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Ore */}
@@ -426,9 +567,17 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
                           onCheckedChange={() => handleMemberToggle(member.userId, member.isAvailable)}
                         />
                         <div>
-                          <p className={`font-medium ${!member.isAvailable ? "text-muted-foreground" : ""}`}>
-                            {member.user.fullName}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className={`font-medium ${!member.isAvailable ? "text-muted-foreground" : ""}`}>
+                              {member.user.fullName}
+                            </p>
+                            {member.isTeamLeader && (
+                              <Badge variant="outline" className="text-xs py-0 px-1.5 gap-1">
+                                <Crown className="h-3 w-3" />
+                                Caposquadra
+                              </Badge>
+                            )}
+                          </div>
                           {!member.isAvailable && member.absenceType && (
                             <p className="text-xs text-muted-foreground">
                               {absenceTypeLabels[member.absenceType] || member.absenceType}
@@ -461,7 +610,7 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
         <div className="mt-6">
           <Button
             onClick={handleSubmit}
-            disabled={createReportMutation.isPending || !selectedClientId || !selectedWorkOrderId || selectedMemberIds.length === 0}
+            disabled={createReportMutation.isPending || !selectedClientId || !selectedWorkOrderId || selectedMemberIds.length === 0 || (availableWorkTypes.length > 0 && selectedWorkTypes.length === 0)}
             className="w-full"
             size="lg"
           >
