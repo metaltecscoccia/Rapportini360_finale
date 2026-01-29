@@ -863,7 +863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get admin and employee counts for this organization
       const users = await storage.getAllUsers(id);
       const adminCount = users.filter(u => u.role === "admin").length;
-      const employeeCount = users.filter(u => u.role === "employee" && u.isActive !== false).length;
+      const employeeCount = users.filter(u => (u.role === "employee" || u.role === "teamleader") && u.isActive !== false).length;
 
       res.json({
         ...organization,
@@ -1896,7 +1896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const date = (req.query.date as string) || getTodayISO();
 
         const allUsers = await storage.getAllUsers(organizationId);
-        const employees = allUsers.filter((user) => user.role === "employee" && user.isActive !== false);
+        const employees = allUsers.filter((user) => (user.role === "employee" || user.role === "teamleader") && user.isActive !== false);
 
         const reportsForDate = await storage.getDailyReportsByDate(
           date,

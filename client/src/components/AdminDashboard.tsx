@@ -2013,7 +2013,7 @@ export default function AdminDashboard({
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Dipendenti Attivi</p>
                 <p className="text-2xl font-bold">
-                  {employees ? (employees as any[]).filter((emp: any) => emp.role === 'employee' && emp.isActive === true).length : 0}
+                  {employees ? (employees as any[]).filter((emp: any) => (emp.role === 'employee' || emp.role === 'teamleader') && emp.isActive === true).length : 0}
                 </p>
               </div>
               <Users className="h-8 w-8 text-primary" />
@@ -3293,7 +3293,7 @@ export default function AdminDashboard({
                     </TableHeader>
                     <TableBody>
                     {(employees as any[])
-                      .filter((emp: any) => emp.role === 'employee')
+                      .filter((emp: any) => emp.role === 'employee' || emp.role === 'teamleader')
                       .filter((emp: any) => {
                         if (employeeStatusFilter === "active") return emp.isActive === true;
                         if (employeeStatusFilter === "inactive") return emp.isActive === false;
@@ -4177,7 +4177,7 @@ export default function AdminDashboard({
                   </SelectTrigger>
                   <SelectContent>
                     {(activeEmployees as any[])
-                      .filter((emp: any) => emp.role === 'employee')
+                      .filter((emp: any) => emp.role === 'employee' || emp.role === 'teamleader')
                       .map((emp: any) => (
                         <SelectItem key={emp.id} value={emp.id}>
                           {emp.fullName}
@@ -5362,7 +5362,7 @@ export default function AdminDashboard({
                     <FormLabel>Dipendenti</FormLabel>
                     <div className="border rounded-md p-4 max-h-48 overflow-y-auto space-y-2">
                       {employees
-                        .filter((emp: any) => emp.role === 'employee' && emp.isActive)
+                        .filter((emp: any) => (emp.role === 'employee' || emp.role === 'teamleader') && emp.isActive)
                         .map((employee: any) => (
                           <label 
                             key={employee.id} 
