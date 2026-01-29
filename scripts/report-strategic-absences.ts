@@ -124,7 +124,7 @@ const absenceTypeNames: Record<string, string> = {
   'A': 'Assenza',
   'P': 'Permesso',
   'M': 'Malattia',
-  'CP': 'Cassa Integrazione/Permesso',
+  'CP': 'Congedo Parentale',
   'L104': 'Legge 104',
   'F': 'Ferie'
 };
@@ -229,7 +229,7 @@ async function generateReport() {
   lines.push('  A  = Assenza');
   lines.push('  P  = Permesso');
   lines.push('  M  = Malattia');
-  lines.push('  CP = Cassa Integrazione/Permesso');
+  lines.push('  CP = Congedo Parentale');
   lines.push('  L104 = Legge 104');
   lines.push('='.repeat(80));
   

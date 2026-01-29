@@ -86,7 +86,7 @@ const absenceTypeLabels: Record<string, string> = {
   F: "Ferie",
   P: "Permesso",
   M: "Malattia",
-  CP: "Cassa Integrazione",
+  CP: "Congedo Parentale",
   L104: "Legge 104",
 };
 
