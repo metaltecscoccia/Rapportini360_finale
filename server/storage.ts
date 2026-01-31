@@ -274,6 +274,7 @@ export interface IStorage {
   
   // Attendance Entries (Assenze)
   getAllAttendanceEntries(organizationId: string, year: string, month: string): Promise<AttendanceEntry[]>;
+  getAllAttendanceByOrganization(organizationId: string): Promise<AttendanceEntry[]>;
   getAttendanceEntriesByDate(date: string, organizationId: string): Promise<AttendanceEntry[]>;
   getAttendanceEntry(userId: string, date: string, organizationId: string): Promise<AttendanceEntry | undefined>;
   createAttendanceEntry(entry: InsertAttendanceEntry, organizationId: string): Promise<AttendanceEntry>;
@@ -1353,12 +1354,20 @@ export class DatabaseStorage implements IStorage {
     await this.ensureInitialized();
     const startDate = `${year}-${month.padStart(2, '0')}-01`;
     const endDate = `${year}-${month.padStart(2, '0')}-31`;
-    
+
     const allEntries = await db.select()
       .from(attendanceEntries)
       .where(eq(attendanceEntries.organizationId, organizationId));
-    
+
     return allEntries.filter(entry => entry.date >= startDate && entry.date <= endDate);
+  }
+
+  async getAllAttendanceByOrganization(organizationId: string): Promise<AttendanceEntry[]> {
+    await this.ensureInitialized();
+    return await db.select()
+      .from(attendanceEntries)
+      .where(eq(attendanceEntries.organizationId, organizationId))
+      .orderBy(desc(attendanceEntries.date));
   }
 
   async getAttendanceEntriesByDate(date: string, organizationId: string): Promise<AttendanceEntry[]> {

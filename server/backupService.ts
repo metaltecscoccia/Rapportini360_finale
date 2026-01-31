@@ -75,7 +75,7 @@ Conservalo in un luogo sicuro.
 }
 
 async function addEmployeesExcel(archive: archiver.Archiver, organizationId: string): Promise<void> {
-  const users = await storage.getUsersByOrganization(organizationId);
+  const users = await storage.getAllUsers(organizationId);
 
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Dipendenti');
@@ -111,7 +111,7 @@ async function addEmployeesExcel(archive: archiver.Archiver, organizationId: str
 }
 
 async function addClientsExcel(archive: archiver.Archiver, organizationId: string): Promise<void> {
-  const clients = await storage.getClientsByOrganization(organizationId);
+  const clients = await storage.getAllClients(organizationId);
 
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Clienti');
@@ -140,8 +140,8 @@ async function addClientsExcel(archive: archiver.Archiver, organizationId: strin
 }
 
 async function addWorkOrdersExcel(archive: archiver.Archiver, organizationId: string): Promise<void> {
-  const workOrders = await storage.getWorkOrdersByOrganization(organizationId);
-  const clients = await storage.getClientsByOrganization(organizationId);
+  const workOrders = await storage.getAllWorkOrders(organizationId);
+  const clients = await storage.getAllClients(organizationId);
   const clientMap = new Map(clients.map(c => [c.id, c.name]));
 
   const workbook = new ExcelJS.Workbook();
@@ -174,10 +174,10 @@ async function addWorkOrdersExcel(archive: archiver.Archiver, organizationId: st
 
 async function addReportsExcel(archive: archiver.Archiver, organizationId: string): Promise<void> {
   // Get all reports (no date filter for backup)
-  const reports = await storage.getDailyReportsByOrganization(organizationId);
-  const users = await storage.getUsersByOrganization(organizationId);
-  const clients = await storage.getClientsByOrganization(organizationId);
-  const workOrders = await storage.getWorkOrdersByOrganization(organizationId);
+  const reports = await storage.getAllDailyReports(organizationId);
+  const users = await storage.getAllUsers(organizationId);
+  const clients = await storage.getAllClients(organizationId);
+  const workOrders = await storage.getAllWorkOrders(organizationId);
 
   const userMap = new Map(users.map(u => [u.id, u.fullName]));
   const clientMap = new Map(clients.map(c => [c.id, c.name]));
@@ -205,7 +205,7 @@ async function addReportsExcel(archive: archiver.Archiver, organizationId: strin
   };
 
   for (const report of reports) {
-    const operations = await storage.getOperationsByDailyReport(report.id);
+    const operations = await storage.getOperationsByReportId(report.id, organizationId);
 
     for (const op of operations) {
       worksheet.addRow({
@@ -230,7 +230,7 @@ async function addReportsExcel(archive: archiver.Archiver, organizationId: strin
 async function addAttendanceExcel(archive: archiver.Archiver, organizationId: string): Promise<void> {
   // Get all attendance records
   const attendance = await storage.getAllAttendanceByOrganization(organizationId);
-  const users = await storage.getUsersByOrganization(organizationId);
+  const users = await storage.getAllUsers(organizationId);
   const userMap = new Map(users.map(u => [u.id, u.fullName]));
 
   const workbook = new ExcelJS.Workbook();
@@ -273,9 +273,9 @@ async function addAttendanceExcel(archive: archiver.Archiver, organizationId: st
 }
 
 async function addVehiclesExcel(archive: archiver.Archiver, organizationId: string): Promise<void> {
-  const vehicles = await storage.getVehiclesByOrganization(organizationId);
-  const refills = await storage.getFuelRefillsByOrganization(organizationId);
-  const users = await storage.getUsersByOrganization(organizationId);
+  const vehicles = await storage.getAllVehicles(organizationId);
+  const refills = await storage.getAllFuelRefills(organizationId);
+  const users = await storage.getAllUsers(organizationId);
 
   const userMap = new Map(users.map(u => [u.id, u.fullName]));
   const vehicleMap = new Map(vehicles.map(v => [v.id, v.licensePlate]));
