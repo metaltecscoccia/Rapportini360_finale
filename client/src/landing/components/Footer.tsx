@@ -131,9 +131,20 @@ export default function Footer() {
           </div>
 
           <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-slate-400">
-              {currentYear} Rapportini360. Tutti i diritti riservati.
-            </p>
+            <div className="text-sm text-slate-400 text-center md:text-left">
+              <p className="font-semibold text-slate-300 mb-1">
+                Metaltec Scoccia S.r.l.
+              </p>
+              <p>
+                Via Tiburtina Valeria Km 127.550, 67041 Aielli (AQ)
+              </p>
+              <p>
+                P.IVA: 02064370667 | Email: info@metaltecscoccia.it | Tel: 0863790251
+              </p>
+              <p className="mt-2 text-xs">
+                © {currentYear} Rapportini360. Tutti i diritti riservati.
+              </p>
+            </div>
             <div className="flex gap-4">
               <a
                 href="#"

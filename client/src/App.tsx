@@ -23,6 +23,9 @@ import AdminDashboard from "@/components/AdminDashboard";
 import SuperAdminDashboard from "@/components/SuperAdminDashboard";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
 import ThemeToggle from "@/components/ThemeToggle";
+import PrivacyPage from "@/pages/PrivacyPage";
+import TermsPage from "@/pages/TermsPage";
+import CookiePage from "@/pages/CookiePage";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateToItalian } from "@/lib/dateUtils";
@@ -423,6 +426,25 @@ function App() {
             <Route path="/signup">
               <SignupForm />
               <Toaster />
+            </Route>
+            {/* Legal Pages */}
+            <Route path="/privacy">
+              <ThemeProvider>
+                <PrivacyPage />
+                <Toaster />
+              </ThemeProvider>
+            </Route>
+            <Route path="/termini">
+              <ThemeProvider>
+                <TermsPage />
+                <Toaster />
+              </ThemeProvider>
+            </Route>
+            <Route path="/cookie">
+              <ThemeProvider>
+                <CookiePage />
+                <Toaster />
+              </ThemeProvider>
             </Route>
             {/* Login (default) */}
             <Route path="/">
