@@ -194,11 +194,15 @@ async function addReportsExcel(archive: archiver.Archiver, organizationId: strin
     { header: 'Data', key: 'date', width: 12 },
     { header: 'Dipendente', key: 'employee', width: 25 },
     { header: 'Cliente', key: 'client', width: 20 },
-    { header: 'Commessa', key: 'workOrder', width: 20 },
+    { header: 'Commessa', key: 'workOrder', width: 25 },
+    { header: 'Attività', key: 'workTypes', width: 35 },
+    { header: 'Materiali', key: 'materials', width: 30 },
     { header: 'Ore', key: 'hours', width: 8 },
     { header: 'Stato', key: 'status', width: 12 },
     { header: 'Creato Da', key: 'createdBy', width: 15 },
-    { header: 'Note', key: 'notes', width: 40 },
+    { header: 'Note', key: 'notes', width: 45 },
+    { header: 'Foto', key: 'photos', width: 15 },
+    { header: 'Data Creazione', key: 'createdAt', width: 18 },
   ];
 
   worksheet.getRow(1).font = { bold: true };
@@ -217,12 +221,16 @@ async function addReportsExcel(archive: archiver.Archiver, organizationId: strin
         employee: userMap.get(report.employeeId) || 'N/A',
         client: clientMap.get(op.clientId) || 'N/A',
         workOrder: workOrderMap.get(op.workOrderId) || 'N/A',
+        workTypes: Array.isArray(op.workTypes) ? op.workTypes.join(', ') : '',
+        materials: Array.isArray(op.materials) ? op.materials.join(', ') : '',
         hours: op.hours,
         status: report.status,
         createdBy: report.createdBy === 'utente' ? 'Dipendente' :
                    report.createdBy === 'ufficio' ? 'Ufficio' :
                    report.createdBy === 'caposquadra' ? 'Caposquadra' : report.createdBy,
         notes: op.notes || '',
+        photos: Array.isArray(op.photos) && op.photos.length > 0 ? `${op.photos.length} foto` : '',
+        createdAt: report.createdAt ? new Date(report.createdAt).toLocaleString('it-IT') : '',
       });
     }
   }
