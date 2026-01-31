@@ -229,8 +229,8 @@ Accetti di ricevere comunicazioni da noi tramite:
 ### 15.2 Notifiche Legali
 
 Le notifiche legali devono essere inviate a:
-**Email**: [DA COMPILARE]
-**Indirizzo**: [DA COMPILARE]
+**Email**: info@metaltecscoccia.it
+**Indirizzo**: Via Tiburtina Valeria Km 127.550, 67041 Aielli (AQ)
 
 ## 16. Legge Applicabile e Foro Competente
 
@@ -241,7 +241,7 @@ Questi Termini sono regolati dalla legge italiana.
 ### 16.2 Foro Competente
 
 Per controversie con consumatori: foro di residenza del consumatore.
-Per controversie B2B: Tribunale di [DA COMPILARE].
+Per controversie B2B: Tribunale di Avezzano.
 
 ### 16.3 Risoluzione Dispute
 
@@ -281,10 +281,10 @@ In caso di conflitto tra versioni linguistiche, prevale la versione italiana.
 
 Per domande sui Termini di Servizio:
 
-**Email**: [DA COMPILARE]
-**Indirizzo**: [DA COMPILARE]
-**Telefono**: [DA COMPILARE]
-**Supporto tecnico**: [DA COMPILARE]
+**Email**: info@metaltecscoccia.it
+**Indirizzo**: Via Tiburtina Valeria Km 127.550, 67041 Aielli (AQ)
+**Telefono**: 0863790251
+**Supporto tecnico**: support@metaltecscoccia.it
 
 ---
 

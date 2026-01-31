@@ -10,10 +10,11 @@ Questa informativa sulla privacy descrive quali dati raccogliamo, come li utiliz
 
 ## 2. Titolare del Trattamento
 
-**Nome Azienda:** [DA COMPILARE]
-**Indirizzo:** [DA COMPILARE]
-**Email:** [DA COMPILARE]
-**Partita IVA:** [DA COMPILARE]
+**Nome Azienda:** Metaltec Scoccia S.r.l.
+**Indirizzo:** Via Tiburtina Valeria Km 127.550, 67041 Aielli (AQ)
+**Email:** info@metaltecscoccia.it
+**Telefono:** 0863790251
+**Partita IVA:** 02064370667
 
 ## 3. Dati Raccolti
 
@@ -191,7 +192,7 @@ Puoi presentare reclamo all'Autorità Garante per la Protezione dei Dati Persona
 Per esercitare i tuoi diritti, contatta:
 
 1. **Amministratore della tua organizzazione** (prima opzione)
-2. **Titolare del trattamento** all'indirizzo email: [DA COMPILARE]
+2. **Titolare del trattamento** all'indirizzo email: info@metaltecscoccia.it
 
 Risponderemo entro 30 giorni dalla richiesta.
 
@@ -233,9 +234,9 @@ La data di "Ultima modifica" in cima al documento indica l'ultima revisione.
 
 Per domande su questa informativa o sul trattamento dei dati:
 
-**Email**: [DA COMPILARE]
-**Indirizzo**: [DA COMPILARE]
-**Telefono**: [DA COMPILARE]
+**Email**: info@metaltecscoccia.it
+**Indirizzo**: Via Tiburtina Valeria Km 127.550, 67041 Aielli (AQ)
+**Telefono**: 0863790251
 
 ---
 
