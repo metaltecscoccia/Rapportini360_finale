@@ -1,6 +1,6 @@
 # Termini e Condizioni di Servizio
 
-**Ultima modifica: 6 gennaio 2026**
+**Ultima modifica: 31 gennaio 2026**
 
 ## 1. Accettazione dei Termini
 
@@ -108,27 +108,68 @@ Questa licenza termina quando i contenuti vengono eliminati.
 - Non caricare materiale offensivo, diffamatorio o illegale
 - Non caricare foto di persone senza consenso
 
-## 8. Privacy e Protezione Dati
+## 8. Backup e Responsabilità Dati
+
+### 8.1 Strumenti di Export
+
+L'App fornisce strumenti di esportazione dati accessibili dalla dashboard amministratore, che consentono di:
+- Esportare rapportini in formato CSV/Excel
+- Esportare registri presenze
+- Scaricare documentazione fotografica
+- Generare report riepilogativi
+
+### 8.2 Responsabilità dell'Organizzazione
+
+È responsabilità dell'Organizzazione:
+- Effettuare backup periodici dei propri dati utilizzando gli strumenti forniti
+- Conservare copie di sicurezza dei dati critici per le proprie esigenze
+- Verificare periodicamente l'integrità dei backup effettuati
+
+### 8.3 Promemoria e Notifiche
+
+Il Fornitore:
+- Mette a disposizione funzionalità di export completo dei dati
+- Invia promemoria periodici (trimestrali) per ricordare l'importanza del backup
+- Fornisce documentazione sulle procedure di esportazione
+
+### 8.4 Limitazione di Responsabilità per Mancato Backup
+
+L'Organizzazione riconosce e accetta che:
+- In caso di mancata esecuzione dei backup, non potrà richiedere risarcimenti per dati non recuperabili
+- Il Fornitore non è responsabile per perdite di dati causate da:
+  - Mancata esecuzione dei backup da parte dell'Organizzazione
+  - Cancellazione volontaria dei dati
+  - Cessazione del servizio per morosità o violazione dei Termini
+  - Scadenza del periodo di conservazione
+
+### 8.5 Backup di Sistema
+
+Il Fornitore mantiene backup di sistema per finalità di disaster recovery e continuità del servizio. Tali backup:
+- Sono destinati esclusivamente al ripristino del servizio in caso di guasti tecnici
+- Non sostituiscono la responsabilità dell'Organizzazione di effettuare propri backup
+- Potrebbero non contenere tutti i dati in caso di eventi catastrofici
+
+## 9. Privacy e Protezione Dati
 
 L'utilizzo dell'App è disciplinato dalla nostra [Informativa sulla Privacy](PRIVACY_POLICY.md), che fa parte integrante di questi Termini.
 
-## 9. Disponibilità del Servizio
+## 10. Disponibilità del Servizio
 
-### 9.1 Continuità del Servizio
+### 10.1 Continuità del Servizio
 
 Ci impegniamo a fornire il servizio con continuità, ma:
 - Non garantiamo disponibilità 100%
 - Il servizio può essere interrotto per manutenzione
 - Potrebbero verificarsi downtime non programmati
 
-### 9.2 Manutenzione
+### 10.2 Manutenzione
 
 Possiamo sospendere temporaneamente il servizio per:
 - Manutenzione programmata (notifica preventiva)
 - Aggiornamenti di sicurezza urgenti
 - Risoluzione problemi tecnici
 
-### 9.3 Modifiche al Servizio
+### 10.3 Modifiche al Servizio
 
 Ci riserviamo il diritto di:
 - Aggiungere, modificare o rimuovere funzionalità
@@ -137,22 +178,21 @@ Ci riserviamo il diritto di:
 
 Notificheremo modifiche sostanziali con congruo anticipo.
 
-## 10. Tariffe e Pagamenti
+## 11. Tariffe e Pagamenti
 
-[DA COMPLETARE - se implementerete sistema pagamenti]
-
-- Le tariffe sono definite nei piani di abbonamento
-- I pagamenti sono gestiti tramite [nome processore pagamenti]
+- Le tariffe sono definite nei piani di abbonamento disponibili sul sito
+- I pagamenti sono gestiti tramite Stripe, piattaforma certificata PCI-DSS
 - Le tariffe possono essere modificate con preavviso di 30 giorni
-- In caso di mancato pagamento, l'account può essere sospeso
+- In caso di mancato pagamento, l'account può essere sospeso dopo 7 giorni di mora
+- È previsto un periodo di prova gratuito di 30 giorni per le nuove organizzazioni
 
-## 11. Cessazione del Servizio
+## 12. Cessazione del Servizio
 
-### 11.1 Cessazione da Parte dell'Organizzazione
+### 12.1 Cessazione da Parte dell'Organizzazione
 
 L'organizzazione può cessare l'utilizzo in qualsiasi momento.
 
-### 11.2 Cessazione da Parte Nostra
+### 12.2 Cessazione da Parte Nostra
 
 Possiamo sospendere o terminare l'account in caso di:
 - Violazione di questi Termini
@@ -160,16 +200,16 @@ Possiamo sospendere o terminare l'account in caso di:
 - Attività fraudolente o illegali
 - Utilizzo abusivo del servizio
 
-### 11.3 Effetti della Cessazione
+### 12.3 Effetti della Cessazione
 
 Alla cessazione:
 - L'accesso all'App viene revocato immediatamente
 - I dati sono conservati per 10 anni per obblighi fiscali
 - L'organizzazione può richiedere export dei dati entro 30 giorni
 
-## 12. Limitazione di Responsabilità
+## 13. Limitazione di Responsabilità
 
-### 12.1 Disclaimer
+### 13.1 Disclaimer
 
 L'APP È FORNITA "COSÌ COM'È" E "COME DISPONIBILE" SENZA GARANZIE DI ALCUN TIPO.
 
@@ -178,7 +218,7 @@ Non garantiamo che:
 - I difetti saranno corretti immediatamente
 - L'App soddisfi tutte le tue esigenze
 
-### 12.2 Limitazione Danni
+### 13.2 Limitazione Danni
 
 NELLA MASSIMA MISURA CONSENTITA DALLA LEGGE, NON SAREMO RESPONSABILI PER:
 - Perdita di dati o profitti
@@ -188,14 +228,14 @@ NELLA MASSIMA MISURA CONSENTITA DALLA LEGGE, NON SAREMO RESPONSABILI PER:
 
 La nostra responsabilità totale non supererà l'importo pagato dall'organizzazione negli ultimi 12 mesi.
 
-### 12.3 Esenzioni
+### 13.3 Esenzioni
 
 Questa limitazione non si applica a:
 - Danni causati da dolo o colpa grave
 - Violazione di diritti inviolabili (es. privacy)
 - Responsabilità non escludibile per legge
 
-## 13. Indennizzo
+## 14. Indennizzo
 
 L'utente accetta di indennizzarci e tenerci indenni da:
 - Violazioni di questi Termini da parte tua
@@ -203,9 +243,9 @@ L'utente accetta di indennizzarci e tenerci indenni da:
 - Uso improprio o illegale dell'App
 - Richieste di risarcimento da parte di terzi
 
-## 14. Proprietà Intellettuale
+## 15. Proprietà Intellettuale
 
-### 14.1 Nostra Proprietà
+### 15.1 Nostra Proprietà
 
 L'App, il codice sorgente, il design, il logo e tutti i materiali sono di nostra proprietà e protetti da:
 - Copyright
@@ -213,71 +253,71 @@ L'App, il codice sorgente, il design, il logo e tutti i materiali sono di nostra
 - Segreti commerciali
 - Brevetti (se applicabile)
 
-### 14.2 Divieto di Utilizzo
+### 15.2 Divieto di Utilizzo
 
 Non puoi utilizzare il nostro nome, logo o marchi senza autorizzazione scritta.
 
-## 15. Comunicazioni
+## 16. Comunicazioni
 
-### 15.1 Comunicazioni Elettroniche
+### 16.1 Comunicazioni Elettroniche
 
 Accetti di ricevere comunicazioni da noi tramite:
 - Notifiche in-app
 - Email all'indirizzo registrato
 - SMS (se implementato)
 
-### 15.2 Notifiche Legali
+### 16.2 Notifiche Legali
 
 Le notifiche legali devono essere inviate a:
 **Email**: info@metaltecscoccia.it
 **Indirizzo**: Via Tiburtina Valeria Km 127.550, 67041 Aielli (AQ)
 
-## 16. Legge Applicabile e Foro Competente
+## 17. Legge Applicabile e Foro Competente
 
-### 16.1 Legge Italiana
+### 17.1 Legge Italiana
 
 Questi Termini sono regolati dalla legge italiana.
 
-### 16.2 Foro Competente
+### 17.2 Foro Competente
 
 Per controversie con consumatori: foro di residenza del consumatore.
 Per controversie B2B: Tribunale di Avezzano.
 
-### 16.3 Risoluzione Dispute
+### 17.3 Risoluzione Dispute
 
 Prima di ricorrere a vie legali, le parti si impegnano a tentare una risoluzione amichevole entro 30 giorni.
 
-## 17. Disposizioni Generali
+## 18. Disposizioni Generali
 
-### 17.1 Modifiche ai Termini
+### 18.1 Modifiche ai Termini
 
 Possiamo modificare questi Termini in qualsiasi momento:
 - Le modifiche saranno notificate con 30 giorni di anticipo
 - L'uso continuato dell'App costituisce accettazione
 - Puoi rifiutare cessando l'utilizzo
 
-### 17.2 Cessione
+### 18.2 Cessione
 
 Non puoi cedere questi Termini a terzi.
 Possiamo cedere questi Termini in caso di fusione, acquisizione o vendita.
 
-### 17.3 Separabilità
+### 18.3 Separabilità
 
 Se una clausola è dichiarata invalida, le altre rimangono in vigore.
 
-### 17.4 Rinuncia
+### 18.4 Rinuncia
 
 La mancata applicazione di una clausola non costituisce rinuncia.
 
-### 17.5 Intero Accordo
+### 18.5 Intero Accordo
 
 Questi Termini, insieme all'Informativa Privacy, costituiscono l'intero accordo.
 
-### 17.6 Lingua
+### 18.6 Lingua
 
 In caso di conflitto tra versioni linguistiche, prevale la versione italiana.
 
-## 18. Contatti
+## 19. Contatti
 
 Per domande sui Termini di Servizio:
 
