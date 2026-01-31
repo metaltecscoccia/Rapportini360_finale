@@ -53,6 +53,10 @@ export async function generateFullBackup(options: BackupOptions): Promise<Readab
     promises.push(addVehiclesExcel(archive, organizationId));
   }
 
+  if (includeWorkOrders) {
+    promises.push(addWorkOrderReportsExcel(archive, organizationId));
+  }
+
   // Add info file
   const infoContent = `BACKUP DATI RAPPORTINI360
 ========================
@@ -61,7 +65,7 @@ Data backup: ${new Date().toLocaleString('it-IT')}
 Organizzazione ID: ${organizationId}
 
 Contenuto:
-${includeEmployees ? '- dipendenti.xlsx: Lista dipendenti\n' : ''}${includeClients ? '- clienti.xlsx: Lista clienti\n' : ''}${includeWorkOrders ? '- commesse.xlsx: Lista commesse\n' : ''}${includeReports ? '- rapportini.xlsx: Tutti i rapportini\n' : ''}${includeAttendance ? '- presenze.xlsx: Registro presenze\n' : ''}${includeVehicles ? '- veicoli.xlsx: Lista veicoli e rifornimenti\n' : ''}
+${includeEmployees ? '- dipendenti.xlsx: Lista dipendenti\n' : ''}${includeClients ? '- clienti.xlsx: Lista clienti\n' : ''}${includeWorkOrders ? '- commesse.xlsx: Lista commesse\n' : ''}${includeWorkOrders ? '- report_commesse.xlsx: Report ore per commessa\n' : ''}${includeReports ? '- rapportini.xlsx: Tutti i rapportini\n' : ''}${includeAttendance ? '- presenze.xlsx: Registro presenze\n' : ''}${includeVehicles ? '- veicoli.xlsx: Lista veicoli e rifornimenti\n' : ''}
 Questo backup contiene tutti i dati della tua organizzazione.
 Conservalo in un luogo sicuro.
 `;
@@ -338,4 +342,105 @@ async function addVehiclesExcel(archive: archiver.Archiver, organizationId: stri
 
   const buffer = await workbook.xlsx.writeBuffer();
   archive.append(Buffer.from(buffer), { name: 'veicoli.xlsx' });
+}
+
+async function addWorkOrderReportsExcel(archive: archiver.Archiver, organizationId: string): Promise<void> {
+  const workOrders = await storage.getAllWorkOrders(organizationId);
+  const clients = await storage.getAllClients(organizationId);
+  const users = await storage.getAllUsers(organizationId);
+  const reports = await storage.getAllDailyReports(organizationId);
+
+  const clientMap = new Map(clients.map(c => [c.id, c.name]));
+  const userMap = new Map(users.map(u => [u.id, u.fullName]));
+
+  const workbook = new ExcelJS.Workbook();
+
+  // Sheet 1: Riepilogo per Commessa
+  const summarySheet = workbook.addWorksheet('Riepilogo Commesse');
+  summarySheet.columns = [
+    { header: 'Commessa', key: 'workOrder', width: 30 },
+    { header: 'Cliente', key: 'client', width: 25 },
+    { header: 'Ore Totali', key: 'totalHours', width: 12 },
+    { header: 'N. Rapportini', key: 'reportCount', width: 15 },
+    { header: 'Stato', key: 'status', width: 10 },
+  ];
+
+  summarySheet.getRow(1).font = { bold: true };
+  summarySheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE0E0E0' }
+  };
+
+  // Calcola statistiche per ogni commessa
+  const workOrderStats = new Map<string, { totalHours: number; reportCount: number; operations: any[] }>();
+
+  for (const report of reports) {
+    const operations = await storage.getOperationsByReportId(report.id, organizationId);
+    for (const op of operations) {
+      const stats = workOrderStats.get(op.workOrderId) || { totalHours: 0, reportCount: 0, operations: [] };
+      stats.totalHours += parseFloat(op.hours) || 0;
+      stats.reportCount += 1;
+      stats.operations.push({
+        date: report.date,
+        employee: userMap.get(report.employeeId) || 'N/A',
+        hours: op.hours,
+        notes: op.notes || '',
+        workTypes: op.workTypes || [],
+      });
+      workOrderStats.set(op.workOrderId, stats);
+    }
+  }
+
+  // Popola il foglio riepilogo
+  for (const wo of workOrders) {
+    const stats = workOrderStats.get(wo.id) || { totalHours: 0, reportCount: 0, operations: [] };
+    summarySheet.addRow({
+      workOrder: wo.name,
+      client: clientMap.get(wo.clientId) || 'N/A',
+      totalHours: stats.totalHours,
+      reportCount: stats.reportCount,
+      status: wo.isActive ? 'Attiva' : 'Chiusa',
+    });
+  }
+
+  // Sheet 2: Dettaglio per Commessa
+  const detailSheet = workbook.addWorksheet('Dettaglio Commesse');
+  detailSheet.columns = [
+    { header: 'Commessa', key: 'workOrder', width: 25 },
+    { header: 'Cliente', key: 'client', width: 20 },
+    { header: 'Data', key: 'date', width: 12 },
+    { header: 'Dipendente', key: 'employee', width: 25 },
+    { header: 'Ore', key: 'hours', width: 8 },
+    { header: 'Attività', key: 'workTypes', width: 30 },
+    { header: 'Note', key: 'notes', width: 40 },
+  ];
+
+  detailSheet.getRow(1).font = { bold: true };
+  detailSheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE0E0E0' }
+  };
+
+  // Popola il dettaglio
+  for (const wo of workOrders) {
+    const stats = workOrderStats.get(wo.id);
+    if (stats && stats.operations.length > 0) {
+      for (const op of stats.operations) {
+        detailSheet.addRow({
+          workOrder: wo.name,
+          client: clientMap.get(wo.clientId) || 'N/A',
+          date: op.date,
+          employee: op.employee,
+          hours: op.hours,
+          workTypes: Array.isArray(op.workTypes) ? op.workTypes.join(', ') : '',
+          notes: op.notes,
+        });
+      }
+    }
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  archive.append(Buffer.from(buffer), { name: 'report_commesse.xlsx' });
 }
