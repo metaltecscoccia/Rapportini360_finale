@@ -7,6 +7,7 @@ import { storage } from "./storage";
 import { WordService } from "./wordService";
 import { txtService } from "./txtService";
 import { generateAttendanceExcel } from "./excelService";
+import { generateFullBackup } from "./backupService";
 import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import streamifier from 'streamifier';
@@ -3013,6 +3014,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error exporting attendance to Excel:", error);
       res.status(500).json({ error: "Failed to export attendance to Excel" });
+    }
+  });
+
+  // ============================================
+  // FULL BACKUP EXPORT
+  // ============================================
+
+  app.get("/api/export/full-backup", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+
+      const archive = await generateFullBackup({
+        organizationId,
+        includeReports: true,
+        includeAttendance: true,
+        includeEmployees: true,
+        includeClients: true,
+        includeWorkOrders: true,
+        includeVehicles: true,
+      });
+
+      const dateStr = new Date().toISOString().split('T')[0];
+
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=Backup_Rapportini360_${dateStr}.zip`
+      );
+
+      archive.pipe(res);
+    } catch (error) {
+      console.error("Error generating full backup:", error);
+      res.status(500).json({ error: "Failed to generate backup" });
     }
   });
 

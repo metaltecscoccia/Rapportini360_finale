@@ -1770,6 +1770,48 @@ export default function AdminDashboard({
     }
   };
 
+  // Full backup download
+  const [isDownloadingBackup, setIsDownloadingBackup] = useState(false);
+
+  const handleFullBackup = async () => {
+    try {
+      setIsDownloadingBackup(true);
+      toast({
+        title: "Preparazione backup in corso...",
+        description: "Questo potrebbe richiedere alcuni secondi",
+      });
+
+      const response = await fetch('/api/export/full-backup');
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Backup_Rapportini360_${new Date().toISOString().split('T')[0]}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        toast({
+          title: "Backup completato",
+          description: "Il backup di tutti i dati è stato scaricato correttamente",
+        });
+      } else {
+        throw new Error("Errore durante la generazione del backup");
+      }
+    } catch (error) {
+      console.error("Error generating backup:", error);
+      toast({
+        title: "Backup non riuscito",
+        description: "Si è verificato un errore durante la generazione del backup",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDownloadingBackup(false);
+    }
+  };
+
   const totalPendingReports = (reports as any[]).filter((r: any) => r.status === "In attesa").length;
   const totalOpenWorkOrders = (workOrders as any[]).filter((wo: any) => wo.isActive === true).length;
 
@@ -3556,6 +3598,30 @@ export default function AdminDashboard({
                 </Table>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Backup Card */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Backup Dati</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Scarica un backup completo di tutti i dati della tua organizzazione in formato ZIP.
+                Il backup include: dipendenti, clienti, commesse, rapportini, presenze e veicoli.
+              </p>
+              <Button
+                onClick={handleFullBackup}
+                disabled={isDownloadingBackup}
+                className="w-full sm:w-auto"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {isDownloadingBackup ? "Generazione backup..." : "Scarica Backup Completo"}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-3">
+                Ti consigliamo di effettuare un backup periodico dei dati e conservarlo in un luogo sicuro.
+              </p>
             </CardContent>
           </Card>
           </div>
