@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, XCircle, CreditCard } from "lucide-react";
 import { Link } from "wouter";
 
+type SubscriptionPlan = 'free' | 'starter_monthly' | 'starter_yearly' | 'business_monthly' | 'business_yearly' | 'professional_monthly' | 'professional_yearly';
+
 interface BillingStatus {
   subscriptionStatus: 'trial' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'paused';
-  subscriptionPlan: 'free' | 'premium_monthly' | 'premium_yearly';
+  subscriptionPlan: SubscriptionPlan;
   isTrialActive: boolean;
   daysUntilTrialEnd: number;
   maxEmployees: number;

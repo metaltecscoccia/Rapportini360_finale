@@ -286,7 +286,7 @@ export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   subscriptionCurrentPeriodEnd: true, // Managed by Stripe webhooks
 }).extend({
   subscriptionStatus: z.enum(['trial', 'active', 'past_due', 'canceled', 'incomplete', 'paused', 'pending_approval']).optional().default('trial'),
-  subscriptionPlan: z.enum(['free', 'premium_monthly', 'premium_yearly']).optional().default('free'),
+  subscriptionPlan: z.enum(['free', 'starter_monthly', 'starter_yearly', 'business_monthly', 'business_yearly', 'professional_monthly', 'professional_yearly']).optional().default('free'),
   trialEndDate: z.union([z.string(), z.date(), z.null()]).optional().transform(val => {
     if (!val) return null;
     if (typeof val === 'string') return new Date(val);

@@ -1,16 +1,8 @@
-import { useState } from "react";
 import { Link } from "wouter";
 import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
-import LegalDialog from "./LegalDialog";
-import PrivacyPolicy from "./markdown/PrivacyPolicy";
-import TermsOfService from "./markdown/TermsOfService";
-import CookiePolicy from "./markdown/CookiePolicy";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
-  const [privacyDialogOpen, setPrivacyDialogOpen] = useState(false);
-  const [termsDialogOpen, setTermsDialogOpen] = useState(false);
-  const [cookieDialogOpen, setCookieDialogOpen] = useState(false);
 
   return (
     <>
@@ -78,19 +70,14 @@ export default function Footer() {
               <h3 className="font-semibold text-white mb-4">Azienda</h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="/chi-siamo" className="hover:text-white transition-colors">
                     Chi siamo
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="/contatti" className="hover:text-white transition-colors">
                     Contatti
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Blog
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -100,31 +87,19 @@ export default function Footer() {
               <h3 className="font-semibold text-white mb-4">Legale</h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <button
-                    onClick={() => setPrivacyDialogOpen(true)}
-                    className="hover:text-white transition-colors text-left"
-                    aria-label="Apri Privacy Policy"
-                  >
+                  <Link href="/privacy" className="hover:text-white transition-colors">
                     Privacy Policy
-                  </button>
+                  </Link>
                 </li>
                 <li>
-                  <button
-                    onClick={() => setTermsDialogOpen(true)}
-                    className="hover:text-white transition-colors text-left"
-                    aria-label="Apri Termini di Servizio"
-                  >
+                  <Link href="/termini" className="hover:text-white transition-colors">
                     Termini di Servizio
-                  </button>
+                  </Link>
                 </li>
                 <li>
-                  <button
-                    onClick={() => setCookieDialogOpen(true)}
-                    className="hover:text-white transition-colors text-left"
-                    aria-label="Apri Cookie Policy"
-                  >
+                  <Link href="/cookie" className="hover:text-white transition-colors">
                     Cookie Policy
-                  </button>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -168,31 +143,6 @@ export default function Footer() {
           </div>
         </div>
       </footer>
-
-      {/* Legal Dialogs */}
-      <LegalDialog
-        open={privacyDialogOpen}
-        onOpenChange={setPrivacyDialogOpen}
-        title="Privacy Policy"
-      >
-        <PrivacyPolicy />
-      </LegalDialog>
-
-      <LegalDialog
-        open={termsDialogOpen}
-        onOpenChange={setTermsDialogOpen}
-        title="Termini di Servizio"
-      >
-        <TermsOfService />
-      </LegalDialog>
-
-      <LegalDialog
-        open={cookieDialogOpen}
-        onOpenChange={setCookieDialogOpen}
-        title="Cookie Policy"
-      >
-        <CookiePolicy />
-      </LegalDialog>
     </>
   );
 }

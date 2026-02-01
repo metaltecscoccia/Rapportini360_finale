@@ -553,13 +553,25 @@ export class DatabaseStorage implements IStorage {
     };
 
     // Calculate revenue from active organizations
+    const monthlyPrices: Record<string, number> = {
+      'starter_monthly': 9.90,
+      'business_monthly': 19.90,
+      'professional_monthly': 49.90,
+    };
+    const yearlyPrices: Record<string, number> = {
+      'starter_yearly': 99,
+      'business_yearly': 199,
+      'professional_yearly': 499,
+    };
+
     allOrgs.forEach(org => {
-      if (org.subscriptionStatus === 'active') {
-        if (org.subscriptionPlan === 'premium_monthly') {
-          stats.estimatedMRR += 49;
-        } else if (org.subscriptionPlan === 'premium_yearly') {
-          stats.estimatedMRR += 470 / 12; // 39.17€/month
-          stats.estimatedARR += 470;
+      if (org.subscriptionStatus === 'active' && org.subscriptionPlan) {
+        if (monthlyPrices[org.subscriptionPlan]) {
+          stats.estimatedMRR += monthlyPrices[org.subscriptionPlan];
+        } else if (yearlyPrices[org.subscriptionPlan]) {
+          const yearlyPrice = yearlyPrices[org.subscriptionPlan];
+          stats.estimatedMRR += yearlyPrice / 12;
+          stats.estimatedARR += yearlyPrice;
         }
       }
     });

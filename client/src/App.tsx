@@ -26,6 +26,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 import PrivacyPage from "@/pages/PrivacyPage";
 import TermsPage from "@/pages/TermsPage";
 import CookiePage from "@/pages/CookiePage";
+import ContattiPage from "@/pages/ContattiPage";
+import ChiSiamoPage from "@/pages/ChiSiamoPage";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateToItalian } from "@/lib/dateUtils";
@@ -443,6 +445,18 @@ function App() {
             <Route path="/cookie">
               <ThemeProvider>
                 <CookiePage />
+                <Toaster />
+              </ThemeProvider>
+            </Route>
+            <Route path="/contatti">
+              <ThemeProvider>
+                <ContattiPage />
+                <Toaster />
+              </ThemeProvider>
+            </Route>
+            <Route path="/chi-siamo">
+              <ThemeProvider>
+                <ChiSiamoPage />
                 <Toaster />
               </ThemeProvider>
             </Route>

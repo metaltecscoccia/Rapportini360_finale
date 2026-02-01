@@ -57,6 +57,8 @@ import {
 } from "lucide-react";
 import { formatDateToItalian } from "@/lib/dateUtils";
 
+type SubscriptionPlan = 'free' | 'starter_monthly' | 'starter_yearly' | 'business_monthly' | 'business_yearly' | 'professional_monthly' | 'professional_yearly';
+
 type Organization = {
   id: string;
   name: string;
@@ -64,7 +66,7 @@ type Organization = {
   createdAt: string;
   stripeCustomerId?: string | null;
   subscriptionStatus: 'trial' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'paused';
-  subscriptionPlan: 'free' | 'premium_monthly' | 'premium_yearly';
+  subscriptionPlan: SubscriptionPlan;
   subscriptionId?: string | null;
   trialEndDate?: string | null;
   billingEmail?: string | null;
@@ -112,7 +114,7 @@ export default function SuperAdminDashboard() {
   const [newOrgName, setNewOrgName] = useState("");
   const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
   const [newOrgAdvanced, setNewOrgAdvanced] = useState({
-    subscriptionPlan: 'free' as 'free' | 'premium_monthly' | 'premium_yearly',
+    subscriptionPlan: 'free' as SubscriptionPlan,
     maxEmployees: 5,
     trialEndDate: '',
     billingEmail: '',
@@ -685,8 +687,12 @@ export default function SuperAdminDashboard() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="free">Free (Trial Default)</SelectItem>
-                          <SelectItem value="premium_monthly">Premium Mensile</SelectItem>
-                          <SelectItem value="premium_yearly">Premium Annuale</SelectItem>
+                          <SelectItem value="starter_monthly">Starter Mensile (9,90€/mese)</SelectItem>
+                          <SelectItem value="starter_yearly">Starter Annuale (99€/anno)</SelectItem>
+                          <SelectItem value="business_monthly">Business Mensile (19,90€/mese)</SelectItem>
+                          <SelectItem value="business_yearly">Business Annuale (199€/anno)</SelectItem>
+                          <SelectItem value="professional_monthly">Professional Mensile (49,90€/mese)</SelectItem>
+                          <SelectItem value="professional_yearly">Professional Annuale (499€/anno)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1232,16 +1238,16 @@ const formatTrialDays = (org: Organization) => {
 };
 
 const getPlanLabel = (plan: string) => {
-  switch (plan) {
-    case 'premium_monthly':
-      return 'Premium Mensile';
-    case 'premium_yearly':
-      return 'Premium Annuale';
-    case 'free':
-      return 'Free';
-    default:
-      return plan;
-  }
+  const planLabels: Record<string, string> = {
+    'free': 'Free',
+    'starter_monthly': 'Starter Mensile',
+    'starter_yearly': 'Starter Annuale',
+    'business_monthly': 'Business Mensile',
+    'business_yearly': 'Business Annuale',
+    'professional_monthly': 'Professional Mensile',
+    'professional_yearly': 'Professional Annuale',
+  };
+  return planLabels[plan] || plan;
 };
 
 const getStatusLabel = (status: string) => {
@@ -1264,7 +1270,7 @@ const getStatusLabel = (status: string) => {
 };
 
 const getPlanBadgeVariant = (plan: string): "default" | "secondary" | "outline" => {
-  if (plan === 'premium_monthly' || plan === 'premium_yearly') return 'default';
+  if (plan !== 'free') return 'default';
   return 'secondary';
 };
 
@@ -1293,7 +1299,7 @@ function SaaSManagementView() {
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [editFormData, setEditFormData] = useState({
     name: '',
-    subscriptionPlan: 'free' as 'free' | 'premium_monthly' | 'premium_yearly',
+    subscriptionPlan: 'free' as SubscriptionPlan,
     subscriptionStatus: 'trial' as 'trial' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'paused',
     maxEmployees: 5,
     trialEndDate: '',
@@ -1457,8 +1463,12 @@ function SaaSManagementView() {
                 <SelectContent>
                   <SelectItem value="all">Tutti</SelectItem>
                   <SelectItem value="free">Free</SelectItem>
-                  <SelectItem value="premium_monthly">Premium Mensile</SelectItem>
-                  <SelectItem value="premium_yearly">Premium Annuale</SelectItem>
+                  <SelectItem value="starter_monthly">Starter Mensile</SelectItem>
+                  <SelectItem value="starter_yearly">Starter Annuale</SelectItem>
+                  <SelectItem value="business_monthly">Business Mensile</SelectItem>
+                  <SelectItem value="business_yearly">Business Annuale</SelectItem>
+                  <SelectItem value="professional_monthly">Professional Mensile</SelectItem>
+                  <SelectItem value="professional_yearly">Professional Annuale</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1558,7 +1568,7 @@ function SaaSManagementView() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={getPlanBadgeVariant(org.subscriptionPlan)}>
-                          {org.subscriptionPlan === 'premium_yearly' && (
+                          {org.subscriptionPlan.includes('yearly') && (
                             <Crown className="h-3 w-3 mr-1" />
                           )}
                           {getPlanLabel(org.subscriptionPlan)}
@@ -1659,8 +1669,12 @@ function SaaSManagementView() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="free">Free</SelectItem>
-                    <SelectItem value="premium_monthly">Premium Mensile (49€/mese)</SelectItem>
-                    <SelectItem value="premium_yearly">Premium Annuale (470€/anno)</SelectItem>
+                    <SelectItem value="starter_monthly">Starter Mensile (9,90€/mese)</SelectItem>
+                    <SelectItem value="starter_yearly">Starter Annuale (99€/anno)</SelectItem>
+                    <SelectItem value="business_monthly">Business Mensile (19,90€/mese)</SelectItem>
+                    <SelectItem value="business_yearly">Business Annuale (199€/anno)</SelectItem>
+                    <SelectItem value="professional_monthly">Professional Mensile (49,90€/mese)</SelectItem>
+                    <SelectItem value="professional_yearly">Professional Annuale (499€/anno)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

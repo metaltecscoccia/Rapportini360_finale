@@ -18,9 +18,11 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
+type SubscriptionPlan = 'free' | 'starter_monthly' | 'starter_yearly' | 'business_monthly' | 'business_yearly' | 'professional_monthly' | 'professional_yearly';
+
 interface BillingStatus {
   subscriptionStatus: 'trial' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'paused';
-  subscriptionPlan: 'free' | 'premium_monthly' | 'premium_yearly';
+  subscriptionPlan: SubscriptionPlan;
   isTrialActive: boolean;
   daysUntilTrialEnd: number;
   maxEmployees: number;
@@ -53,15 +55,11 @@ export default function BillingDashboard() {
   });
 
   const createCheckoutMutation = useMutation({
-    mutationFn: async ({ planType }: { planType: 'premium_monthly' | 'premium_yearly' }) => {
-      // In production, these would be actual Stripe Price IDs
-      const priceId = planType === 'premium_monthly'
-        ? process.env.STRIPE_PRICE_MONTHLY || 'price_monthly'
-        : process.env.STRIPE_PRICE_YEARLY || 'price_yearly';
-
+    mutationFn: async ({ planType }: { planType: Exclude<SubscriptionPlan, 'free'> }) => {
+      // Price IDs are handled server-side from environment variables
       return apiRequest<CheckoutSessionResponse>("/api/billing/create-checkout-session", {
         method: "POST",
-        body: JSON.stringify({ priceId, planType }),
+        body: JSON.stringify({ planType }),
         headers: { "Content-Type": "application/json" },
       });
     },
@@ -124,7 +122,7 @@ export default function BillingDashboard() {
     billingEmail,
   } = billingStatus;
 
-  const isPremium = subscriptionPlan === 'premium_monthly' || subscriptionPlan === 'premium_yearly';
+  const isPremium = subscriptionPlan !== 'free';
   const isActive = subscriptionStatus === 'active';
 
   // Get status badge
@@ -149,14 +147,27 @@ export default function BillingDashboard() {
 
   // Get plan badge
   const getPlanBadge = () => {
-    switch (subscriptionPlan) {
-      case 'premium_yearly':
-        return <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white"><Crown className="h-3 w-3 mr-1" />Premium Annuale</Badge>;
-      case 'premium_monthly':
-        return <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white"><Crown className="h-3 w-3 mr-1" />Premium Mensile</Badge>;
-      default:
-        return <Badge variant="secondary">Free</Badge>;
+    const planLabels: Record<SubscriptionPlan, string> = {
+      'free': 'Free',
+      'starter_monthly': 'Starter Mensile',
+      'starter_yearly': 'Starter Annuale',
+      'business_monthly': 'Business Mensile',
+      'business_yearly': 'Business Annuale',
+      'professional_monthly': 'Professional Mensile',
+      'professional_yearly': 'Professional Annuale',
+    };
+
+    if (subscriptionPlan === 'free') {
+      return <Badge variant="secondary">Free</Badge>;
     }
+
+    const isYearly = subscriptionPlan.includes('yearly');
+    return (
+      <Badge className={`bg-gradient-to-r ${isYearly ? 'from-purple-500 to-pink-500' : 'from-blue-500 to-cyan-500'} text-white`}>
+        <Crown className="h-3 w-3 mr-1" />
+        {planLabels[subscriptionPlan]}
+      </Badge>
+    );
   };
 
   return (
@@ -246,9 +257,9 @@ export default function BillingDashboard() {
                 {/* Monthly Plan */}
                 <div className="border rounded-lg p-6 space-y-4 hover:border-primary transition-colors">
                   <div>
-                    <h3 className="text-xl font-bold">Premium Mensile</h3>
+                    <h3 className="text-xl font-bold">Professional Mensile</h3>
                     <div className="mt-2">
-                      <span className="text-4xl font-bold">49€</span>
+                      <span className="text-4xl font-bold">49,90€</span>
                       <span className="text-muted-foreground">/mese</span>
                     </div>
                   </div>
@@ -268,7 +279,7 @@ export default function BillingDashboard() {
 
                   <Button
                     className="w-full"
-                    onClick={() => createCheckoutMutation.mutate({ planType: 'premium_monthly' })}
+                    onClick={() => createCheckoutMutation.mutate({ planType: 'professional_monthly' })}
                     disabled={createCheckoutMutation.isPending}
                   >
                     <CreditCard className="h-4 w-4 mr-2" />
@@ -283,13 +294,13 @@ export default function BillingDashboard() {
                   </Badge>
 
                   <div>
-                    <h3 className="text-xl font-bold">Premium Annuale</h3>
+                    <h3 className="text-xl font-bold">Professional Annuale</h3>
                     <div className="mt-2">
-                      <span className="text-4xl font-bold">470€</span>
+                      <span className="text-4xl font-bold">499€</span>
                       <span className="text-muted-foreground">/anno</span>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Solo 39€/mese
+                      2 mesi gratis!
                     </p>
                   </div>
 
@@ -308,7 +319,7 @@ export default function BillingDashboard() {
 
                   <Button
                     className="w-full"
-                    onClick={() => createCheckoutMutation.mutate({ planType: 'premium_yearly' })}
+                    onClick={() => createCheckoutMutation.mutate({ planType: 'professional_yearly' })}
                     disabled={createCheckoutMutation.isPending}
                   >
                     <Crown className="h-4 w-4 mr-2" />

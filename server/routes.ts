@@ -979,10 +979,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(503).json({ error: "Pagamenti non configurati" });
       }
 
-      const { priceId, planType } = req.body;
+      const { planType } = req.body;
 
-      if (!priceId || !planType) {
-        return res.status(400).json({ error: "priceId e planType sono richiesti" });
+      const validPlanTypes = [
+        'starter_monthly', 'starter_yearly',
+        'business_monthly', 'business_yearly',
+        'professional_monthly', 'professional_yearly'
+      ];
+
+      if (!planType || !validPlanTypes.includes(planType)) {
+        return res.status(400).json({ error: "planType non valido" });
+      }
+
+      // Look up Price ID from environment variables based on plan type
+      const priceEnvMap: Record<string, string | undefined> = {
+        'starter_monthly': process.env.STRIPE_PRICE_STARTER_MONTHLY,
+        'starter_yearly': process.env.STRIPE_PRICE_STARTER_YEARLY,
+        'business_monthly': process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+        'business_yearly': process.env.STRIPE_PRICE_BUSINESS_YEARLY,
+        'professional_monthly': process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY,
+        'professional_yearly': process.env.STRIPE_PRICE_PROFESSIONAL_YEARLY,
+      };
+
+      const priceId = priceEnvMap[planType];
+
+      if (!priceId) {
+        console.error(`[Stripe] Missing price ID for plan: ${planType}`);
+        return res.status(503).json({ error: "Configurazione prezzi non completata" });
       }
 
       const organizationId = (req as any).session.organizationId;
