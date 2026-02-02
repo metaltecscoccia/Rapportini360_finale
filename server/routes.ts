@@ -242,13 +242,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Email non valida" });
       }
 
-      // Validazione password solo per attivazione immediata con carta
+      // Validazione password solo per attivazione immediata
       if (activationType === "card") {
         if (!adminPassword || adminPassword.length < 8) {
           return res.status(400).json({ error: "La password deve contenere almeno 8 caratteri" });
-        }
-        if (!stripe) {
-          return res.status(500).json({ error: "Stripe non configurato. Contattare l'assistenza." });
         }
       }
 
@@ -399,67 +396,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // ===== INTEGRAZIONE STRIPE CHECKOUT =====
-      const priceId = process.env.STRIPE_PRICE_STARTER_MONTHLY;
-      if (!priceId) {
-        console.error('[SIGNUP] STRIPE_PRICE_STARTER_MONTHLY not configured');
-        return res.status(500).json({ error: "Configurazione Stripe incompleta. Contattare l'assistenza." });
-      }
+      // ===== ATTIVAZIONE TRIAL IMMEDIATA (senza carta) =====
+      // La carta verrà richiesta alla fine del trial dalla dashboard
+      console.log(`[SIGNUP] Trial attivato per organizzazione: ${organization.name}`);
 
-      // 1. Creare customer Stripe
-      const customer = await stripe!.customers.create({
-        email: billingEmail,
-        name: organizationName,
-        metadata: {
-          organizationId: organization.id,
-          adminUsername: adminUsername
-        }
-      });
-      console.log(`[SIGNUP] Created Stripe customer: ${customer.id}`);
-
-      // Salvare customer ID nell'organizzazione
-      await storage.updateOrganization(organization.id, {
-        stripeCustomerId: customer.id,
-      });
-
-      // 2. Creare Checkout Session con trial 30 giorni
-      const appUrl = process.env.APP_URL || 'http://localhost:5173';
-      const checkoutSession = await stripe!.checkout.sessions.create({
-        customer: customer.id,
-        payment_method_types: ['card'],
-        mode: 'subscription',
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ],
-        subscription_data: {
-          trial_period_days: 30,
-          metadata: {
-            organizationId: organization.id,
-          },
-        },
-        success_url: `${appUrl}/signup/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${appUrl}/signup?canceled=true`,
-        metadata: {
-          organizationId: organization.id,
-          adminUserId: admin.id,
-        },
-      });
-      console.log(`[SIGNUP] Created Stripe Checkout Session: ${checkoutSession.id}`);
-
-      // Restituire URL del checkout (l'utente verrà reindirizzato)
-      return res.status(201).json({
-        success: true,
-        checkoutUrl: checkoutSession.url,
-        message: "Reindirizzamento a Stripe per il pagamento...",
-      });
-
-      // NOTA: L'auto-login e l'attivazione dell'organizzazione avverranno
-      // dopo il completamento del checkout tramite webhook o pagina di successo
-
-      // Auto-login: crea session (questo codice non verrà eseguito per il flusso con carta)
+      // Auto-login: crea session
       (req as any).session.userId = admin.id;
       (req as any).session.userRole = admin.role;
       (req as any).session.organizationId = organization.id;

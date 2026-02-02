@@ -103,15 +103,12 @@ export default function SignupForm() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        if (formData.activationType === "card" && data.checkoutUrl) {
-          // Redirect a Stripe Checkout per inserire i dati carta
-          window.location.href = data.checkoutUrl;
-        } else if (formData.activationType === "manual") {
+        if (formData.activationType === "card") {
+          // Attivazione immediata - redirect alla dashboard
+          window.location.href = "/";
+        } else {
           // Richiesta manuale - mostra messaggio di successo
           setSuccess(data.message || "Richiesta inviata! Riceverai le credenziali via email dopo l'approvazione.");
-        } else {
-          // Fallback per attivazione senza checkout URL
-          window.location.href = "/";
         }
       } else {
         setError(data.error || "Errore durante la registrazione. Riprova.");
@@ -371,11 +368,11 @@ export default function SignupForm() {
                         <RadioGroupItem value="card" id="card" className="mt-1" />
                         <div className="flex-1">
                           <Label htmlFor="card" className="flex items-center gap-2 font-medium cursor-pointer">
-                            <CreditCard className="h-4 w-4" />
+                            <CheckCircle className="h-4 w-4" />
                             Attivazione Immediata
                           </Label>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Inserisci una carta di credito (non verra' addebitato nulla per 30 giorni)
+                            Inizia subito il trial di 30 giorni gratuito
                           </p>
                         </div>
                       </div>
@@ -433,13 +430,6 @@ export default function SignupForm() {
                         </div>
                       </div>
 
-                      {/* Info pagamento Stripe */}
-                      <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg text-sm text-blue-700 dark:text-blue-300">
-                        <p className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4" />
-                          Verrai reindirizzato a Stripe per inserire i dati della carta in modo sicuro.
-                        </p>
-                      </div>
                     </>
                   )}
 
