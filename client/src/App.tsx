@@ -15,7 +15,8 @@ import { LogOut } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import LoginForm from "@/components/LoginForm";
 import LandingPage from "@/landing/LandingPage";
-import SignupFormWithStripe from "@/landing/SignupFormWithStripe";
+import SignupForm from "@/landing/SignupForm";
+import SignupSuccessPage from "@/pages/SignupSuccessPage";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import DailyReportForm from "@/components/DailyReportForm";
 import TeamReportForm from "@/components/TeamReportForm";
@@ -426,7 +427,11 @@ function App() {
             </Route>
             {/* Signup */}
             <Route path="/signup">
-              <SignupFormWithStripe />
+              <SignupForm />
+              <Toaster />
+            </Route>
+            <Route path="/signup/success">
+              <SignupSuccessPage />
               <Toaster />
             </Route>
             {/* Legal Pages */}

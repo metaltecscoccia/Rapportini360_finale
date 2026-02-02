@@ -242,13 +242,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Email non valida" });
       }
 
-      // Validazione password e paymentMethodId solo per attivazione immediata con carta
+      // Validazione password solo per attivazione immediata con carta
       if (activationType === "card") {
         if (!adminPassword || adminPassword.length < 8) {
           return res.status(400).json({ error: "La password deve contenere almeno 8 caratteri" });
-        }
-        if (!paymentMethodId) {
-          return res.status(400).json({ error: "Metodo di pagamento richiesto per attivazione con carta" });
         }
         if (!stripe) {
           return res.status(500).json({ error: "Stripe non configurato. Contattare l'assistenza." });
@@ -402,7 +399,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // ===== INTEGRAZIONE STRIPE =====
+      // ===== INTEGRAZIONE STRIPE CHECKOUT =====
+      const priceId = process.env.STRIPE_PRICE_STARTER_MONTHLY;
+      if (!priceId) {
+        console.error('[SIGNUP] STRIPE_PRICE_STARTER_MONTHLY not configured');
+        return res.status(500).json({ error: "Configurazione Stripe incompleta. Contattare l'assistenza." });
+      }
+
       // 1. Creare customer Stripe
       const customer = await stripe!.customers.create({
         email: billingEmail,
@@ -414,52 +417,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       console.log(`[SIGNUP] Created Stripe customer: ${customer.id}`);
 
-      // 2. Attaccare payment method al customer
-      await stripe!.paymentMethods.attach(paymentMethodId, {
+      // Salvare customer ID nell'organizzazione
+      await storage.updateOrganization(organization.id, {
+        stripeCustomerId: customer.id,
+      });
+
+      // 2. Creare Checkout Session con trial 30 giorni
+      const appUrl = process.env.APP_URL || 'http://localhost:5173';
+      const checkoutSession = await stripe!.checkout.sessions.create({
         customer: customer.id,
-      });
-      console.log(`[SIGNUP] Attached payment method to customer`);
-
-      // 3. Impostare come metodo di pagamento di default
-      await stripe!.customers.update(customer.id, {
-        invoice_settings: {
-          default_payment_method: paymentMethodId,
-        },
-      });
-
-      // 4. Creare subscription con trial 30 giorni
-      const priceId = process.env.STRIPE_PRICE_STARTER_MONTHLY;
-      if (!priceId) {
-        console.error('[SIGNUP] STRIPE_PRICE_STARTER_MONTHLY not configured');
-        // Continua senza subscription, l'utente potra' scegliere un piano dalla dashboard
-      } else {
-        const subscription = await stripe!.subscriptions.create({
-          customer: customer.id,
-          items: [{ price: priceId }],
+        payment_method_types: ['card'],
+        mode: 'subscription',
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        subscription_data: {
           trial_period_days: 30,
           metadata: {
             organizationId: organization.id,
           },
-        });
-        console.log(`[SIGNUP] Created Stripe subscription: ${subscription.id} (trial until ${new Date(subscription.trial_end! * 1000).toISOString()})`);
+        },
+        success_url: `${appUrl}/signup/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${appUrl}/signup?canceled=true`,
+        metadata: {
+          organizationId: organization.id,
+          adminUserId: admin.id,
+        },
+      });
+      console.log(`[SIGNUP] Created Stripe Checkout Session: ${checkoutSession.id}`);
 
-        // 5. Aggiornare organizzazione con dati Stripe
-        await storage.updateOrganization(organization.id, {
-          stripeCustomerId: customer.id,
-          stripeSubscriptionId: subscription.id,
-          subscriptionStatus: 'trial',
-          subscriptionPlan: 'starter_monthly',
-        });
-      }
+      // Restituire URL del checkout (l'utente verrà reindirizzato)
+      return res.status(201).json({
+        success: true,
+        checkoutUrl: checkoutSession.url,
+        message: "Reindirizzamento a Stripe per il pagamento...",
+      });
 
-      // Salva almeno il customer ID se la subscription non e' stata creata
-      if (!priceId) {
-        await storage.updateOrganization(organization.id, {
-          stripeCustomerId: customer.id,
-        });
-      }
+      // NOTA: L'auto-login e l'attivazione dell'organizzazione avverranno
+      // dopo il completamento del checkout tramite webhook o pagina di successo
 
-      // Auto-login: crea session
+      // Auto-login: crea session (questo codice non verrà eseguito per il flusso con carta)
       (req as any).session.userId = admin.id;
       (req as any).session.userRole = admin.role;
       (req as any).session.organizationId = organization.id;
@@ -480,6 +480,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error during signup:", error);
       res.status(500).json({ error: "Errore durante la registrazione" });
+    }
+  });
+
+  // Verifica checkout session e attiva account
+  app.post("/api/signup/verify-checkout", async (req, res) => {
+    try {
+      const { sessionId } = req.body;
+
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID mancante" });
+      }
+
+      if (!stripe) {
+        return res.status(500).json({ error: "Stripe non configurato" });
+      }
+
+      // Recupera la checkout session da Stripe
+      const session = await stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ['subscription'],
+      });
+
+      if (session.payment_status !== 'paid' && session.status !== 'complete') {
+        return res.status(400).json({ error: "Pagamento non completato" });
+      }
+
+      const organizationId = session.metadata?.organizationId;
+      const adminUserId = session.metadata?.adminUserId;
+
+      if (!organizationId || !adminUserId) {
+        return res.status(400).json({ error: "Dati sessione non validi" });
+      }
+
+      // Recupera organizzazione e utente
+      const organization = await storage.getOrganization(organizationId);
+      const admin = await storage.getUser(adminUserId);
+
+      if (!organization || !admin) {
+        return res.status(404).json({ error: "Account non trovato" });
+      }
+
+      // Aggiorna organizzazione con dati subscription
+      const subscription = session.subscription as any;
+      if (subscription) {
+        await storage.updateOrganization(organizationId, {
+          stripeSubscriptionId: subscription.id,
+          subscriptionStatus: 'trial',
+          subscriptionPlan: 'starter_monthly',
+          isActive: true,
+        });
+      }
+
+      console.log(`[SIGNUP] Checkout completed for organization: ${organization.name}`);
+
+      // Auto-login: crea session
+      (req as any).session.userId = admin.id;
+      (req as any).session.userRole = admin.role;
+      (req as any).session.organizationId = organization.id;
+
+      res.json({
+        success: true,
+        message: "Account attivato con successo!",
+      });
+    } catch (error) {
+      console.error("Error verifying checkout:", error);
+      res.status(500).json({ error: "Errore durante la verifica" });
     }
   });
 

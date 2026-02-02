@@ -103,12 +103,15 @@ export default function SignupForm() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        if (formData.activationType === "card") {
-          // Attivazione immediata - redirect alla dashboard
-          window.location.href = "/";
-        } else {
+        if (formData.activationType === "card" && data.checkoutUrl) {
+          // Redirect a Stripe Checkout per inserire i dati carta
+          window.location.href = data.checkoutUrl;
+        } else if (formData.activationType === "manual") {
           // Richiesta manuale - mostra messaggio di successo
           setSuccess(data.message || "Richiesta inviata! Riceverai le credenziali via email dopo l'approvazione.");
+        } else {
+          // Fallback per attivazione senza checkout URL
+          window.location.href = "/";
         }
       } else {
         setError(data.error || "Errore durante la registrazione. Riprova.");
@@ -430,14 +433,13 @@ export default function SignupForm() {
                         </div>
                       </div>
 
-                      {/* TODO: Stripe Card Element qui */}
-                      <Alert>
-                        <CreditCard className="h-4 w-4" />
-                        <AlertDescription>
-                          L'integrazione con Stripe per l'inserimento della carta e' in fase di implementazione.
-                          Per ora usa "Richiedi Attivazione".
-                        </AlertDescription>
-                      </Alert>
+                      {/* Info pagamento Stripe */}
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg text-sm text-blue-700 dark:text-blue-300">
+                        <p className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4" />
+                          Verrai reindirizzato a Stripe per inserire i dati della carta in modo sicuro.
+                        </p>
+                      </div>
                     </>
                   )}
 
