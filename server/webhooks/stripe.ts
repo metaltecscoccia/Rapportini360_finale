@@ -1,249 +1,131 @@
-import express from 'express';
-import Stripe from 'stripe';
-import { storage } from '../storage';
+import type { Express } from "express";
+import Stripe from "stripe";
+import { storage } from "../storage";
 
-// Initialize Stripe only if API key is configured
-let stripe: Stripe | null = null;
-if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+// Questo è il file che gestirà gli eventi webhook di Stripe.
+// È fondamentale per mantenere lo stato degli abbonamenti sincronizzato con il tuo database.
+
+export async function registerStripeWebhook(app: Express) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2025-12-15.clover',
   });
-}
 
-const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
+  app.post("/webhook/stripe", async (req, res) => {
+    const sig = req.headers["stripe-signature"] as string;
+    let event: Stripe.Event;
 
-export const stripeWebhookRouter = express.Router();
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET as string);
+    } catch (err: any) {
+      console.error(`⚠️  Webhook Error: ${err.message}`);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
 
-/**
- * Stripe Webhook Endpoint
- * IMPORTANT: This must be registered BEFORE express.json() middleware
- * to ensure the raw body is available for signature verification
- */
-stripeWebhookRouter.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  if (!stripe) {
-    console.error('[Stripe Webhook] Stripe not initialized');
-    return res.status(503).send('Stripe not configured');
-  }
-
-  const sig = req.headers['stripe-signature'];
-
-  if (!sig) {
-    console.error('[Stripe Webhook] Missing stripe-signature header');
-    return res.status(400).send('Missing stripe-signature header');
-  }
-
-  let event: Stripe.Event;
-
-  try {
-    // Verify webhook signature
-    event = stripe.webhooks.constructEvent(req.body, sig, WEBHOOK_SECRET);
-  } catch (err: any) {
-    console.error('[Stripe Webhook] Signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  console.log(`[Stripe Webhook] Received event: ${event.type}`);
-
-  try {
     // Handle the event
     switch (event.type) {
-      case 'checkout.session.completed':
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted":
+        const subscription = event.data.object as Stripe.Subscription;
+        console.log(`[Webhook] Subscription ${event.type}:`, subscription.id);
+        // Recupera l'organizzazione basandosi sul customerId o metadata
+        // (Dovrai assicurarti che il customerId sia salvato con l'organizzazione)
+        const organizationId = subscription.metadata.organizationId;
+
+        if (!organizationId) {
+          console.error(`[Webhook Error] Organization ID missing in metadata for subscription ${subscription.id}`);
+          return res.status(400).send(`Webhook Error: Organization ID missing`);
+        }
+
+        let status: "trial" | "active" | "canceled" | "past_due" | "unpaid" | "pending_approval" | "free" = "free";
+        let trialEndDate: Date | null = null;
+        let currentPeriodEnd: Date | null = null;
+
+        if (subscription.status === "trialing") {
+          status = "trial";
+          trialEndDate = subscription.trial_end ? new Date(subscription.trial_end * 1000) : null;
+        } else if (subscription.status === "active") {
+          status = "active";
+          currentPeriodEnd = subscription.current_period_end ? new Date(subscription.current_period_end * 1000) : null;
+        } else if (subscription.status === "canceled") {
+          status = "canceled";
+        } else if (subscription.status === "past_due") {
+          status = "past_due";
+        } else if (subscription.status === "unpaid") {
+          status = "unpaid";
+        }
+
+        // Determina il planType dal Price ID
+        let subscriptionPlan: "free" | "starter_monthly" | "starter_yearly" | "business_monthly" | "business_yearly" | "professional_monthly" | "professional_yearly" = "free";
+        if (subscription.items.data.length > 0) {
+          const priceId = subscription.items.data[0].price.id;
+          // Mappa Price ID a planType (dovrai configurare questi nel tuo .env o in una mappa qui)
+          const planMap: Record<string, typeof subscriptionPlan> = {
+            [process.env.STRIPE_PRICE_STARTER_MONTHLY as string]: "starter_monthly",
+            [process.env.STRIPE_PRICE_STARTER_YEARLY as string]: "starter_yearly",
+            [process.env.STRIPE_PRICE_BUSINESS_MONTHLY as string]: "business_monthly",
+            [process.env.STRIPE_PRICE_BUSINESS_YEARLY as string]: "business_yearly",
+            [process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY as string]: "professional_monthly",
+            [process.env.STRIPE_PRICE_PROFESSIONAL_YEARLY as string]: "professional_yearly",
+            // Aggiungi altri Price ID se necessario
+          };
+          subscriptionPlan = planMap[priceId] || "free";
+        }
+
+        await storage.updateOrganization(organizationId, {
+          stripeCustomerId: subscription.customer as string,
+          stripeSubscriptionId: subscription.id,
+          subscriptionStatus: status,
+          subscriptionPlan: subscriptionPlan,
+          trialEndDate: trialEndDate,
+          currentPeriodEnd: currentPeriodEnd,
+          // Puoi anche aggiornare isActive, maxEmployees in base al piano
+          isActive: status === "active" || status === "trial", // Attiva se in trial o attivo
+        });
+        break;
+      
+      case "invoice.payment_succeeded":
+        const invoice = event.data.object as Stripe.Invoice;
+        console.log(`[Webhook] Invoice payment succeeded:`, invoice.id);
+        // Potresti voler inviare una notifica all'utente, aggiornare crediti, ecc.
+        // Lo stato della sottoscrizione dovrebbe essere già gestito da customer.subscription.updated
+        break;
+      
+      case "invoice.payment_failed":
+        const failedInvoice = event.data.object as Stripe.Invoice;
+        console.log(`[Webhook] Invoice payment failed:`, failedInvoice.id);
+        // Notifica l'utente, disabilita alcune funzionalità o cambia lo stato dell'abbonamento a 'past_due' / 'unpaid'
+        // Lo stato della sottoscrizione dovrebbe essere già gestito da customer.subscription.updated
         break;
 
-      case 'customer.subscription.created':
-        await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
-        break;
+      case "checkout.session.completed":
+        const session = event.data.object as Stripe.Checkout.Session;
+        console.log(`[Webhook] Checkout session completed:`, session.id);
+        // Se usi Checkout Session per creare sottoscrizioni, potresti voler finalizzare qui
+        // Ma se la sottoscrizione è già creata, l'evento customer.subscription.created dovrebbe gestirla.
+        // Puoi usare i metadata qui per collegare la sessione all'organizzazione
+        const completedOrgId = session.metadata?.organizationId;
+        const customerStripeId = session.metadata?.customerStripeId || session.customer;
+        const planTypeFromMetadata = session.metadata?.planType; // Get planType from metadata
 
-      case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
-        break;
+        if (completedOrgId && customerStripeId && planTypeFromMetadata) {
+          // In un flusso normale, la sottoscrizione viene creata dall'evento customer.subscription.created
+          // Questo blocco è più per sicurezza o se il flusso di creazione è diverso.
+          // Assicurati che l'organizzazione sia attiva e il suo stato di abbonamento sia aggiornato.
+          // Potresti voler recuperare la subscription qui se non hai l'ID diretto
+          // await storage.updateOrganization(completedOrgId, { /* updates */ });
+          console.log(`[Webhook] Checkout session for Org ${completedOrgId} completed for customer ${customerStripeId} with plan ${planTypeFromMetadata}`);
+        } else {
+          console.warn(`[Webhook] Checkout session completed event missing organizationId, customerStripeId or planType metadata.`);
+        }
 
-      case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
-        break;
-
-      case 'invoice.payment_succeeded':
-        await handlePaymentSucceeded(event.data.object as Stripe.Invoice);
-        break;
-
-      case 'invoice.payment_failed':
-        await handlePaymentFailed(event.data.object as Stripe.Invoice);
         break;
 
       default:
-        console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
+        console.log(`Unhandled event type ${event.type}`);
     }
 
+    // Return a 200 response to acknowledge receipt of the event
     res.json({ received: true });
-  } catch (error) {
-    console.error('[Stripe Webhook] Error processing event:', error);
-    res.status(500).json({ error: 'Webhook handler failed' });
-  }
-});
-
-/**
- * Handle checkout.session.completed
- * Called when a customer completes the checkout process
- */
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  console.log('[Stripe Webhook] Processing checkout.session.completed', session.id);
-
-  const organizationId = session.metadata?.organizationId;
-  const planType = session.metadata?.planType;
-
-  if (!organizationId) {
-    console.error('[Stripe Webhook] Missing organizationId in metadata');
-    return;
-  }
-
-  // Determine max employees based on plan type
-  const maxEmployees = planType?.startsWith('premium') ? 999 : 5;
-
-  await storage.updateOrganization(organizationId, {
-    stripeCustomerId: session.customer as string,
-    subscriptionStatus: 'active',
-    subscriptionPlan: planType || 'free',
-    subscriptionId: session.subscription as string,
-    maxEmployees,
   });
-
-  console.log(`[Stripe Webhook] Updated organization ${organizationId} to active status`);
-}
-
-/**
- * Handle customer.subscription.created
- * Called when a new subscription is created
- */
-async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  console.log('[Stripe Webhook] Processing customer.subscription.created', subscription.id);
-
-  const customerId = subscription.customer as string;
-  const org = await storage.getOrganizationByStripeCustomerId(customerId);
-
-  if (!org) {
-    console.error('[Stripe Webhook] Organization not found for customer', customerId);
-    return;
-  }
-
-  const periodEnd = (subscription as any).current_period_end;
-  await storage.updateOrganization(org.id, {
-    subscriptionId: subscription.id,
-    subscriptionStatus: mapStripeStatus(subscription.status),
-    subscriptionCurrentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : undefined,
-  });
-
-  console.log(`[Stripe Webhook] Created subscription for organization ${org.id}`);
-}
-
-/**
- * Handle customer.subscription.updated
- * Called when a subscription is updated (e.g., status change, renewal)
- */
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  console.log('[Stripe Webhook] Processing customer.subscription.updated', subscription.id);
-
-  const customerId = subscription.customer as string;
-  const org = await storage.getOrganizationByStripeCustomerId(customerId);
-
-  if (!org) {
-    console.error('[Stripe Webhook] Organization not found for customer', customerId);
-    return;
-  }
-
-  const periodEnd = (subscription as any).current_period_end;
-  await storage.updateOrganization(org.id, {
-    subscriptionStatus: mapStripeStatus(subscription.status),
-    subscriptionCurrentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : undefined,
-  });
-
-  console.log(`[Stripe Webhook] Updated subscription status for organization ${org.id}: ${subscription.status}`);
-}
-
-/**
- * Handle customer.subscription.deleted
- * Called when a subscription is canceled
- */
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  console.log('[Stripe Webhook] Processing customer.subscription.deleted', subscription.id);
-
-  const customerId = subscription.customer as string;
-  const org = await storage.getOrganizationByStripeCustomerId(customerId);
-
-  if (!org) {
-    console.error('[Stripe Webhook] Organization not found for customer', customerId);
-    return;
-  }
-
-  await storage.updateOrganization(org.id, {
-    subscriptionStatus: 'canceled',
-  });
-
-  console.log(`[Stripe Webhook] Subscription canceled for organization ${org.id}`);
-}
-
-/**
- * Handle invoice.payment_succeeded
- * Called when a payment is successful
- */
-async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
-  console.log('[Stripe Webhook] Processing invoice.payment_succeeded', invoice.id);
-
-  const customerId = invoice.customer as string;
-  const org = await storage.getOrganizationByStripeCustomerId(customerId);
-
-  if (!org) {
-    console.error('[Stripe Webhook] Organization not found for customer', customerId);
-    return;
-  }
-
-  // If subscription was past_due, set back to active
-  if (org.subscriptionStatus === 'past_due') {
-    await storage.updateOrganization(org.id, {
-      subscriptionStatus: 'active',
-    });
-    console.log(`[Stripe Webhook] Payment recovered for organization ${org.id}`);
-  }
-}
-
-/**
- * Handle invoice.payment_failed
- * Called when a payment fails
- */
-async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  console.log('[Stripe Webhook] Processing invoice.payment_failed', invoice.id);
-
-  const customerId = invoice.customer as string;
-  const org = await storage.getOrganizationByStripeCustomerId(customerId);
-
-  if (!org) {
-    console.error('[Stripe Webhook] Organization not found for customer', customerId);
-    return;
-  }
-
-  await storage.updateOrganization(org.id, {
-    subscriptionStatus: 'past_due',
-  });
-
-  console.log(`[Stripe Webhook] Payment failed for organization ${org.id}`);
-
-  // TODO: Send email notification to billing contact
-}
-
-/**
- * Map Stripe subscription status to our internal status
- */
-function mapStripeStatus(stripeStatus: string): string {
-  const statusMap: { [key: string]: string } = {
-    'active': 'active',
-    'past_due': 'past_due',
-    'unpaid': 'past_due',
-    'canceled': 'canceled',
-    'incomplete': 'incomplete',
-    'incomplete_expired': 'canceled',
-    'trialing': 'trial',
-    'paused': 'paused',
-  };
-
-  return statusMap[stripeStatus] || stripeStatus;
 }

@@ -4,7 +4,7 @@ import connectPgSimple from "connect-pg-simple";
 import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { stripeWebhookRouter } from "./webhooks/stripe";
+import { registerStripeWebhook } from "./webhooks/stripe";
 
 const app = express();
 
@@ -99,7 +99,9 @@ if (process.env.NODE_ENV === "production") {
 // ============================================
 // IMPORTANT: Stripe webhooks MUST be registered BEFORE express.json()
 // to ensure raw body is available for signature verification
-app.use("/api/stripe", stripeWebhookRouter);
+// The webhook needs raw body for signature verification
+app.use("/webhook/stripe", express.raw({ type: "application/json" }));
+registerStripeWebhook(app);
 
 // ============================================
 // BODY PARSERS

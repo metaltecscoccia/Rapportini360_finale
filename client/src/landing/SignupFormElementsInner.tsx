@@ -1,5 +1,5 @@
-sei import { useState } from "react";
 import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, CheckCircle, CreditCard, Lock, Clock } from "lucide-react";
-import { useFormikContext } from "formik";
 
 interface SignupFormElementsInnerProps {
   formData: any;
@@ -135,7 +134,7 @@ export function SignupFormElementsInner({
     }
   };
 
-  const currentError = externalError || error;
+  const currentError = externalError;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">

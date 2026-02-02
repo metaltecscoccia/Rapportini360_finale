@@ -222,7 +222,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         adminPassword,
         adminFullName,
         billingEmail,
-        activationType = "manual"
+        activationType = "manual",
+        paymentMethodId
       } = req.body;
 
       // Validazione input base
@@ -241,10 +242,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Email non valida" });
       }
 
-      // Validazione password solo per attivazione immediata con carta
+      // Validazione password e paymentMethodId solo per attivazione immediata con carta
       if (activationType === "card") {
         if (!adminPassword || adminPassword.length < 8) {
           return res.status(400).json({ error: "La password deve contenere almeno 8 caratteri" });
+        }
+        if (!paymentMethodId) {
+          return res.status(400).json({ error: "Metodo di pagamento richiesto per attivazione con carta" });
+        }
+        if (!stripe) {
+          return res.status(500).json({ error: "Stripe non configurato. Contattare l'assistenza." });
         }
       }
 
@@ -393,6 +400,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           console.log(`[SIGNUP] Created ${preset.components.length} materials for ${workField}`);
         }
+      }
+
+      // ===== INTEGRAZIONE STRIPE =====
+      // 1. Creare customer Stripe
+      const customer = await stripe!.customers.create({
+        email: billingEmail,
+        name: organizationName,
+        metadata: {
+          organizationId: organization.id,
+          adminUsername: adminUsername
+        }
+      });
+      console.log(`[SIGNUP] Created Stripe customer: ${customer.id}`);
+
+      // 2. Attaccare payment method al customer
+      await stripe!.paymentMethods.attach(paymentMethodId, {
+        customer: customer.id,
+      });
+      console.log(`[SIGNUP] Attached payment method to customer`);
+
+      // 3. Impostare come metodo di pagamento di default
+      await stripe!.customers.update(customer.id, {
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
+      });
+
+      // 4. Creare subscription con trial 30 giorni
+      const priceId = process.env.STRIPE_PRICE_STARTER_MONTHLY;
+      if (!priceId) {
+        console.error('[SIGNUP] STRIPE_PRICE_STARTER_MONTHLY not configured');
+        // Continua senza subscription, l'utente potra' scegliere un piano dalla dashboard
+      } else {
+        const subscription = await stripe!.subscriptions.create({
+          customer: customer.id,
+          items: [{ price: priceId }],
+          trial_period_days: 30,
+          metadata: {
+            organizationId: organization.id,
+          },
+        });
+        console.log(`[SIGNUP] Created Stripe subscription: ${subscription.id} (trial until ${new Date(subscription.trial_end! * 1000).toISOString()})`);
+
+        // 5. Aggiornare organizzazione con dati Stripe
+        await storage.updateOrganization(organization.id, {
+          stripeCustomerId: customer.id,
+          stripeSubscriptionId: subscription.id,
+          subscriptionStatus: 'trial',
+          subscriptionPlan: 'starter_monthly',
+        });
+      }
+
+      // Salva almeno il customer ID se la subscription non e' stata creata
+      if (!priceId) {
+        await storage.updateOrganization(organization.id, {
+          stripeCustomerId: customer.id,
+        });
       }
 
       // Auto-login: crea session
