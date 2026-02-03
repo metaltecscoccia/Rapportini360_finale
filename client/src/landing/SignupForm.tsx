@@ -442,13 +442,13 @@ export default function SignupForm() {
                     />
                     <Label htmlFor="terms" className="text-sm text-muted-foreground leading-tight">
                       Accetto i{" "}
-                      <a href="#" className="text-primary hover:underline">
+                      <Link href="/termini" className="text-primary hover:underline">
                         Termini di Servizio
-                      </a>{" "}
+                      </Link>{" "}
                       e la{" "}
-                      <a href="#" className="text-primary hover:underline">
+                      <Link href="/privacy" className="text-primary hover:underline">
                         Privacy Policy
-                      </a>
+                      </Link>
                     </Label>
                   </div>
 
