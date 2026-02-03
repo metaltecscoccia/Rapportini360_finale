@@ -7,7 +7,6 @@ import {
   BarChart2,
   Users,
   Camera,
-  CloudOff,
   UsersRound,
 } from "lucide-react";
 
@@ -59,12 +58,6 @@ const features = [
     title: "Gestione Squadre",
     description: "Organizza il team in squadre. Il caposquadra compila 1 rapportino per tutti i dipendenti.",
     gradient: "from-teal-500 to-teal-600",
-  },
-  {
-    icon: CloudOff,
-    title: "Funziona Offline",
-    description: "Niente connessione in cantiere? I dati si sincronizzano dopo.",
-    gradient: "from-rose-500 to-rose-600",
   },
 ];
 

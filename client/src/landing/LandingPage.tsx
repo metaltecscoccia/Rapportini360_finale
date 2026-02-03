@@ -3,7 +3,6 @@ import HeroSection from "./components/HeroSection";
 import DemoSection from "./components/DemoSection";
 import FeaturesSection from "./components/FeaturesSection";
 import PricingSection from "./components/PricingSection";
-import TestimonialsSection from "./components/TestimonialsSection";
 import FAQSection from "./components/FAQSection";
 import CTASection from "./components/CTASection";
 import Footer from "./components/Footer";
@@ -19,7 +18,6 @@ export default function LandingPage() {
           <DemoSection />
           <FeaturesSection />
           <PricingSection />
-          <TestimonialsSection />
           <FAQSection />
           <CTASection />
         </main>

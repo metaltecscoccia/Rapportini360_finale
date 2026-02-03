@@ -40,12 +40,6 @@ export default function Navbar() {
               Prezzi
             </button>
             <button
-              onClick={() => scrollToSection("testimonials")}
-              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-            >
-              Testimonianze
-            </button>
-            <button
               onClick={() => scrollToSection("faq")}
               className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
             >
@@ -87,12 +81,6 @@ export default function Navbar() {
                 className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors text-left"
               >
                 Prezzi
-              </button>
-              <button
-                onClick={() => scrollToSection("testimonials")}
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors text-left"
-              >
-                Testimonianze
               </button>
               <button
                 onClick={() => scrollToSection("faq")}

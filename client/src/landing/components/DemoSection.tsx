@@ -47,11 +47,11 @@ const demos = [
     id: "mobile",
     icon: Smartphone,
     title: "App Mobile",
-    description: "I dipendenti compilano i rapportini direttamente dal cantiere. Interfaccia semplice e intuitiva. Funziona anche offline.",
+    description: "I dipendenti compilano i rapportini direttamente dal cantiere. Interfaccia semplice e intuitiva.",
     image: screenshotMobile1,
     secondImage: screenshotMobile2,
     color: "from-green-500 to-emerald-500",
-    features: ["Facile da usare", "Foto allegate", "Offline mode"],
+    features: ["Facile da usare", "Foto allegate", "Sincronizzazione"],
     isMobile: true
   }
 ];
