@@ -74,7 +74,7 @@ export default function DemoSection() {
 
     const interval = setInterval(() => {
       setActiveDemo((prev) => (prev + 1) % demos.length);
-    }, 5000);
+    }, 8000);
 
     return () => clearInterval(interval);
   }, [isPaused, activeDemo]);
@@ -126,7 +126,7 @@ export default function DemoSection() {
 
         {/* Demo Content */}
         <div
-          className="grid lg:grid-cols-2 gap-12 items-center"
+          className="grid lg:grid-cols-2 gap-12 items-center min-h-[500px]"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
