@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,6 +58,7 @@ const demos = [
 
 export default function DemoSection() {
   const [activeDemo, setActiveDemo] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
   const nextDemo = () => {
     setActiveDemo((prev) => (prev + 1) % demos.length);
@@ -66,6 +67,17 @@ export default function DemoSection() {
   const prevDemo = () => {
     setActiveDemo((prev) => (prev - 1 + demos.length) % demos.length);
   };
+
+  // Auto-scroll ogni 5 secondi, pausa su hover
+  useEffect(() => {
+    if (isPaused) return;
+
+    const interval = setInterval(() => {
+      setActiveDemo((prev) => (prev + 1) % demos.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isPaused, activeDemo]);
 
   const currentDemo = demos[activeDemo];
   const Icon = currentDemo.icon;
@@ -113,7 +125,11 @@ export default function DemoSection() {
         </div>
 
         {/* Demo Content */}
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div
+          className="grid lg:grid-cols-2 gap-12 items-center"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+        >
           {/* Left - Info */}
           <motion.div
             key={currentDemo.id + "-info"}
