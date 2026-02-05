@@ -78,6 +78,8 @@ import FuelRefillsManagement from "./FuelRefillsManagement";
 import FuelStatistics from "./FuelStatistics";
 import BillingDashboard from "./BillingDashboard";
 import TeamsManagement from "./TeamsManagement";
+import AgendaSection from "./AgendaSection";
+import AgendaWidget from "./AgendaWidget";
 import { AppSidebar, sidebarItems } from "./AppSidebar";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -1910,6 +1912,7 @@ export default function AdminDashboard({
       "configuration": { mainSection: "rapportini", tab: "work-types" },
       "attendance": { mainSection: "rapportini", tab: "attendance" },
       "absence-stats": { mainSection: "rapportini", tab: "absence-stats" },
+      "agenda": { mainSection: "agenda", tab: "agenda" },
       "fuel": { mainSection: "rifornimenti", tab: "refills" },
       "billing": { mainSection: "billing", tab: "billing" },
     };
@@ -2006,6 +2009,8 @@ export default function AdminDashboard({
         <BillingDashboard />
       ) : activeSection === "teams" ? (
         <TeamsManagement />
+      ) : activeSection === "agenda" ? (
+        <AgendaSection />
       ) : (
       <>
       {/* Tabs - navigation now handled by sidebar */}
@@ -2062,6 +2067,9 @@ export default function AdminDashboard({
             </div>
           </CardContent>
         </Card>
+
+        {/* Agenda Widget */}
+        <AgendaWidget onViewAll={() => setActiveSection("agenda")} />
 
       </div>
 

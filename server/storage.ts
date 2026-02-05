@@ -17,6 +17,7 @@ import {
   teams,
   teamMembers,
   teamSubmissions,
+  agendaItems,
   type User,
   type InsertUser,
   type Client,
@@ -63,6 +64,9 @@ import {
   type InsertTeamSubmission,
   type ReportAuditLog,
   reportAuditLog,
+  type AgendaItem,
+  type InsertAgendaItem,
+  type UpdateAgendaItem,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, inArray, ne, sql } from "drizzle-orm";
@@ -424,6 +428,13 @@ export interface IStorage {
     summary?: string;
   }): Promise<ReportAuditLog>;
   getAuditLogByReportId(reportId: string, organizationId: string): Promise<(ReportAuditLog & { changedByName: string })[]>;
+
+  // Agenda (Eventi, Scadenze, Promemoria)
+  getAgendaItems(organizationId: string, startDate?: string, endDate?: string, eventType?: string): Promise<AgendaItem[]>;
+  getAgendaItem(id: string, organizationId: string): Promise<AgendaItem | undefined>;
+  createAgendaItem(item: InsertAgendaItem, organizationId: string, createdBy: string): Promise<AgendaItem>;
+  updateAgendaItem(id: string, updates: UpdateAgendaItem, organizationId: string): Promise<AgendaItem | undefined>;
+  deleteAgendaItem(id: string, organizationId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2738,6 +2749,134 @@ export class DatabaseStorage implements IStorage {
       ))
       .orderBy(desc(reportAuditLog.createdAt));
     return entries;
+  }
+
+  // ============================================
+  // AGENDA (EVENTI, SCADENZE, PROMEMORIA)
+  // ============================================
+
+  async getAgendaItems(
+    organizationId: string,
+    startDate?: string,
+    endDate?: string,
+    eventType?: string
+  ): Promise<AgendaItem[]> {
+    await this.ensureInitialized();
+
+    let items = await db.select()
+      .from(agendaItems)
+      .where(eq(agendaItems.organizationId, organizationId))
+      .orderBy(agendaItems.eventDate);
+
+    // Filter by date range
+    if (startDate) {
+      items = items.filter(item => item.eventDate >= startDate);
+    }
+    if (endDate) {
+      items = items.filter(item => item.eventDate <= endDate);
+    }
+
+    // Filter by event type
+    if (eventType) {
+      items = items.filter(item => item.eventType === eventType);
+    }
+
+    // Include recurring events that fall within the date range
+    if (startDate && endDate) {
+      const recurringItems = items.filter(item => item.recurrence);
+      const nonRecurringItems = items.filter(item => !item.recurrence);
+
+      const expandedRecurring: AgendaItem[] = [];
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      for (const item of recurringItems) {
+        const itemDate = new Date(item.eventDate);
+
+        // Generate occurrences within the date range
+        let currentDate = new Date(itemDate);
+        while (currentDate <= end) {
+          if (currentDate >= start) {
+            expandedRecurring.push({
+              ...item,
+              eventDate: currentDate.toISOString().split('T')[0],
+            });
+          }
+
+          // Advance to next occurrence based on recurrence type
+          switch (item.recurrence) {
+            case 'daily':
+              currentDate.setDate(currentDate.getDate() + 1);
+              break;
+            case 'weekly':
+              currentDate.setDate(currentDate.getDate() + 7);
+              break;
+            case 'monthly':
+              currentDate.setMonth(currentDate.getMonth() + 1);
+              break;
+            case 'yearly':
+              currentDate.setFullYear(currentDate.getFullYear() + 1);
+              break;
+            default:
+              currentDate = new Date(end.getTime() + 1); // Exit loop
+          }
+        }
+      }
+
+      // Combine non-recurring and expanded recurring, sort by date
+      items = [...nonRecurringItems, ...expandedRecurring].sort((a, b) =>
+        a.eventDate.localeCompare(b.eventDate)
+      );
+    }
+
+    return items;
+  }
+
+  async getAgendaItem(id: string, organizationId: string): Promise<AgendaItem | undefined> {
+    await this.ensureInitialized();
+    const [item] = await db.select()
+      .from(agendaItems)
+      .where(and(
+        eq(agendaItems.id, id),
+        eq(agendaItems.organizationId, organizationId)
+      ));
+    return item || undefined;
+  }
+
+  async createAgendaItem(item: InsertAgendaItem, organizationId: string, createdBy: string): Promise<AgendaItem> {
+    await this.ensureInitialized();
+    const [created] = await db.insert(agendaItems).values({
+      ...item,
+      organizationId,
+      createdBy,
+    }).returning();
+    return created;
+  }
+
+  async updateAgendaItem(id: string, updates: UpdateAgendaItem, organizationId: string): Promise<AgendaItem | undefined> {
+    await this.ensureInitialized();
+    const [updated] = await db.update(agendaItems)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(agendaItems.id, id),
+        eq(agendaItems.organizationId, organizationId)
+      ))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteAgendaItem(id: string, organizationId: string): Promise<boolean> {
+    await this.ensureInitialized();
+    const result = await db.delete(agendaItems).where(
+      and(
+        eq(agendaItems.id, id),
+        eq(agendaItems.organizationId, organizationId)
+      )
+    );
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 

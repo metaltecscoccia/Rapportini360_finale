@@ -261,6 +261,24 @@ export const fuelTankLoads = pgTable("fuel_tank_loads", {
   orgDateIdx: index("fuel_tank_loads_org_date_idx").on(table.organizationId, table.loadDate),
 }));
 
+// Agenda items table (Eventi, scadenze, promemoria)
+export const agendaItems = pgTable("agenda_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  eventDate: date("event_date").notNull(),
+  eventTime: text("event_time"), // HH:MM format, NULL per eventi giornata intera
+  eventType: text("event_type").notNull(), // 'deadline', 'appointment', 'reminder'
+  recurrence: text("recurrence"), // NULL, 'daily', 'weekly', 'monthly', 'yearly'
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+}, (table) => ({
+  orgDateIdx: index("agenda_items_org_date_idx").on(table.organizationId, table.eventDate),
+  orgTypeIdx: index("agenda_items_org_type_idx").on(table.organizationId, table.eventType),
+}));
+
 // Report audit log table (Storico modifiche rapportini)
 export const reportAuditLog = pgTable("report_audit_log", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -494,6 +512,23 @@ export const updateFuelTankLoadSchema = insertFuelTankLoadSchema.partial().exten
   id: z.string().optional()
 });
 
+// Agenda items insert schema
+export const insertAgendaItemSchema = createInsertSchema(agendaItems).omit({
+  id: true,
+  organizationId: true, // Will be set automatically from session
+  createdBy: true, // Will be set automatically from session
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  eventType: z.enum(['deadline', 'appointment', 'reminder']),
+  recurrence: z.enum(['daily', 'weekly', 'monthly', 'yearly']).nullable().optional(),
+  eventTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato ora non valido (HH:MM)").nullable().optional(),
+});
+
+export const updateAgendaItemSchema = insertAgendaItemSchema.partial().extend({
+  id: z.string().optional()
+});
+
 // Types
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type Organization = typeof organizations.$inferSelect;
@@ -562,6 +597,10 @@ export type UpdateOperation = z.infer<typeof updateOperationSchema>;
 
 export type ReportAuditLog = typeof reportAuditLog.$inferSelect;
 
+export type InsertAgendaItem = z.infer<typeof insertAgendaItemSchema>;
+export type AgendaItem = typeof agendaItems.$inferSelect;
+export type UpdateAgendaItem = z.infer<typeof updateAgendaItemSchema>;
+
 // Status enum
 export const StatusEnum = z.enum(["In attesa", "Approvato"]);
 export type Status = z.infer<typeof StatusEnum>;
@@ -577,3 +616,11 @@ export type CreatedBy = z.infer<typeof CreatedByEnum>;
 // User role enum
 export const UserRoleEnum = z.enum(["employee", "admin", "superadmin", "teamleader"]);
 export type UserRole = z.infer<typeof UserRoleEnum>;
+
+// Event type enum (Agenda)
+export const EventTypeEnum = z.enum(["deadline", "appointment", "reminder"]);
+export type EventType = z.infer<typeof EventTypeEnum>;
+
+// Recurrence enum (Agenda)
+export const RecurrenceEnum = z.enum(["daily", "weekly", "monthly", "yearly"]);
+export type Recurrence = z.infer<typeof RecurrenceEnum>;

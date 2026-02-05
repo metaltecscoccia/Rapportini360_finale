@@ -38,6 +38,8 @@ import {
   insertFuelTankLoadSchema,
   updateFuelTankLoadSchema,
   insertOrganizationSchema,
+  insertAgendaItemSchema,
+  updateAgendaItemSchema,
 } from "@shared/schema";
 import { validatePassword, verifyPassword, hashPassword } from "./auth";
 
@@ -4195,6 +4197,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching team members status:", error);
       res.status(500).json({ error: "Failed to fetch team members status" });
+    }
+  });
+
+  // =====================================================
+  // AGENDA (EVENTI, SCADENZE, PROMEMORIA) ROUTES
+  // =====================================================
+
+  // Get all agenda items for organization (with optional filters)
+  app.get("/api/agenda", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const { startDate, endDate, eventType } = req.query;
+
+      const items = await storage.getAgendaItems(
+        organizationId,
+        startDate as string | undefined,
+        endDate as string | undefined,
+        eventType as string | undefined
+      );
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching agenda items:", error);
+      res.status(500).json({ error: "Failed to fetch agenda items" });
+    }
+  });
+
+  // Get upcoming agenda items (next 7 days) - for widget
+  app.get("/api/agenda/upcoming", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const today = new Date().toISOString().split("T")[0];
+      const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+      const items = await storage.getAgendaItems(organizationId, today, nextWeek);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching upcoming agenda items:", error);
+      res.status(500).json({ error: "Failed to fetch upcoming agenda items" });
+    }
+  });
+
+  // Get single agenda item
+  app.get("/api/agenda/:id", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const item = await storage.getAgendaItem(req.params.id, organizationId);
+      if (!item) {
+        return res.status(404).json({ error: "Agenda item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error fetching agenda item:", error);
+      res.status(500).json({ error: "Failed to fetch agenda item" });
+    }
+  });
+
+  // Create agenda item
+  app.post("/api/agenda", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const userId = (req.session as any).userId;
+
+      const validatedData = insertAgendaItemSchema.parse(req.body);
+      const item = await storage.createAgendaItem(validatedData, organizationId, userId);
+      res.status(201).json(item);
+    } catch (error: any) {
+      console.error("Error creating agenda item:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Dati non validi", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create agenda item" });
+    }
+  });
+
+  // Update agenda item
+  app.put("/api/agenda/:id", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+
+      const validatedData = updateAgendaItemSchema.parse(req.body);
+      const item = await storage.updateAgendaItem(req.params.id, validatedData, organizationId);
+      if (!item) {
+        return res.status(404).json({ error: "Agenda item not found" });
+      }
+      res.json(item);
+    } catch (error: any) {
+      console.error("Error updating agenda item:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Dati non validi", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update agenda item" });
+    }
+  });
+
+  // Delete agenda item
+  app.delete("/api/agenda/:id", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const success = await storage.deleteAgendaItem(req.params.id, organizationId);
+      if (!success) {
+        return res.status(404).json({ error: "Agenda item not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting agenda item:", error);
+      res.status(500).json({ error: "Failed to delete agenda item" });
     }
   });
 
