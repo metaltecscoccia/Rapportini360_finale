@@ -147,7 +147,7 @@ export default function AgendaSection() {
       const response = await apiRequest("POST", "/api/agenda", {
         ...data,
         eventTime: data.eventTime || null,
-        recurrence: data.recurrence || null,
+        recurrence: data.recurrence && data.recurrence !== "none" ? data.recurrence : null,
       });
       return response.json();
     },
@@ -166,7 +166,7 @@ export default function AgendaSection() {
       const response = await apiRequest("PUT", `/api/agenda/${id}`, {
         ...data,
         eventTime: data.eventTime || null,
-        recurrence: data.recurrence || null,
+        recurrence: data.recurrence && data.recurrence !== "none" ? data.recurrence : null,
       });
       return response.json();
     },
