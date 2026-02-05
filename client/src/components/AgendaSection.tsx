@@ -144,11 +144,19 @@ export default function AgendaSection() {
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await apiRequest("POST", "/api/agenda", {
-        ...data,
+      const payload = {
+        title: data.title,
+        description: data.description || null,
+        eventDate: data.eventDate,
         eventTime: data.eventTime || null,
+        eventType: data.eventType,
         recurrence: data.recurrence && data.recurrence !== "none" ? data.recurrence : null,
-      });
+      };
+      const response = await apiRequest("POST", "/api/agenda", payload);
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Errore nella creazione");
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -156,18 +164,26 @@ export default function AgendaSection() {
       toast({ title: "Evento creato con successo" });
       closeForm();
     },
-    onError: () => {
-      toast({ title: "Errore nella creazione", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: error.message || "Errore nella creazione", variant: "destructive" });
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: FormData }) => {
-      const response = await apiRequest("PUT", `/api/agenda/${id}`, {
-        ...data,
+      const payload = {
+        title: data.title,
+        description: data.description || null,
+        eventDate: data.eventDate,
         eventTime: data.eventTime || null,
+        eventType: data.eventType,
         recurrence: data.recurrence && data.recurrence !== "none" ? data.recurrence : null,
-      });
+      };
+      const response = await apiRequest("PUT", `/api/agenda/${id}`, payload);
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Errore nell'aggiornamento");
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -175,8 +191,8 @@ export default function AgendaSection() {
       toast({ title: "Evento aggiornato con successo" });
       closeForm();
     },
-    onError: () => {
-      toast({ title: "Errore nell'aggiornamento", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: error.message || "Errore nell'aggiornamento", variant: "destructive" });
     },
   });
 

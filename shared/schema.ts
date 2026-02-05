@@ -521,8 +521,9 @@ export const insertAgendaItemSchema = createInsertSchema(agendaItems).omit({
   updatedAt: true,
 }).extend({
   eventType: z.enum(['deadline', 'appointment', 'reminder']),
-  recurrence: z.enum(['daily', 'weekly', 'monthly', 'yearly']).nullable().optional(),
-  eventTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato ora non valido (HH:MM)").nullable().optional(),
+  recurrence: z.union([z.enum(['daily', 'weekly', 'monthly', 'yearly']), z.null()]).optional(),
+  eventTime: z.union([z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato ora non valido (HH:MM)"), z.null()]).optional(),
+  description: z.union([z.string(), z.null()]).optional(),
 });
 
 export const updateAgendaItemSchema = insertAgendaItemSchema.partial().extend({
