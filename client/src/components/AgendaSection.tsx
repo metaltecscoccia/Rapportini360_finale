@@ -161,6 +161,7 @@ export default function AgendaSection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/agenda"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/agenda/upcoming"] });
       toast({ title: "Evento creato con successo" });
       closeForm();
     },
@@ -188,6 +189,7 @@ export default function AgendaSection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/agenda"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/agenda/upcoming"] });
       toast({ title: "Evento aggiornato con successo" });
       closeForm();
     },
@@ -202,6 +204,7 @@ export default function AgendaSection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/agenda"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/agenda/upcoming"] });
       toast({ title: "Evento eliminato" });
       setIsDeleteOpen(false);
       setDeletingItem(null);

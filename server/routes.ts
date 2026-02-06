@@ -74,10 +74,10 @@ if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('s
 // RATE LIMITING - Protezione contro brute force
 // ============================================
 
-// Rate limiter generale per API: max 100 richieste per 15 minuti
+// Rate limiter generale per API: max 500 richieste per 15 minuti
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   message: { error: "Troppi richieste. Riprova più tardi." },
   standardHeaders: true,
   legacyHeaders: false,
