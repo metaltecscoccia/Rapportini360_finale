@@ -225,6 +225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         adminFullName,
         billingEmail,
         activationType = "manual",
+        selectedPlan,
         paymentMethodId
       } = req.body;
 
@@ -345,24 +346,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // ===== FLUSSO ATTIVAZIONE IMMEDIATA CON CARTA =====
-      // Calcola data di fine trial (30 giorni)
-      const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + 30);
+      if (!stripe) {
+        return res.status(503).json({ error: "Pagamenti non configurati. Contatta l'assistenza." });
+      }
 
-      // Crea organizzazione con trial 30 giorni (attiva)
+      // Mappa dei price ID da variabili d'ambiente
+      const signupPriceEnvMap: Record<string, string | undefined> = {
+        'starter_monthly': process.env.STRIPE_PRICE_STARTER_MONTHLY,
+        'starter_yearly': process.env.STRIPE_PRICE_STARTER_YEARLY,
+        'business_monthly': process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+        'business_yearly': process.env.STRIPE_PRICE_BUSINESS_YEARLY,
+        'professional_monthly': process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY,
+        'professional_yearly': process.env.STRIPE_PRICE_PROFESSIONAL_YEARLY,
+      };
+
+      const planType = selectedPlan || 'starter_monthly';
+      const priceId = signupPriceEnvMap[planType];
+
+      if (!priceId) {
+        return res.status(400).json({ error: "Piano selezionato non valido." });
+      }
+
+      // Crea organizzazione come INATTIVA (in attesa di pagamento)
       const organization = await storage.createOrganization({
         name: organizationName,
-        subscriptionStatus: 'trial',
+        subscriptionStatus: 'pending_payment',
         subscriptionPlan: 'free',
-        trialEndDate,
         billingEmail,
         vatNumber,
         phone,
         maxEmployees: 5,
-        isActive: true,
+        isActive: false,
       });
 
-      console.log(`[SIGNUP] Created organization: ${organization.name} (ID: ${organization.id})`);
+      console.log(`[SIGNUP] Created organization (pending payment): ${organization.name} (ID: ${organization.id})`);
 
       // Crea admin user
       const admin = await storage.createUser(
@@ -398,27 +415,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // ===== ATTIVAZIONE TRIAL IMMEDIATA (senza carta) =====
-      // La carta verrà richiesta alla fine del trial dalla dashboard
-      console.log(`[SIGNUP] Trial attivato per organizzazione: ${organization.name}`);
+      // Crea Stripe customer
+      const customer = await stripe.customers.create({
+        email: billingEmail,
+        name: organizationName,
+        metadata: { organizationId: organization.id },
+      });
 
-      // Auto-login: crea session
-      (req as any).session.userId = admin.id;
-      (req as any).session.userRole = admin.role;
-      (req as any).session.organizationId = organization.id;
+      await storage.updateOrganization(organization.id, { stripeCustomerId: customer.id });
+      console.log(`[SIGNUP] Created Stripe customer: ${customer.id}`);
 
-      // Return success response
-      const { password: _, ...adminWithoutPassword } = admin;
+      // Crea Stripe Checkout Session con trial 30 giorni
+      const checkoutSession = await stripe.checkout.sessions.create({
+        customer: customer.id,
+        mode: 'subscription',
+        line_items: [{ price: priceId, quantity: 1 }],
+        subscription_data: {
+          trial_period_days: 30,
+        },
+        success_url: `${process.env.APP_URL || 'http://localhost:5173'}/signup/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.APP_URL || 'http://localhost:5173'}/signup?canceled=true`,
+        metadata: {
+          organizationId: organization.id,
+          adminUserId: admin.id,
+          planType,
+        },
+      });
+
+      console.log(`[SIGNUP] Created Stripe checkout session: ${checkoutSession.id}`);
+
+      // Return checkout URL per redirect
       res.status(201).json({
         success: true,
-        message: "Registrazione completata con successo! Trial di 30 giorni attivato.",
-        organization: {
-          id: organization.id,
-          name: organization.name,
-          subscriptionStatus: organization.subscriptionStatus,
-          trialEndDate: organization.trialEndDate,
-        },
-        user: adminWithoutPassword,
+        checkoutUrl: checkoutSession.url,
       });
     } catch (error) {
       console.error("Error during signup:", error);
@@ -463,18 +492,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Account non trovato" });
       }
 
+      // Calcola data fine trial (30 giorni)
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 30);
+
+      // Recupera planType dalla metadata
+      const planType = session.metadata?.planType || 'starter_monthly';
+
       // Aggiorna organizzazione con dati subscription
       const subscription = session.subscription as any;
+      const updateData: any = {
+        subscriptionStatus: 'trial',
+        subscriptionPlan: planType,
+        isActive: true,
+        trialEndDate,
+      };
+
       if (subscription) {
-        await storage.updateOrganization(organizationId, {
-          stripeSubscriptionId: subscription.id,
-          subscriptionStatus: 'trial',
-          subscriptionPlan: 'starter_monthly',
-          isActive: true,
-        });
+        updateData.stripeSubscriptionId = subscription.id;
       }
 
-      console.log(`[SIGNUP] Checkout completed for organization: ${organization.name}`);
+      await storage.updateOrganization(organizationId, updateData);
+
+      console.log(`[SIGNUP] Checkout completed for organization: ${organization.name} - Plan: ${planType}`);
 
       // Auto-login: crea session
       (req as any).session.userId = admin.id;

@@ -31,7 +31,9 @@ export default function SignupForm() {
     adminPassword: "",
     confirmPassword: "",
     activationType: "manual" as "card" | "manual",
+    selectedPlan: "starter_monthly" as string,
   });
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -97,16 +99,18 @@ export default function SignupForm() {
           adminPassword: formData.activationType === "card" ? formData.adminPassword : undefined,
           billingEmail: formData.billingEmail,
           activationType: formData.activationType,
+          selectedPlan: formData.activationType === "card" ? formData.selectedPlan : undefined,
         }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        if (formData.activationType === "card") {
-          // Attivazione immediata - redirect alla dashboard
-          window.location.href = "/";
-        } else {
+        if (formData.activationType === "card" && data.checkoutUrl) {
+          // Redirect a Stripe Checkout
+          window.location.href = data.checkoutUrl;
+          return;
+        } else if (formData.activationType !== "card") {
           // Richiesta manuale - mostra messaggio di successo
           setSuccess(data.message || "Richiesta inviata! Riceverai le credenziali via email dopo l'approvazione.");
         }
@@ -391,6 +395,74 @@ export default function SignupForm() {
                       </div>
                     </RadioGroup>
                   </div>
+
+                  {/* Selezione Piano - solo per attivazione con carta */}
+                  {formData.activationType === "card" && (
+                    <div className="space-y-3">
+                      <Label>Scegli il tuo Piano *</Label>
+                      <div className="flex items-center justify-center gap-2 p-1 bg-muted rounded-lg">
+                        <button
+                          type="button"
+                          className={`flex-1 text-sm py-1.5 px-3 rounded-md transition-colors ${billingCycle === "monthly" ? "bg-background shadow font-medium" : "text-muted-foreground"}`}
+                          onClick={() => {
+                            setBillingCycle("monthly");
+                            setFormData(prev => ({ ...prev, selectedPlan: prev.selectedPlan.replace("_yearly", "_monthly") }));
+                          }}
+                        >
+                          Mensile
+                        </button>
+                        <button
+                          type="button"
+                          className={`flex-1 text-sm py-1.5 px-3 rounded-md transition-colors ${billingCycle === "yearly" ? "bg-background shadow font-medium" : "text-muted-foreground"}`}
+                          onClick={() => {
+                            setBillingCycle("yearly");
+                            setFormData(prev => ({ ...prev, selectedPlan: prev.selectedPlan.replace("_monthly", "_yearly") }));
+                          }}
+                        >
+                          Annuale <span className="text-green-600 text-xs font-medium">-17%</span>
+                        </button>
+                      </div>
+                      <RadioGroup
+                        value={formData.selectedPlan}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, selectedPlan: value }))}
+                        className="space-y-2"
+                      >
+                        <div className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer ${formData.selectedPlan.startsWith("starter") ? "border-primary bg-primary/5" : "border-muted"}`}>
+                          <div className="flex items-center gap-3">
+                            <RadioGroupItem value={`starter_${billingCycle}`} id="plan-starter" />
+                            <div>
+                              <Label htmlFor="plan-starter" className="font-medium cursor-pointer">Starter</Label>
+                              <p className="text-xs text-muted-foreground">5 dipendenti</p>
+                            </div>
+                          </div>
+                          <span className="font-semibold">{billingCycle === "monthly" ? "9,90" : "99"} &euro;/{billingCycle === "monthly" ? "mese" : "anno"}</span>
+                        </div>
+                        <div className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer ${formData.selectedPlan.startsWith("business") ? "border-primary bg-primary/5" : "border-muted"}`}>
+                          <div className="flex items-center gap-3">
+                            <RadioGroupItem value={`business_${billingCycle}`} id="plan-business" />
+                            <div>
+                              <Label htmlFor="plan-business" className="font-medium cursor-pointer">Business</Label>
+                              <p className="text-xs text-muted-foreground">15 dipendenti</p>
+                            </div>
+                          </div>
+                          <span className="font-semibold">{billingCycle === "monthly" ? "19,90" : "199"} &euro;/{billingCycle === "monthly" ? "mese" : "anno"}</span>
+                        </div>
+                        <div className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer ${formData.selectedPlan.startsWith("professional") ? "border-primary bg-primary/5" : "border-muted"}`}>
+                          <div className="flex items-center gap-3">
+                            <RadioGroupItem value={`professional_${billingCycle}`} id="plan-professional" />
+                            <div>
+                              <Label htmlFor="plan-professional" className="font-medium cursor-pointer">Professional</Label>
+                              <p className="text-xs text-muted-foreground">30 dipendenti</p>
+                            </div>
+                          </div>
+                          <span className="font-semibold">{billingCycle === "monthly" ? "49,90" : "499"} &euro;/{billingCycle === "monthly" ? "mese" : "anno"}</span>
+                        </div>
+                      </RadioGroup>
+                      <p className="text-xs text-muted-foreground text-center">
+                        30 giorni di prova gratuita. Il primo addebito sara dopo il trial.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Password - solo per attivazione con carta */}
                   {formData.activationType === "card" && (
