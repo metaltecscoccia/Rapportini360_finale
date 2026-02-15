@@ -80,20 +80,25 @@ export default function ChiSiamoPage() {
           <div className="prose prose-slate dark:prose-invert max-w-none">
             <h2>La Nostra Storia</h2>
             <p>
-              Metaltec Scoccia S.r.l. nasce ad Aielli, nel cuore dell'Abruzzo, con la visione di
-              portare l'innovazione digitale nelle piccole e medie imprese italiane.
+              Metaltec Scoccia S.r.l. nasce ad Aielli, nel cuore dell'Abruzzo, come azienda operativa
+              nel settore delle costruzioni metalliche e dell'impiantistica industriale.
             </p>
             <p>
-              Rapportini360 e il frutto della nostra esperienza diretta nel settore produttivo:
-              abbiamo sviluppato una soluzione che risponde alle reali esigenze delle aziende
-              che gestiscono squadre di lavoro sul campo.
+              Rapportini360 e nato come software interno, sviluppato per rispondere alle nostre
+              stesse necessita: tracciare le ore lavorate dai dipendenti sulle diverse commesse,
+              gestire le presenze e avere un quadro chiaro dei costi e delle attivita quotidiane.
+            </p>
+            <p>
+              Con il tempo ci siamo resi conto che questa esigenza non era solo nostra: qualsiasi
+              azienda che gestisce commesse, dipendenti e squadre di lavoro ha bisogno di uno
+              strumento semplice e affidabile per tenere traccia delle ore lavorate sulle relative
+              commesse. Cosi abbiamo deciso di rendere Rapportini360 disponibile a tutti.
             </p>
 
             <h2>Perche Rapportini360</h2>
             <p>
-              La nostra applicazione nasce dall'esigenza di eliminare la carta, ridurre gli
-              errori e avere sempre sotto controllo l'attivita dei dipendenti. Con Rapportini360,
-              le aziende possono:
+              La nostra applicazione nasce dall'esperienza reale sul campo. Sappiamo cosa serve
+              perche lo usiamo ogni giorno. Con Rapportini360, le aziende possono:
             </p>
             <ul>
               <li>Raccogliere rapportini giornalieri in tempo reale</li>

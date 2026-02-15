@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -20,20 +20,29 @@ export default function SignupForm() {
   const [success, setSuccess] = useState<string | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
-  const [formData, setFormData] = useState({
-    organizationName: "",
-    workField: "",
-    vatNumber: "",
-    phone: "",
-    adminFullName: "",
-    adminUsername: "",
-    billingEmail: "",
-    adminPassword: "",
-    confirmPassword: "",
-    activationType: "manual" as "card" | "manual",
-    selectedPlan: "starter_monthly" as string,
+  // Leggi piano dalla URL (?plan=business_monthly)
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlPlan = urlParams.get("plan");
+
+  const [formData, setFormData] = useState(() => {
+    const initialPlan = urlPlan || "starter_monthly";
+    return {
+      organizationName: "",
+      workField: "",
+      vatNumber: "",
+      phone: "",
+      adminFullName: "",
+      adminUsername: "",
+      billingEmail: "",
+      adminPassword: "",
+      confirmPassword: "",
+      activationType: (urlPlan ? "card" : "manual") as "card" | "manual",
+      selectedPlan: initialPlan,
+    };
   });
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">(
+    urlPlan?.includes("yearly") ? "yearly" : "monthly"
+  );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

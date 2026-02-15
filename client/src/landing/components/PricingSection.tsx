@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 const plans = [
   {
     name: "Starter",
+    planKey: "starter",
     priceMonthly: "9.90",
     priceYearly: "99",
     description: "Per ditte individuali e piccoli team.",
@@ -17,6 +18,7 @@ const plans = [
   },
   {
     name: "Business",
+    planKey: "business",
     priceMonthly: "19.90",
     priceYearly: "199",
     description: "La soluzione completa per PMI in crescita.",
@@ -26,6 +28,7 @@ const plans = [
   },
   {
     name: "Professional",
+    planKey: "professional",
     priceMonthly: "49.90",
     priceYearly: "499",
     description: "Per aziende che necessitano di controllo totale.",
@@ -34,6 +37,7 @@ const plans = [
   },
   {
     name: "Custom",
+    planKey: "custom",
     priceMonthly: "Su misura",
     priceYearly: "Su misura",
     description: "Configurazione enterprise personalizzata.",
@@ -178,17 +182,32 @@ export default function PricingSection() {
                 ))}
               </div>
 
-              <Button
-                variant={plan.highlighted ? "default" : "outline"}
-                className={cn(
-                  "w-full h-14 rounded-2xl font-black transition-all text-base uppercase tracking-wider",
-                  plan.highlighted 
-                    ? "bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20" 
-                    : "border-white/10 hover:bg-white/10"
-                )}
-              >
-                {plan.cta || "Scegli il piano"}
-              </Button>
+              {plan.planKey === "custom" ? (
+                <Button
+                  variant="outline"
+                  className="w-full h-14 rounded-2xl font-black transition-all text-base uppercase tracking-wider border-white/10 hover:bg-white/10"
+                  onClick={() => {
+                    const el = document.getElementById("contatti");
+                    if (el) el.scrollIntoView({ behavior: "smooth" });
+                  }}
+                >
+                  Contattaci
+                </Button>
+              ) : (
+                <Link href={`/signup?plan=${plan.planKey}_${isYearly ? "yearly" : "monthly"}`}>
+                  <Button
+                    variant={plan.highlighted ? "default" : "outline"}
+                    className={cn(
+                      "w-full h-14 rounded-2xl font-black transition-all text-base uppercase tracking-wider",
+                      plan.highlighted
+                        ? "bg-primary hover:bg-primary/80 shadow-lg shadow-primary/20"
+                        : "border-white/10 hover:bg-white/10"
+                    )}
+                  >
+                    Scegli il piano
+                  </Button>
+                </Link>
+              )}
             </motion.div>
           ))}
         </div>

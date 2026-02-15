@@ -21,24 +21,13 @@ export default function CTASection() {
             Inizia oggi con 30 giorni di prova gratuita. Nessuna carta di credito
             richiesta.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex justify-center">
             <Link href="/signup">
               <Button size="lg" variant="secondary" className="text-lg px-8">
                 Inizia Gratis
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-lg px-8 bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10"
-              onClick={() => {
-                const el = document.getElementById("pricing");
-                if (el) el.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              Vedi i Prezzi
-            </Button>
           </div>
         </motion.div>
       </div>
