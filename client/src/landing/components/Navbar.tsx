@@ -45,6 +45,12 @@ export default function Navbar() {
             >
               FAQ
             </button>
+            <button
+              onClick={() => scrollToSection("contatti")}
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              Contatti
+            </button>
           </div>
 
           {/* Desktop CTA */}
@@ -87,6 +93,12 @@ export default function Navbar() {
                 className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors text-left"
               >
                 FAQ
+              </button>
+              <button
+                onClick={() => scrollToSection("contatti")}
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors text-left"
+              >
+                Contatti
               </button>
               <div className="flex flex-col gap-2 pt-4 border-t">
                 <Link href="/">

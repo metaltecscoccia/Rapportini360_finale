@@ -5,6 +5,7 @@ import FeaturesSection from "./components/FeaturesSection";
 import PricingSection from "./components/PricingSection";
 import FAQSection from "./components/FAQSection";
 import CTASection from "./components/CTASection";
+import ContactFormSection from "./components/ContactFormSection";
 import Footer from "./components/Footer";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
@@ -19,6 +20,7 @@ export default function LandingPage() {
           <FeaturesSection />
           <PricingSection />
           <FAQSection />
+          <ContactFormSection />
           <CTASection />
         </main>
         <Footer />

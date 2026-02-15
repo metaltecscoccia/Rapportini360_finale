@@ -243,6 +243,61 @@ export async function sendRejectionEmail(email: string, organizationName: string
   }
 }
 
+// Invia email di richiesta informazioni dal form contatti
+export async function sendContactFormEmail(data: {
+  name: string;
+  email: string;
+  phone?: string;
+  message: string;
+}): Promise<boolean> {
+  const resend = getResend();
+  if (!resend) {
+    console.log('[EMAIL] Resend non configurato, email contatto non inviata');
+    return false;
+  }
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: SUPERADMIN_EMAIL,
+      subject: `Richiesta informazioni da ${data.name}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+            <h2 style="margin: 0;">Nuova Richiesta di Informazioni</h2>
+            <p style="margin: 5px 0 0; opacity: 0.9;">Dal form contatti di Rapportini360</p>
+          </div>
+          <div style="padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; width: 120px;">Nome:</td>
+                <td style="padding: 8px 0;">${data.name}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold;">Email:</td>
+                <td style="padding: 8px 0;"><a href="mailto:${data.email}">${data.email}</a></td>
+              </tr>
+              ${data.phone ? `<tr>
+                <td style="padding: 8px 0; font-weight: bold;">Telefono:</td>
+                <td style="padding: 8px 0;"><a href="tel:${data.phone}">${data.phone}</a></td>
+              </tr>` : ''}
+            </table>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+            <p style="font-weight: bold; margin-bottom: 8px;">Messaggio:</p>
+            <div style="background: #f9fafb; padding: 12px; border-radius: 6px; white-space: pre-wrap;">${data.message}</div>
+          </div>
+        </div>
+      `,
+    });
+
+    console.log(`[EMAIL] Contact form email sent from ${data.name} (${data.email})`);
+    return true;
+  } catch (err) {
+    console.error('[EMAIL] Failed to send contact form email:', err);
+    return false;
+  }
+}
+
 // Genera una password temporanea sicura
 export function generateTemporaryPassword(length: number = 12): string {
   const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';

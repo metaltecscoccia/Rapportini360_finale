@@ -13,7 +13,7 @@ import multer from 'multer';
 import streamifier from 'streamifier';
 import { getTodayISO } from "@shared/dateUtils";
 import { workFieldPresets } from "@shared/workFieldPresets";
-import { sendNewSignupRequestEmail, sendApprovalEmail, generateTemporaryPassword } from "./emailService";
+import { sendNewSignupRequestEmail, sendApprovalEmail, sendContactFormEmail, generateTemporaryPassword } from "./emailService";
 import {
   insertUserSchema,
   updateUserSchema,
@@ -89,6 +89,16 @@ const signupLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5,
   message: { error: "Troppi tentativi di registrazione. Riprova tra un'ora." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => process.env.NODE_ENV === "development",
+});
+
+// Rate limiter specifico per form contatti: max 3 richieste per IP per ora
+const contactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  message: { error: "Troppe richieste. Riprova tra un'ora." },
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => process.env.NODE_ENV === "development",
@@ -528,6 +538,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error verifying checkout:", error);
       res.status(500).json({ error: "Errore durante la verifica" });
+    }
+  });
+
+  // Form contatti (pubblico, con rate limiting dedicato)
+  app.post("/api/contact", contactLimiter, async (req, res) => {
+    try {
+      const { name, email, phone, message } = req.body;
+
+      if (!name?.trim() || !email?.trim() || !message?.trim()) {
+        return res.status(400).json({ error: "Nome, email e messaggio sono obbligatori." });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "Indirizzo email non valido." });
+      }
+
+      await sendContactFormEmail({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone?.trim() || undefined,
+        message: message.trim(),
+      });
+
+      console.log(`[CONTACT] New contact form submission from ${name} (${email})`);
+
+      res.json({ success: true, message: "Messaggio inviato con successo!" });
+    } catch (error) {
+      console.error("Error processing contact form:", error);
+      res.status(500).json({ error: "Errore nell'invio del messaggio. Riprova." });
     }
   });
 
