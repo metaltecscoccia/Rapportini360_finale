@@ -4154,7 +4154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const organizationId = (req.session as any).organizationId;
       const userId = (req.session as any).userId;
-      const userRole = (req.session as any).role;
+      const userRole = (req.session as any).userRole;
 
       // Only teamleaders can create team reports
       if (userRole !== "teamleader" && userRole !== "admin") {
