@@ -2431,9 +2431,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTeam(id: string, organizationId: string): Promise<boolean> {
-    // First delete all team members
+    // 1. Find all team_submissions for this team
+    const submissions = await db.select({ id: teamSubmissions.id })
+      .from(teamSubmissions).where(eq(teamSubmissions.teamId, id));
+
+    if (submissions.length > 0) {
+      const subIds = submissions.map(s => s.id);
+      // 2. Unlink daily_reports from these submissions (keep reports, just remove FK)
+      await db.update(dailyReports)
+        .set({ teamSubmissionId: null })
+        .where(inArray(dailyReports.teamSubmissionId, subIds));
+      // 3. Delete team_submissions
+      await db.delete(teamSubmissions).where(eq(teamSubmissions.teamId, id));
+    }
+
+    // 4. Delete all team members
     await db.delete(teamMembers).where(eq(teamMembers.teamId, id));
-    // Then delete the team
+    // 5. Delete the team
     const result = await db.delete(teams)
       .where(and(eq(teams.id, id), eq(teams.organizationId, organizationId)));
     return result.rowCount !== null && result.rowCount > 0;
