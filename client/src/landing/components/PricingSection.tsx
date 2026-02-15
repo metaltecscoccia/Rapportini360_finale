@@ -109,7 +109,7 @@ export default function PricingSection() {
               >
                 Fatturazione Annuale
                 <span className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-green-500/20 text-green-400 text-[10px] border border-green-500/30">
-                  -20%
+                  -17%
                 </span>
               </button>
             </div>
