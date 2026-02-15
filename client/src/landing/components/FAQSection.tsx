@@ -10,7 +10,7 @@ const faqs = [
   {
     question: "Come funziona il periodo di prova gratuito?",
     answer:
-      "Puoi provare Rapportini360 gratuitamente per 30 giorni con tutte le funzionalita. Durante il trial puoi aggiungere fino a 5 dipendenti. Non e richiesta nessuna carta di credito per iniziare.",
+      "Puoi provare Rapportini360 gratuitamente per 30 giorni con tutte le funzionalita del piano scelto. Al termine del periodo di prova, inizierai a pagare l'abbonamento selezionato.",
   },
   {
     question: "Posso cancellare l'abbonamento quando voglio?",
@@ -33,9 +33,9 @@ const faqs = [
       "Si, Rapportini360 e completamente responsive e funziona perfettamente su smartphone e tablet. I tuoi dipendenti possono compilare i rapportini direttamente dal cantiere o in mobilita.",
   },
   {
-    question: "Cosa succede se supero i 5 dipendenti durante il trial?",
+    question: "Come funziona il trial rispetto al piano scelto?",
     answer:
-      "Durante il periodo di prova gratuito puoi avere massimo 5 dipendenti. Per aggiungerne altri, dovrai passare a un piano Premium che include dipendenti illimitati.",
+      "Durante i 30 giorni di prova gratuita hai accesso a tutte le funzionalita del piano che hai scelto (Starter, Business o Professional), incluso il numero di dipendenti previsto. Al termine del trial inizierai a pagare l'abbonamento del piano selezionato.",
   },
   {
     question: "Offrite assistenza tecnica?",
