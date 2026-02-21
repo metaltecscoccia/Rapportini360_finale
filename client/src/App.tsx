@@ -26,7 +26,9 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateToItalian } from "@/lib/dateUtils";
-import logoPath from "@assets/LOGO V2 Rapportini360 con scritta.png";
+import logoLight from "@assets/LOGO V2 Rapportini360 con scritta.png";
+import logoDark from "@assets/Logo V2 rapportini 360 sfondo scuro.PNG";
+import { useTheme } from "@/components/ThemeProvider";
 
 type User = {
   id: string;
@@ -55,6 +57,8 @@ function AuthenticatedApp({
   onLogout: () => void;
 }) {
   const { toast } = useToast();
+  const { theme } = useTheme();
+  const logoPath = theme === "dark" ? logoDark : logoLight;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {

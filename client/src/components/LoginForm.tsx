@@ -12,7 +12,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LogIn, Loader2, AlertCircle, Shield, Check } from "lucide-react";
 import { ShakeOnError } from "@/components/ui/animated";
-import logoPath from "@assets/LOGO V2 Rapportini360 con scritta.png";
+import logoLight from "@assets/LOGO V2 Rapportini360 con scritta.png";
+import logoDark from "@assets/Logo V2 rapportini 360 sfondo scuro.PNG";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface LoginFormProps {
   onLogin: (
@@ -22,6 +24,8 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onLogin }: LoginFormProps) {
+  const { theme } = useTheme();
+  const logoPath = theme === "dark" ? logoDark : logoLight;
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);

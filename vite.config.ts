@@ -19,6 +19,7 @@ export default defineConfig({
         ]
       : []),
   ],
+  assetsInclude: ["**/*.PNG"],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
