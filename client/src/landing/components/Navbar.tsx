@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
+import logoPath from "@assets/LOGO V2 Rapportini360 senza scritta.PNG";
 import { APP_URL, LANDING_BASE } from "@/landing/config";
 
 export default function Navbar() {
@@ -21,8 +21,16 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <a href={`${LANDING_BASE}/`} className="flex items-center gap-2">
-            <img src={logoPath} alt="Rapportini360" className="h-[92px] w-[92px] object-contain" />
-            <span className="text-xl font-bold text-primary">Rapportini360</span>
+            <img src={logoPath} alt="Rapportini360" className="h-12 w-12 object-contain" />
+            <div className="flex flex-col">
+              <span className="text-xl font-extrabold tracking-tight">
+                <span className="text-slate-800 dark:text-slate-100">Rapportini</span>
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">360</span>
+              </span>
+              <span className="text-[0.6rem] text-muted-foreground uppercase tracking-[0.2em] font-medium -mt-0.5">
+                Gestione digitale rapportini
+              </span>
+            </div>
           </a>
 
           {/* Desktop Navigation */}

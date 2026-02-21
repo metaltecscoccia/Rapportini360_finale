@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ArrowLeft, Loader2, CheckCircle, Building, User, Mail, Lock, Briefcase, Phone, CreditCard, Clock } from "lucide-react";
-import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
+import logoPath from "@assets/LOGO V2 Rapportini360 con scritta.png";
 import { workFields } from "../../../shared/workFieldPresets";
 import { SITE_URL, LANDING_BASE } from "@/landing/config";
 

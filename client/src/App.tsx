@@ -26,7 +26,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateToItalian } from "@/lib/dateUtils";
-import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
+import logoPath from "@assets/LOGO V2 Rapportini360 con scritta.png";
 
 type User = {
   id: string;
