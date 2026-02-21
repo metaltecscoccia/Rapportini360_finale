@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-import logoPath from "@assets/LOGO V2 Rapportini360 senza scritta.PNG";
+import logoPath from "@assets/Logo V3 senza scritta.jpg";
 import { APP_URL, LANDING_BASE } from "@/landing/config";
 
 export default function Navbar() {

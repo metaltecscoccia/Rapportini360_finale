@@ -1,4 +1,4 @@
-import logoPath from "@assets/LOGO V2 Rapportini360 senza scritta.PNG";
+import logoPath from "@assets/Logo V3 senza scritta.jpg";
 import { LANDING_BASE } from "@/landing/config";
 
 export default function Footer() {
