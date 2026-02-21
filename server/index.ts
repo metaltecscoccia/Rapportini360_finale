@@ -20,6 +20,7 @@ app.use(cors({
     'capacitor://localhost',
     'ionic://localhost',
     'http://localhost',
+    'https://www.metaltecscoccia.it',
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -508,6 +509,27 @@ app.get("/terms", (_req, res) => {
     // Register API routes
     const server = await registerRoutes(app);
     log("✓ API routes registered");
+
+    // ============================================
+    // 301 REDIRECTS - Landing pages moved to main site
+    // ============================================
+    const MAIN_SITE = "https://www.metaltecscoccia.it";
+    // Note: /privacy and /terms are NOT redirected because they have existing
+    // HTML handlers (for Google Play Store) registered earlier in the middleware chain
+    const landingRedirects: Record<string, string> = {
+      "/home": `${MAIN_SITE}/rapportini360/`,
+      "/chi-siamo": `${MAIN_SITE}/rapportini360/chi-siamo`,
+      "/contatti": `${MAIN_SITE}/rapportini360/contatti`,
+      "/termini": `${MAIN_SITE}/rapportini360/termini`,
+      "/cookie": `${MAIN_SITE}/rapportini360/cookie`,
+    };
+
+    for (const [from, to] of Object.entries(landingRedirects)) {
+      app.get(from, (_req, res) => {
+        res.redirect(301, to);
+      });
+    }
+    log("✓ Landing page 301 redirects configured");
 
     // Global error handler (must be after routes)
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

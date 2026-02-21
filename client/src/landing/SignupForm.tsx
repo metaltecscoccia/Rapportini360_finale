@@ -13,6 +13,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { ArrowLeft, Loader2, CheckCircle, Building, User, Mail, Lock, Briefcase, Phone, CreditCard, Clock } from "lucide-react";
 import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
 import { workFields } from "../../../shared/workFieldPresets";
+import { SITE_URL, LANDING_BASE } from "@/landing/config";
 
 export default function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -141,10 +142,10 @@ export default function SignupForm() {
         <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex flex-col">
           <header className="p-4">
             <div className="container mx-auto">
-              <Link href="/home" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+              <a href={`${SITE_URL}${LANDING_BASE}/`} className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                 <ArrowLeft className="h-4 w-4" />
                 Torna alla home
-              </Link>
+              </a>
             </div>
           </header>
 
@@ -179,11 +180,11 @@ export default function SignupForm() {
                   <p className="text-center text-sm text-muted-foreground">
                     Di solito rispondiamo entro 24 ore lavorative.
                   </p>
-                  <Link href="/home">
+                  <a href={`${SITE_URL}${LANDING_BASE}/`}>
                     <Button variant="outline" className="w-full">
                       Torna alla Home
                     </Button>
-                  </Link>
+                  </a>
                 </CardContent>
               </Card>
             </motion.div>
@@ -199,10 +200,10 @@ export default function SignupForm() {
         {/* Header */}
         <header className="p-4">
           <div className="container mx-auto">
-            <Link href="/home" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <a href={`${SITE_URL}${LANDING_BASE}/`} className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="h-4 w-4" />
               Torna alla home
-            </Link>
+            </a>
           </div>
         </header>
 
@@ -523,13 +524,13 @@ export default function SignupForm() {
                     />
                     <Label htmlFor="terms" className="text-sm text-muted-foreground leading-tight">
                       Accetto i{" "}
-                      <Link href="/termini" className="text-primary hover:underline">
+                      <a href={`${SITE_URL}${LANDING_BASE}/termini`} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
                         Termini di Servizio
-                      </Link>{" "}
+                      </a>{" "}
                       e la{" "}
-                      <Link href="/privacy" className="text-primary hover:underline">
+                      <a href={`${SITE_URL}${LANDING_BASE}/privacy`} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
                         Privacy Policy
-                      </Link>
+                      </a>
                     </Label>
                   </div>
 

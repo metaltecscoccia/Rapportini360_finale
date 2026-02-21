@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import LoginForm from "@/components/LoginForm";
-import LandingPage from "@/landing/LandingPage";
 import SignupForm from "@/landing/SignupForm";
 import SignupSuccessPage from "@/pages/SignupSuccessPage";
 import SetPasswordForm from "@/components/SetPasswordForm";
@@ -24,11 +23,6 @@ import AdminDashboard from "@/components/AdminDashboard";
 import SuperAdminDashboard from "@/components/SuperAdminDashboard";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
 import ThemeToggle from "@/components/ThemeToggle";
-import PrivacyPage from "@/pages/PrivacyPage";
-import TermsPage from "@/pages/TermsPage";
-import CookiePage from "@/pages/CookiePage";
-import ContattiPage from "@/pages/ContattiPage";
-import ChiSiamoPage from "@/pages/ChiSiamoPage";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateToItalian } from "@/lib/dateUtils";
@@ -415,16 +409,13 @@ function App() {
   }
 
   // Show public pages if not authenticated
+  // Landing pages (/home, /chi-siamo, /contatti, /privacy, /termini, /cookie)
+  // are now on www.metaltecscoccia.it/rapportini360/ - server handles 301 redirects
   if (!currentUser) {
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Switch>
-            {/* Landing Page */}
-            <Route path="/home">
-              <LandingPage />
-              <Toaster />
-            </Route>
             {/* Signup */}
             <Route path="/signup">
               <SignupForm />
@@ -433,37 +424,6 @@ function App() {
             <Route path="/signup/success">
               <SignupSuccessPage />
               <Toaster />
-            </Route>
-            {/* Legal Pages */}
-            <Route path="/privacy">
-              <ThemeProvider>
-                <PrivacyPage />
-                <Toaster />
-              </ThemeProvider>
-            </Route>
-            <Route path="/termini">
-              <ThemeProvider>
-                <TermsPage />
-                <Toaster />
-              </ThemeProvider>
-            </Route>
-            <Route path="/cookie">
-              <ThemeProvider>
-                <CookiePage />
-                <Toaster />
-              </ThemeProvider>
-            </Route>
-            <Route path="/contatti">
-              <ThemeProvider>
-                <ContattiPage />
-                <Toaster />
-              </ThemeProvider>
-            </Route>
-            <Route path="/chi-siamo">
-              <ThemeProvider>
-                <ChiSiamoPage />
-                <Toaster />
-              </ThemeProvider>
             </Route>
             {/* Login (default) */}
             <Route path="/">

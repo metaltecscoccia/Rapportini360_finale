@@ -1,9 +1,9 @@
-import { Link } from "wouter";
 import { ArrowLeft, MapPin, Mail, Phone, Building } from "lucide-react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Footer from "@/landing/components/Footer";
 import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
+import { LANDING_BASE } from "@/landing/config";
 
 export default function ContattiPage() {
   return (
@@ -12,14 +12,14 @@ export default function ContattiPage() {
         {/* Header */}
         <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
           <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-            <Link href="/home" className="flex items-center gap-2">
+            <a href={`${LANDING_BASE}/`} className="flex items-center gap-2">
               <img src={logoPath} alt="Rapportini360" className="h-10 w-10 object-contain" />
               <span className="font-bold text-lg">Rapportini360</span>
-            </Link>
-            <Link href="/home" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm">
+            </a>
+            <a href={`${LANDING_BASE}/`} className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm">
               <ArrowLeft className="h-4 w-4" />
               Torna alla home
-            </Link>
+            </a>
           </div>
         </header>
 

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Send, Loader2, CheckCircle, Mail, Phone, MapPin } from "lucide-react";
+import { APP_URL } from "@/landing/config";
 
 export default function ContactFormSection() {
   const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +38,7 @@ export default function ContactFormSection() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/contact", {
+      const response = await fetch(`${APP_URL}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

@@ -12,7 +12,8 @@
     "mobile:build": "vite build && npx cap sync android",
     "mobile:open": "npx cap open android",
     "mobile:run": "npm run mobile:build && npx cap run android",
-    "mobile:sync": "npx cap sync android"
+    "mobile:sync": "npx cap sync android",
+    "build:landing": "vite build --config vite.config.landing.ts && mv dist/landing/landing.html dist/landing/index.html"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",

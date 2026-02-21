@@ -1,9 +1,9 @@
-import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle, Smartphone, Monitor } from "lucide-react";
 import { motion } from "framer-motion";
 import screenshotDesktop from "@assets/app-rapportini.png";
 import screenshotMobile1 from "@assets/app-mobile-1.jpeg";
+import { APP_URL } from "@/landing/config";
 
 export default function HeroSection() {
   return (
@@ -38,12 +38,12 @@ export default function HeroSection() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
-              <Link href="/signup">
+              <a href={`${APP_URL}/signup`}>
                 <Button size="lg" className="text-lg px-8 h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-blue-500/25">
                   Inizia Gratis
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
-              </Link>
+              </a>
               <Button
                 size="lg"
                 variant="outline"

@@ -1,7 +1,7 @@
-import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { APP_URL } from "@/landing/config";
 
 export default function CTASection() {
   return (
@@ -22,12 +22,12 @@ export default function CTASection() {
             richiesta.
           </p>
           <div className="flex justify-center">
-            <Link href="/signup">
+            <a href={`${APP_URL}/signup`}>
               <Button size="lg" variant="secondary" className="text-lg px-8">
                 Inizia Gratis
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-            </Link>
+            </a>
           </div>
         </motion.div>
       </div>

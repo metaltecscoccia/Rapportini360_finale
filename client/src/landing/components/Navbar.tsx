@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
+import { APP_URL, LANDING_BASE } from "@/landing/config";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -20,10 +20,10 @@ export default function Navbar() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/home" className="flex items-center gap-2">
+          <a href={`${LANDING_BASE}/`} className="flex items-center gap-2">
             <img src={logoPath} alt="Rapportini360" className="h-[92px] w-[92px] object-contain" />
             <span className="text-xl font-bold text-primary">Rapportini360</span>
-          </Link>
+          </a>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
@@ -55,12 +55,12 @@ export default function Navbar() {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/">
+            <a href={`${APP_URL}/`}>
               <Button variant="ghost">Accedi</Button>
-            </Link>
-            <Link href="/signup">
+            </a>
+            <a href={`${APP_URL}/signup`}>
               <Button>Inizia Gratis</Button>
-            </Link>
+            </a>
           </div>
 
           {/* Mobile Menu Button */}
@@ -101,12 +101,12 @@ export default function Navbar() {
                 Contatti
               </button>
               <div className="flex flex-col gap-2 pt-4 border-t">
-                <Link href="/">
+                <a href={`${APP_URL}/`}>
                   <Button variant="ghost" className="w-full">Accedi</Button>
-                </Link>
-                <Link href="/signup">
+                </a>
+                <a href={`${APP_URL}/signup`}>
                   <Button className="w-full">Inizia Gratis</Button>
-                </Link>
+                </a>
               </div>
             </div>
           </div>

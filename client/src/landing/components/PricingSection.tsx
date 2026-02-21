@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Check, Sparkles, ShieldCheck, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { APP_URL } from "@/landing/config";
 
 const plans = [
   {
@@ -194,7 +194,7 @@ export default function PricingSection() {
                   Contattaci
                 </Button>
               ) : (
-                <Link href={`/signup?plan=${plan.planKey}_${isYearly ? "yearly" : "monthly"}`}>
+                <a href={`${APP_URL}/signup?plan=${plan.planKey}_${isYearly ? "yearly" : "monthly"}`}>
                   <Button
                     variant={plan.highlighted ? "default" : "outline"}
                     className={cn(
@@ -206,7 +206,7 @@ export default function PricingSection() {
                   >
                     Scegli il piano
                   </Button>
-                </Link>
+                </a>
               )}
             </motion.div>
           ))}

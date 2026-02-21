@@ -1,5 +1,5 @@
-import { Link } from "wouter";
 import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
+import { LANDING_BASE } from "@/landing/config";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -11,14 +11,14 @@ export default function Footer() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             {/* Brand */}
             <div className="md:col-span-1">
-              <Link href="/home" className="flex items-center gap-2 mb-4">
+              <a href={`${LANDING_BASE}/`} className="flex items-center gap-2 mb-4">
                 <img
                   src={logoPath}
                   alt="Rapportini360"
                   className="h-[92px] w-[92px] object-contain"
                 />
                 <span className="text-xl font-bold text-white">Rapportini360</span>
-              </Link>
+              </a>
               <p className="text-sm text-slate-400">
                 La soluzione completa per la gestione digitale dei rapportini
                 aziendali.
@@ -70,14 +70,14 @@ export default function Footer() {
               <h3 className="font-semibold text-white mb-4">Azienda</h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="/chi-siamo" className="hover:text-white transition-colors">
+                  <a href={`${LANDING_BASE}/chi-siamo`} className="hover:text-white transition-colors">
                     Chi siamo
-                  </Link>
+                  </a>
                 </li>
                 <li>
-                  <Link href="/contatti" className="hover:text-white transition-colors">
+                  <a href={`${LANDING_BASE}/contatti`} className="hover:text-white transition-colors">
                     Contatti
-                  </Link>
+                  </a>
                 </li>
               </ul>
             </div>
@@ -87,19 +87,19 @@ export default function Footer() {
               <h3 className="font-semibold text-white mb-4">Legale</h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="/privacy" className="hover:text-white transition-colors">
+                  <a href={`${LANDING_BASE}/privacy`} className="hover:text-white transition-colors">
                     Privacy Policy
-                  </Link>
+                  </a>
                 </li>
                 <li>
-                  <Link href="/termini" className="hover:text-white transition-colors">
+                  <a href={`${LANDING_BASE}/termini`} className="hover:text-white transition-colors">
                     Termini di Servizio
-                  </Link>
+                  </a>
                 </li>
                 <li>
-                  <Link href="/cookie" className="hover:text-white transition-colors">
+                  <a href={`${LANDING_BASE}/cookie`} className="hover:text-white transition-colors">
                     Cookie Policy
-                  </Link>
+                  </a>
                 </li>
               </ul>
             </div>
