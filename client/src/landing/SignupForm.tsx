@@ -11,11 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ArrowLeft, Loader2, CheckCircle, Building, User, Mail, Lock, Briefcase, Phone, CreditCard, Clock } from "lucide-react";
-import logoPath from "@assets/LOGO V2 Rapportini360 con scritta.png";
+import logoLight from "@assets/Logo V3 conscritta.jpg";
+import logoDark from "@assets/Logo V3 dark.jpg";
+import { useTheme } from "@/components/ThemeProvider";
 import { workFields } from "../../../shared/workFieldPresets";
 import { SITE_URL, LANDING_BASE } from "@/landing/config";
 
 export default function SignupForm() {
+  const { theme } = useTheme();
+  const logoPath = theme === "dark" ? logoDark : logoLight;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);

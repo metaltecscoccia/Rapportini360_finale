@@ -26,8 +26,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateToItalian } from "@/lib/dateUtils";
-import logoLight from "@assets/LOGO V2 Rapportini360 con scritta.png";
-import logoDark from "@assets/Logo V2 rapportini 360 sfondo scuro.PNG";
+import logoLight from "@assets/Logo V3 conscritta.jpg";
+import logoDark from "@assets/Logo V3 dark.jpg";
 import { useTheme } from "@/components/ThemeProvider";
 
 type User = {

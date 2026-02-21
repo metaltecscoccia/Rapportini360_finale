@@ -12,8 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LogIn, Loader2, AlertCircle, Shield, Check } from "lucide-react";
 import { ShakeOnError } from "@/components/ui/animated";
-import logoLight from "@assets/LOGO V2 Rapportini360 con scritta.png";
-import logoDark from "@assets/Logo V2 rapportini 360 sfondo scuro.PNG";
+import logoLight from "@assets/Logo V3 conscritta.jpg";
+import logoDark from "@assets/Logo V3 dark.jpg";
 import { useTheme } from "@/components/ThemeProvider";
 
 interface LoginFormProps {
