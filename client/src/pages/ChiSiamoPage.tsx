@@ -2,7 +2,7 @@ import { ArrowLeft, Users, Target, Heart } from "lucide-react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Footer from "@/landing/components/Footer";
-import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
+import logoPath from "@assets/Logo V3 senza scritta.jpg";
 import { LANDING_BASE } from "@/landing/config";
 
 export default function ChiSiamoPage() {
