@@ -14,7 +14,8 @@ function getResend(): Resend | null {
 }
 
 const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'admin@example.com';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'Rapportini360 <noreply@rapportini360.it>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Rapportini360 <noreply@mail.metaltecscoccia.it>';
+const REPLY_TO = 'metaltecscoccia@gmail.com';
 
 interface SignupRequestData {
   organizationName: string;
@@ -48,6 +49,7 @@ export async function sendNewSignupRequestEmail(data: SignupRequestData): Promis
 
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO,
       to: SUPERADMIN_EMAIL,
       subject: `Nuova richiesta di registrazione: ${data.organizationName}`,
       html: `
@@ -133,6 +135,7 @@ export async function sendApprovalEmail(data: ApprovalEmailData): Promise<boolea
 
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO,
       to: data.billingEmail,
       subject: `Benvenuto su Rapportini360 - Account attivato!`,
       html: `
@@ -209,6 +212,7 @@ export async function sendRejectionEmail(email: string, organizationName: string
 
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO,
       to: email,
       subject: `Rapportini360 - Richiesta di registrazione`,
       html: `
@@ -256,46 +260,56 @@ export async function sendContactFormEmail(data: {
     return false;
   }
 
-  try {
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: SUPERADMIN_EMAIL,
-      subject: `Richiesta informazioni da ${data.name}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0;">Nuova Richiesta di Informazioni</h2>
-            <p style="margin: 5px 0 0; opacity: 0.9;">Dal form contatti di Rapportini360</p>
-          </div>
-          <div style="padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 8px 0; font-weight: bold; width: 120px;">Nome:</td>
-                <td style="padding: 8px 0;">${data.name}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; font-weight: bold;">Email:</td>
-                <td style="padding: 8px 0;"><a href="mailto:${data.email}">${data.email}</a></td>
-              </tr>
-              ${data.phone ? `<tr>
-                <td style="padding: 8px 0; font-weight: bold;">Telefono:</td>
-                <td style="padding: 8px 0;"><a href="tel:${data.phone}">${data.phone}</a></td>
-              </tr>` : ''}
-            </table>
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
-            <p style="font-weight: bold; margin-bottom: 8px;">Messaggio:</p>
-            <div style="background: #f9fafb; padding: 12px; border-radius: 6px; white-space: pre-wrap;">${data.message}</div>
-          </div>
-        </div>
-      `,
-    });
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY_MS = 2000;
 
-    console.log(`[EMAIL] Contact form email sent from ${data.name} (${data.email})`);
-    return true;
-  } catch (err) {
-    console.error('[EMAIL] Failed to send contact form email:', err);
-    return false;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt += 1) {
+    try {
+      await resend.emails.send({
+        from: FROM_EMAIL,
+        replyTo: REPLY_TO,
+        to: SUPERADMIN_EMAIL,
+        subject: `Richiesta informazioni da ${data.name}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+              <h2 style="margin: 0;">Nuova Richiesta di Informazioni</h2>
+              <p style="margin: 5px 0 0; opacity: 0.9;">Dal form contatti di Rapportini360</p>
+            </div>
+            <div style="padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; width: 120px;">Nome:</td>
+                  <td style="padding: 8px 0;">${data.name}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold;">Email:</td>
+                  <td style="padding: 8px 0;"><a href="mailto:${data.email}">${data.email}</a></td>
+                </tr>
+                ${data.phone ? `<tr>
+                  <td style="padding: 8px 0; font-weight: bold;">Telefono:</td>
+                  <td style="padding: 8px 0;"><a href="tel:${data.phone}">${data.phone}</a></td>
+                </tr>` : ''}
+              </table>
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+              <p style="font-weight: bold; margin-bottom: 8px;">Messaggio:</p>
+              <div style="background: #f9fafb; padding: 12px; border-radius: 6px; white-space: pre-wrap;">${data.message}</div>
+            </div>
+          </div>
+        `,
+      });
+
+      console.log(`[EMAIL] Contact form email sent from ${data.name} (${data.email}) (Attempt ${attempt})`);
+      return true;
+    } catch (err) {
+      console.error(`[EMAIL] Failed to send contact form email (Attempt ${attempt}/${MAX_RETRIES}):`, err);
+      if (attempt < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+      }
+    }
   }
+
+  return false;
 }
 
 // Genera una password temporanea sicura
