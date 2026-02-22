@@ -4677,8 +4677,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate PDF with pdfmake
       const [PdfMake, pdfFonts] = await Promise.all([
-        import("pdfmake/build/pdfmake"),
-        import("pdfmake/build/vfs_fonts").catch(() => null),
+        import("pdfmake/build/pdfmake.js"),
+        import("pdfmake/build/vfs_fonts.js").catch(() => null),
       ]);
       const vfs = pdfFonts && (pdfFonts as any).pdfMake?.vfs ? (pdfFonts as any).pdfMake.vfs : undefined;
       const pdfDoc = PdfMake.default.createPdf(docDefinition as any, undefined, undefined, vfs);

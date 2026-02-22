@@ -121,8 +121,8 @@ export class PDFService {
       try {
         // Use dynamic imports to avoid ES module restrictions
         const [PdfMake, pdfFonts] = await Promise.all([
-          import('pdfmake/build/pdfmake'),
-          import('pdfmake/build/vfs_fonts').catch(() => null)
+          import('pdfmake/build/pdfmake.js'),
+          import('pdfmake/build/vfs_fonts.js').catch(() => null)
         ]);
         
         // Get VFS fonts if available
