@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,9 +28,21 @@ const assignmentSchema = z.object({
 
 type AssignmentForm = z.infer<typeof assignmentSchema>;
 
-export default function EquipmentAssignmentManagement() {
+interface EquipmentAssignmentManagementProps {
+  autoOpenAdd?: boolean;
+  onAutoOpenHandled?: () => void;
+}
+
+export default function EquipmentAssignmentManagement({ autoOpenAdd, onAutoOpenHandled }: EquipmentAssignmentManagementProps = {}) {
   const { toast } = useToast();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (autoOpenAdd) {
+      setAddDialogOpen(true);
+      onAutoOpenHandled?.();
+    }
+  }, [autoOpenAdd]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<EquipmentAssignment | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");

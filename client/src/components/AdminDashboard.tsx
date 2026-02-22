@@ -62,7 +62,8 @@ import {
   Copy,
   Menu,
   Wallet,
-  History
+  History,
+  HardHat
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
@@ -242,6 +243,9 @@ export default function AdminDashboard({
   // State for register absence dialog
   const [registerAbsenceDialogOpen, setRegisterAbsenceDialogOpen] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+
+  // State for quick add equipment assignment
+  const [autoOpenEquipmentAdd, setAutoOpenEquipmentAdd] = useState(false);
 
   // State for quick add expense dialog
   const [quickAddExpenseDialogOpen, setQuickAddExpenseDialogOpen] = useState(false);
@@ -2015,7 +2019,10 @@ export default function AdminDashboard({
       ) : activeSection === "agenda" ? (
         <AgendaSection />
       ) : activeSection === "equipment" ? (
-        <EquipmentAssignmentManagement />
+        <EquipmentAssignmentManagement
+          autoOpenAdd={autoOpenEquipmentAdd}
+          onAutoOpenHandled={() => setAutoOpenEquipmentAdd(false)}
+        />
       ) : (
       <>
       {/* Tabs - navigation now handled by sidebar */}
@@ -2125,12 +2132,15 @@ export default function AdminDashboard({
               delay={0}
             />
             <QuickActionCard
-              title="Aggiungi Cliente"
-              description="Registra un nuovo cliente"
-              icon={Building}
+              title="Nuova Dotazione"
+              description="Assegna DPI o attrezzatura"
+              icon={HardHat}
               gradientFrom="hsl(142, 76%, 31%)"
               gradientTo="hsl(142, 76%, 46%)"
-              onClick={() => dialogState.openClientDialog({ type: 'addClient' })}
+              onClick={() => {
+                setAutoOpenEquipmentAdd(true);
+                setActiveSection("equipment");
+              }}
               delay={0.1}
             />
             <QuickActionCard
