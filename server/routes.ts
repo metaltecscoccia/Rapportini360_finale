@@ -4679,11 +4679,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const vfs = pdfFonts && (pdfFonts as any).pdfMake?.vfs ? (pdfFonts as any).pdfMake.vfs : undefined;
       const pdfDoc = PdfMake.default.createPdf(docDefinition as any, undefined, undefined, vfs);
 
-      pdfDoc.getBuffer((buffer: Buffer) => {
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", `attachment; filename=verbale-consegna-dpi-${Date.now()}.pdf`);
-        res.send(buffer);
+      const buffer = await new Promise<Buffer>((resolve, reject) => {
+        try {
+          pdfDoc.getBuffer((buf: Buffer) => {
+            resolve(buf);
+          });
+        } catch (err) {
+          reject(err);
+        }
       });
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=verbale-consegna-dpi-${Date.now()}.pdf`);
+      res.send(buffer);
     } catch (error: any) {
       console.error("Error generating equipment PDF:", error);
       res.status(500).json({ error: error.message || "Failed to generate PDF" });
