@@ -4577,13 +4577,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build PDF content
       const content: any[] = [];
       const employeeIds = Array.from(byEmployee.keys());
+      const allUsers = await storage.getAllUsers(organizationId);
 
       for (let i = 0; i < employeeIds.length; i++) {
         const employeeId = employeeIds[i];
         const assignments = byEmployee.get(employeeId)!;
 
         // Get employee info
-        const allUsers = await storage.getAllUsers(organizationId);
         const employee = allUsers.find(u => u.id === employeeId);
         if (!employee) continue;
 
@@ -4625,7 +4625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         content.push({
           table: { headerRows: 1, widths: ["auto", "*", "auto", "auto", "*", "auto", "auto"], body: tableBody },
-          layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#cccccc", vLineColor: () => "#cccccc" },
+          layout: "lightHorizontalLines",
           margin: [0, 0, 0, 20],
         });
 
@@ -4658,6 +4658,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (i < employeeIds.length - 1) {
           content.push({ text: "", pageBreak: "after" });
         }
+      }
+
+      if (content.length === 0) {
+        return res.status(400).json({ error: "Nessuna assegnazione valida trovata" });
       }
 
       const docDefinition = {

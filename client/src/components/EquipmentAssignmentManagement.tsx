@@ -103,7 +103,15 @@ export default function EquipmentAssignmentManagement() {
 
   const handleExportPDF = async () => {
     try {
-      const res = await apiRequest("POST", "/api/equipment-assignments/export-pdf", { assignmentIds: selectedIds });
+      const res = await fetch("/api/equipment-assignments/export-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignmentIds: selectedIds }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        throw new Error("PDF generation failed");
+      }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
