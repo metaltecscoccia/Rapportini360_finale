@@ -80,6 +80,8 @@ import BillingDashboard from "./BillingDashboard";
 import TeamsManagement from "./TeamsManagement";
 import AgendaSection from "./AgendaSection";
 import AgendaWidget from "./AgendaWidget";
+import EquipmentCatalogManagement from "./EquipmentCatalogManagement";
+import EquipmentAssignmentManagement from "./EquipmentAssignmentManagement";
 import { AppSidebar, sidebarItems } from "./AppSidebar";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -3442,197 +3444,226 @@ export default function AdminDashboard({
           </Card>
         </TabsContent>
 
-        {/* Configurazione Tab (Attività e Componenti) */}
+        {/* Configurazione Tab con sotto-tab */}
         <TabsContent value="work-types">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Attività Card */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Attività</CardTitle>
-                <Button onClick={() => setAddWorkTypeDialogOpen(true)} data-testid="button-add-worktype">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Aggiungi Attività
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoadingWorkTypes ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Caricamento attività...
-                </div>
-              ) : (
-                <div className="overflow-x-auto" data-testid="scroll-table-worktypes">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead className="hidden lg:table-cell">Descrizione</TableHead>
-                        <TableHead className="hidden lg:table-cell">Stato</TableHead>
-                        <TableHead>Azioni</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {(workTypes as any[]).length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={2} className="text-center text-muted-foreground py-8 lg:hidden">
-                          Nessuna attività trovata. Aggiungi la prima attività.
-                        </TableCell>
-                        <TableCell colSpan={4} className="hidden lg:table-cell text-center text-muted-foreground py-8">
-                          Nessuna attività trovata. Aggiungi la prima attività.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      (workTypes as any[]).map((workType: any) => (
-                        <TableRow key={workType.id}>
-                          <TableCell className="font-medium" data-testid={`text-worktype-name-${workType.id}`}>
-                            {workType.name}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell" data-testid={`text-worktype-description-${workType.id}`}>
-                            {workType.description || "-"}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell" data-testid={`text-worktype-status-${workType.id}`}>
-                            <Badge variant={workType.isActive ? "default" : "secondary"}>
-                              {workType.isActive ? "Attivo" : "Non attivo"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleEditWorkType(workType)}
-                                data-testid={`button-edit-worktype-${workType.id}`}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleDeleteWorkType(workType)}
-                                data-testid={`button-delete-worktype-${workType.id}`}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <Tabs defaultValue="config-activities" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="config-activities">Attività e Componenti</TabsTrigger>
+              <TabsTrigger value="config-equipment">DPI/Attrezzature</TabsTrigger>
+              <TabsTrigger value="config-backup">Backup</TabsTrigger>
+            </TabsList>
 
-          {/* Componenti Card */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Componenti</CardTitle>
-                <Button onClick={() => setAddMaterialDialogOpen(true)} data-testid="button-add-material">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Aggiungi Componente
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoadingMaterials ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Caricamento componenti...
-                </div>
-              ) : (
-                <div className="overflow-x-auto" data-testid="scroll-table-materials">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead className="hidden lg:table-cell">Descrizione</TableHead>
-                        <TableHead className="hidden lg:table-cell">Stato</TableHead>
-                        <TableHead>Azioni</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {(materials as any[]).length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={2} className="text-center text-muted-foreground py-8 lg:hidden">
-                          Nessun componente trovato. Aggiungi il primo componente.
-                        </TableCell>
-                        <TableCell colSpan={4} className="hidden lg:table-cell text-center text-muted-foreground py-8">
-                          Nessun componente trovato. Aggiungi il primo componente.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      (materials as any[]).map((material: any) => (
-                        <TableRow key={material.id}>
-                          <TableCell className="font-medium" data-testid={`text-material-name-${material.id}`}>
-                            {material.name}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell" data-testid={`text-material-description-${material.id}`}>
-                            {material.description || "-"}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell" data-testid={`text-material-status-${material.id}`}>
-                            <Badge variant={material.isActive ? "default" : "secondary"}>
-                              {material.isActive ? "Attivo" : "Non attivo"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleEditMaterial(material)}
-                                data-testid={`button-edit-material-${material.id}`}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleDeleteMaterial(material)}
-                                data-testid={`button-delete-material-${material.id}`}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            {/* Sotto-tab: Attività e Componenti */}
+            <TabsContent value="config-activities">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Attività Card */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Attività</CardTitle>
+                    <Button onClick={() => setAddWorkTypeDialogOpen(true)} data-testid="button-add-worktype">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Aggiungi Attività
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingWorkTypes ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Caricamento attività...
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto" data-testid="scroll-table-worktypes">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead className="hidden lg:table-cell">Descrizione</TableHead>
+                            <TableHead className="hidden lg:table-cell">Stato</TableHead>
+                            <TableHead>Azioni</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {(workTypes as any[]).length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={2} className="text-center text-muted-foreground py-8 lg:hidden">
+                              Nessuna attività trovata. Aggiungi la prima attività.
+                            </TableCell>
+                            <TableCell colSpan={4} className="hidden lg:table-cell text-center text-muted-foreground py-8">
+                              Nessuna attività trovata. Aggiungi la prima attività.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          (workTypes as any[]).map((workType: any) => (
+                            <TableRow key={workType.id}>
+                              <TableCell className="font-medium" data-testid={`text-worktype-name-${workType.id}`}>
+                                {workType.name}
+                              </TableCell>
+                              <TableCell className="hidden lg:table-cell" data-testid={`text-worktype-description-${workType.id}`}>
+                                {workType.description || "-"}
+                              </TableCell>
+                              <TableCell className="hidden lg:table-cell" data-testid={`text-worktype-status-${workType.id}`}>
+                                <Badge variant={workType.isActive ? "default" : "secondary"}>
+                                  {workType.isActive ? "Attivo" : "Non attivo"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditWorkType(workType)}
+                                    data-testid={`button-edit-worktype-${workType.id}`}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteWorkType(workType)}
+                                    data-testid={`button-delete-worktype-${workType.id}`}
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-          {/* Backup Card */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Backup Dati</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Scarica un backup completo di tutti i dati della tua organizzazione in formato ZIP.
-                Il backup include: dipendenti, clienti, commesse, rapportini, presenze e veicoli.
-              </p>
-              <Button
-                onClick={handleFullBackup}
-                disabled={isDownloadingBackup}
-                className="w-full sm:w-auto"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {isDownloadingBackup ? "Generazione backup..." : "Scarica Backup Completo"}
-              </Button>
-              <p className="text-xs text-muted-foreground mt-3">
-                Ti consigliamo di effettuare un backup periodico dei dati e conservarlo in un luogo sicuro.
-              </p>
-            </CardContent>
-          </Card>
-          </div>
+              {/* Componenti Card */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Componenti</CardTitle>
+                    <Button onClick={() => setAddMaterialDialogOpen(true)} data-testid="button-add-material">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Aggiungi Componente
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingMaterials ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Caricamento componenti...
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto" data-testid="scroll-table-materials">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead className="hidden lg:table-cell">Descrizione</TableHead>
+                            <TableHead className="hidden lg:table-cell">Stato</TableHead>
+                            <TableHead>Azioni</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {(materials as any[]).length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={2} className="text-center text-muted-foreground py-8 lg:hidden">
+                              Nessun componente trovato. Aggiungi il primo componente.
+                            </TableCell>
+                            <TableCell colSpan={4} className="hidden lg:table-cell text-center text-muted-foreground py-8">
+                              Nessun componente trovato. Aggiungi il primo componente.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          (materials as any[]).map((material: any) => (
+                            <TableRow key={material.id}>
+                              <TableCell className="font-medium" data-testid={`text-material-name-${material.id}`}>
+                                {material.name}
+                              </TableCell>
+                              <TableCell className="hidden lg:table-cell" data-testid={`text-material-description-${material.id}`}>
+                                {material.description || "-"}
+                              </TableCell>
+                              <TableCell className="hidden lg:table-cell" data-testid={`text-material-status-${material.id}`}>
+                                <Badge variant={material.isActive ? "default" : "secondary"}>
+                                  {material.isActive ? "Attivo" : "Non attivo"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditMaterial(material)}
+                                    data-testid={`button-edit-material-${material.id}`}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteMaterial(material)}
+                                    data-testid={`button-delete-material-${material.id}`}
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              </div>
+            </TabsContent>
+
+            {/* Sotto-tab: DPI/Attrezzature */}
+            <TabsContent value="config-equipment">
+              <Tabs defaultValue="equipment-catalog" className="w-full">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="equipment-catalog">Catalogo</TabsTrigger>
+                  <TabsTrigger value="equipment-assignments">Assegnazioni</TabsTrigger>
+                </TabsList>
+                <TabsContent value="equipment-catalog">
+                  <EquipmentCatalogManagement />
+                </TabsContent>
+                <TabsContent value="equipment-assignments">
+                  <EquipmentAssignmentManagement />
+                </TabsContent>
+              </Tabs>
+            </TabsContent>
+
+            {/* Sotto-tab: Backup */}
+            <TabsContent value="config-backup">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Backup Dati</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Scarica un backup completo di tutti i dati della tua organizzazione in formato ZIP.
+                    Il backup include: dipendenti, clienti, commesse, rapportini, presenze e veicoli.
+                  </p>
+                  <Button
+                    onClick={handleFullBackup}
+                    disabled={isDownloadingBackup}
+                    className="w-full sm:w-auto"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {isDownloadingBackup ? "Generazione backup..." : "Scarica Backup Completo"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Ti consigliamo di effettuare un backup periodico dei dati e conservarlo in un luogo sicuro.
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* Attendance Tab */}

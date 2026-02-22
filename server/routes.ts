@@ -40,6 +40,11 @@ import {
   insertOrganizationSchema,
   insertAgendaItemSchema,
   updateAgendaItemSchema,
+  insertEquipmentTypeSchema,
+  updateEquipmentTypeSchema,
+  insertEquipmentAssignmentSchema,
+  updateEquipmentAssignmentSchema,
+  confirmEquipmentSchema,
 } from "@shared/schema";
 import { validatePassword, verifyPassword, hashPassword } from "./auth";
 
@@ -4383,6 +4388,320 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting agenda item:", error);
       res.status(500).json({ error: "Failed to delete agenda item" });
+    }
+  });
+
+  // ============================================
+  // EQUIPMENT TYPES (DPI/Attrezzature - Catalogo)
+  // ============================================
+
+  app.get("/api/equipment-types", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const types = await storage.getAllEquipmentTypes(organizationId);
+      res.json(types);
+    } catch (error) {
+      console.error("Error fetching equipment types:", error);
+      res.status(500).json({ error: "Failed to fetch equipment types" });
+    }
+  });
+
+  app.post("/api/equipment-types", requireAdmin, async (req, res) => {
+    try {
+      const result = insertEquipmentTypeSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: "Dati tipo attrezzatura non validi", issues: result.error.issues });
+      }
+      const organizationId = (req.session as any).organizationId;
+      const equipmentType = await storage.createEquipmentType(result.data, organizationId);
+      res.status(201).json(equipmentType);
+    } catch (error) {
+      console.error("Error creating equipment type:", error);
+      res.status(500).json({ error: "Failed to create equipment type" });
+    }
+  });
+
+  app.patch("/api/equipment-types/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = (req.session as any).organizationId;
+      const parsed = updateEquipmentTypeSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Dati non validi", issues: parsed.error.issues });
+      }
+      const updated = await storage.updateEquipmentType(id, parsed.data, organizationId);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating equipment type:", error);
+      res.status(500).json({ error: error.message || "Failed to update equipment type" });
+    }
+  });
+
+  app.delete("/api/equipment-types/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = (req.session as any).organizationId;
+      const deleted = await storage.deleteEquipmentType(id, organizationId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Tipo attrezzatura non trovato" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting equipment type:", error);
+      res.status(500).json({ error: "Failed to delete equipment type" });
+    }
+  });
+
+  // ============================================
+  // EQUIPMENT ASSIGNMENTS (Consegne DPI/Attrezzature)
+  // ============================================
+
+  app.get("/api/equipment-assignments", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const assignments = await storage.getAllEquipmentAssignments(organizationId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching equipment assignments:", error);
+      res.status(500).json({ error: "Failed to fetch equipment assignments" });
+    }
+  });
+
+  app.get("/api/equipment-assignments/pending", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const userId = (req.session as any).userId;
+      const pending = await storage.getPendingEquipmentAssignments(userId, organizationId);
+      res.json(pending);
+    } catch (error) {
+      console.error("Error fetching pending equipment assignments:", error);
+      res.status(500).json({ error: "Failed to fetch pending equipment assignments" });
+    }
+  });
+
+  app.get("/api/equipment-assignments/employee/:employeeId", requireAuth, async (req, res) => {
+    try {
+      const { employeeId } = req.params;
+      const organizationId = (req.session as any).organizationId;
+      const userId = (req.session as any).userId;
+      const userRole = (req.session as any).role;
+
+      // Solo l'utente stesso o un admin può vedere le assegnazioni
+      if (userId !== employeeId && userRole !== "admin" && userRole !== "superadmin") {
+        return res.status(403).json({ error: "Non autorizzato" });
+      }
+
+      const assignments = await storage.getEquipmentAssignmentsByEmployee(employeeId, organizationId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching employee equipment assignments:", error);
+      res.status(500).json({ error: "Failed to fetch employee equipment assignments" });
+    }
+  });
+
+  app.post("/api/equipment-assignments", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const assignedById = (req.session as any).userId;
+      const parsed = insertEquipmentAssignmentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Dati assegnazione non validi", details: parsed.error.issues });
+      }
+      const assignment = await storage.createEquipmentAssignment(parsed.data, organizationId, assignedById);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Error creating equipment assignment:", error);
+      res.status(500).json({ error: "Failed to create equipment assignment" });
+    }
+  });
+
+  app.patch("/api/equipment-assignments/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = (req.session as any).organizationId;
+      const parsed = updateEquipmentAssignmentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Dati non validi", details: parsed.error.issues });
+      }
+      const updated = await storage.updateEquipmentAssignment(id, parsed.data, organizationId);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating equipment assignment:", error);
+      res.status(500).json({ error: error.message || "Failed to update equipment assignment" });
+    }
+  });
+
+  app.post("/api/equipment-assignments/confirm", requireAuth, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const parsed = confirmEquipmentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Dati conferma non validi", details: parsed.error.issues });
+      }
+      const { assignmentIds, status, employeeNote } = parsed.data;
+      const confirmed = await storage.confirmEquipmentAssignments(assignmentIds, status, employeeNote, organizationId);
+      if (!confirmed) {
+        return res.status(404).json({ error: "Assegnazioni non trovate" });
+      }
+      res.json({ success: true, message: "Conferma registrata con successo" });
+    } catch (error) {
+      console.error("Error confirming equipment assignments:", error);
+      res.status(500).json({ error: "Failed to confirm equipment assignments" });
+    }
+  });
+
+  // Export PDF verbale consegna DPI/Attrezzature
+  app.post("/api/equipment-assignments/export-pdf", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const { assignmentIds } = req.body;
+
+      if (!assignmentIds || !Array.isArray(assignmentIds) || assignmentIds.length === 0) {
+        return res.status(400).json({ error: "Seleziona almeno un'assegnazione" });
+      }
+
+      // Get all data
+      const allAssignments = await storage.getAllEquipmentAssignments(organizationId);
+      const selectedAssignments = allAssignments.filter(a => assignmentIds.includes(a.id));
+      const equipmentTypesList = await storage.getAllEquipmentTypes(organizationId);
+      const typesMap = new Map(equipmentTypesList.map(t => [t.id, t]));
+
+      // Group by employee
+      const byEmployee = new Map<string, typeof selectedAssignments>();
+      for (const a of selectedAssignments) {
+        const list = byEmployee.get(a.employeeId) || [];
+        list.push(a);
+        byEmployee.set(a.employeeId, list);
+      }
+
+      // Build PDF content
+      const content: any[] = [];
+      const employeeIds = Array.from(byEmployee.keys());
+
+      for (let i = 0; i < employeeIds.length; i++) {
+        const employeeId = employeeIds[i];
+        const assignments = byEmployee.get(employeeId)!;
+
+        // Get employee info
+        const allUsers = await storage.getAllUsers(organizationId);
+        const employee = allUsers.find(u => u.id === employeeId);
+        if (!employee) continue;
+
+        content.push(
+          { text: "VERBALE DI CONSEGNA DPI/ATTREZZATURE", style: "header", alignment: "center", margin: [0, 0, 0, 10] },
+          { text: `Dipendente: ${employee.fullName}`, style: "subheader", margin: [0, 0, 0, 15] }
+        );
+
+        // Table
+        const tableBody: any[][] = [
+          [
+            { text: "Data", bold: true, fontSize: 9 },
+            { text: "Attrezzatura/DPI", bold: true, fontSize: 9 },
+            { text: "Categoria", bold: true, fontSize: 9 },
+            { text: "Qtà", bold: true, fontSize: 9, alignment: "center" },
+            { text: "Note", bold: true, fontSize: 9 },
+            { text: "Scadenza", bold: true, fontSize: 9 },
+            { text: "Stato", bold: true, fontSize: 9 },
+          ],
+        ];
+
+        for (const a of assignments) {
+          const eqType = typesMap.get(a.equipmentTypeId);
+          const statusText = a.confirmationStatus === "confirmed" ? "Confermato"
+            : a.confirmationStatus === "not_received" ? "Non ricevuto" : "In attesa";
+          const assignDate = a.assignmentDate ? new Date(a.assignmentDate).toLocaleDateString("it-IT") : "-";
+          const expiryStr = a.expiryDate ? new Date(a.expiryDate).toLocaleDateString("it-IT") : "-";
+
+          tableBody.push([
+            { text: assignDate, fontSize: 8 },
+            { text: eqType?.name || "N/A", fontSize: 8 },
+            { text: eqType?.category || "N/A", fontSize: 8 },
+            { text: String(a.quantity), fontSize: 8, alignment: "center" },
+            { text: a.notes || "-", fontSize: 8 },
+            { text: expiryStr, fontSize: 8 },
+            { text: statusText, fontSize: 8 },
+          ]);
+        }
+
+        content.push({
+          table: { headerRows: 1, widths: ["auto", "*", "auto", "auto", "*", "auto", "auto"], body: tableBody },
+          layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#cccccc", vLineColor: () => "#cccccc" },
+          margin: [0, 0, 0, 20],
+        });
+
+        // Confirmation info
+        const confirmedAssignments = assignments.filter(a => a.confirmedAt);
+        if (confirmedAssignments.length > 0) {
+          const confirmDate = new Date(confirmedAssignments[0].confirmedAt!).toLocaleString("it-IT");
+          content.push({
+            text: `Conferma registrata il: ${confirmDate}`,
+            fontSize: 9, italics: true, color: "#666666", margin: [0, 0, 0, 5],
+          });
+          if (confirmedAssignments[0].employeeNote) {
+            content.push({
+              text: `Note dipendente: ${confirmedAssignments[0].employeeNote}`,
+              fontSize: 9, italics: true, color: "#666666", margin: [0, 0, 0, 10],
+            });
+          }
+        }
+
+        // Signature space
+        content.push({
+          columns: [
+            { stack: [{ text: "Firma Dipendente", fontSize: 9, margin: [0, 30, 0, 5] }, { text: "_________________________" }], width: "50%" },
+            { stack: [{ text: "Firma Responsabile", fontSize: 9, margin: [0, 30, 0, 5] }, { text: "_________________________" }], width: "50%" },
+          ],
+          margin: [0, 10, 0, 0],
+        });
+
+        // Page break if not last
+        if (i < employeeIds.length - 1) {
+          content.push({ text: "", pageBreak: "after" });
+        }
+      }
+
+      const docDefinition = {
+        pageSize: "A4" as const,
+        pageOrientation: "landscape" as const,
+        pageMargins: [40, 40, 40, 40] as [number, number, number, number],
+        content,
+        styles: {
+          header: { fontSize: 16, bold: true },
+          subheader: { fontSize: 12, bold: true },
+        },
+      };
+
+      // Generate PDF with pdfmake
+      const [PdfMake, pdfFonts] = await Promise.all([
+        import("pdfmake/build/pdfmake"),
+        import("pdfmake/build/vfs_fonts").catch(() => null),
+      ]);
+      const vfs = pdfFonts && (pdfFonts as any).pdfMake?.vfs ? (pdfFonts as any).pdfMake.vfs : undefined;
+      const pdfDoc = PdfMake.default.createPdf(docDefinition as any, undefined, undefined, vfs);
+
+      pdfDoc.getBuffer((buffer: Buffer) => {
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename=verbale-consegna-dpi-${Date.now()}.pdf`);
+        res.send(buffer);
+      });
+    } catch (error: any) {
+      console.error("Error generating equipment PDF:", error);
+      res.status(500).json({ error: error.message || "Failed to generate PDF" });
+    }
+  });
+
+  app.delete("/api/equipment-assignments/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = (req.session as any).organizationId;
+      const deleted = await storage.deleteEquipmentAssignment(id, organizationId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Assegnazione non trovata" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting equipment assignment:", error);
+      res.status(500).json({ error: "Failed to delete equipment assignment" });
     }
   });
 

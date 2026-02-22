@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { queryClient } from "./lib/queryClient";
@@ -22,6 +22,7 @@ import TeamReportForm from "@/components/TeamReportForm";
 import AdminDashboard from "@/components/AdminDashboard";
 import SuperAdminDashboard from "@/components/SuperAdminDashboard";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
+import EquipmentConfirmationDialog from "@/components/EquipmentConfirmationDialog";
 import ThemeToggle from "@/components/ThemeToggle";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -97,6 +98,21 @@ function AuthenticatedApp({
   // The queryClient throws errors in format "404: error message"
   const isReportNotFound = hasReportError && (reportError as Error)?.message?.startsWith('404');
   const hasServerError = hasReportError && !isReportNotFound;
+
+  // Check for pending equipment assignments (for employees and teamleaders)
+  const [equipmentDialogOpen, setEquipmentDialogOpen] = useState(false);
+  const { data: pendingEquipment = [] } = useQuery<any[]>({
+    queryKey: ["/api/equipment-assignments/pending"],
+    enabled: currentUser.role === "employee" || currentUser.role === "teamleader",
+    staleTime: 0,
+  });
+
+  // Show dialog when there are pending assignments
+  useEffect(() => {
+    if (pendingEquipment.length > 0 && !equipmentDialogOpen) {
+      setEquipmentDialogOpen(true);
+    }
+  }, [pendingEquipment]);
 
   // Mutation to create new daily report
   const createReportMutation = useMutation({
@@ -193,7 +209,15 @@ function AuthenticatedApp({
   };
 
   return (
-    <motion.div 
+    <>
+      {/* Equipment Confirmation Dialog for employees */}
+      {(currentUser.role === "employee" || currentUser.role === "teamleader") && (
+        <EquipmentConfirmationDialog
+          open={equipmentDialogOpen}
+          onOpenChange={setEquipmentDialogOpen}
+        />
+      )}
+    <motion.div
       className="min-h-screen bg-background"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -336,6 +360,7 @@ function AuthenticatedApp({
         </Switch>
       </main>
     </motion.div>
+    </>
   );
 }
 

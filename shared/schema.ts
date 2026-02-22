@@ -295,6 +295,37 @@ export const reportAuditLog = pgTable("report_audit_log", {
   orgIdx: index("report_audit_log_org_idx").on(table.organizationId),
 }));
 
+// Equipment types master table (DPI/Attrezzature - catalogo)
+export const equipmentTypes = pgTable("equipment_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  name: text("name").notNull(),
+  category: text("category").notNull(), // "DPI" | "Attrezzatura" | "Altro"
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+});
+
+// Equipment assignments table (Consegne DPI/Attrezzature ai dipendenti)
+export const equipmentAssignments = pgTable("equipment_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  equipmentTypeId: varchar("equipment_type_id").notNull().references(() => equipmentTypes.id),
+  employeeId: varchar("employee_id").notNull().references(() => users.id),
+  assignedById: varchar("assigned_by_id").notNull().references(() => users.id),
+  quantity: integer("quantity").notNull().default(1),
+  assignmentDate: timestamp("assignment_date").notNull().default(sql`now()`),
+  notes: text("notes"), // Taglia, matricola, ecc.
+  expiryDate: date("expiry_date"), // Scadenza opzionale (per DPI)
+  confirmationStatus: text("confirmation_status").notNull().default("pending"), // "pending" | "confirmed" | "not_received"
+  confirmedAt: timestamp("confirmed_at"),
+  employeeNote: text("employee_note"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+}, (table) => ({
+  orgIdx: index("equipment_assignments_org_idx").on(table.organizationId),
+  employeeIdx: index("equipment_assignments_employee_idx").on(table.employeeId),
+  employeeStatusIdx: index("equipment_assignments_employee_status_idx").on(table.employeeId, table.confirmationStatus),
+}));
+
 // Insert schemas
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   id: true,
@@ -512,6 +543,50 @@ export const updateFuelTankLoadSchema = insertFuelTankLoadSchema.partial().exten
   id: z.string().optional()
 });
 
+// Equipment types insert schema
+export const insertEquipmentTypeSchema = createInsertSchema(equipmentTypes).omit({
+  id: true,
+  organizationId: true,
+}).extend({
+  category: z.enum(["DPI", "Attrezzatura", "Altro"]),
+});
+
+export const updateEquipmentTypeSchema = insertEquipmentTypeSchema.partial().extend({
+  id: z.string().optional()
+});
+
+// Equipment assignments insert schema
+export const insertEquipmentAssignmentSchema = createInsertSchema(equipmentAssignments).omit({
+  id: true,
+  organizationId: true,
+  assignedById: true,
+  confirmationStatus: true,
+  confirmedAt: true,
+  employeeNote: true,
+  createdAt: true,
+}).extend({
+  quantity: z.union([z.string(), z.number()]).transform(val => Number(val)),
+  assignmentDate: z.union([z.string(), z.date()]).transform(val => {
+    if (typeof val === 'string') return new Date(val);
+    return val;
+  }),
+  expiryDate: z.union([z.string(), z.date(), z.null()]).optional().transform(val => {
+    if (!val) return null;
+    if (typeof val === 'string') return val;
+    return val;
+  }),
+});
+
+export const updateEquipmentAssignmentSchema = insertEquipmentAssignmentSchema.partial().extend({
+  id: z.string().optional()
+});
+
+export const confirmEquipmentSchema = z.object({
+  assignmentIds: z.array(z.string()).min(1, "Almeno un'assegnazione richiesta"),
+  status: z.enum(["confirmed", "not_received"]),
+  employeeNote: z.string().optional(),
+});
+
 // Agenda items insert schema
 export const insertAgendaItemSchema = createInsertSchema(agendaItems).omit({
   id: true,
@@ -602,6 +677,15 @@ export type InsertAgendaItem = z.infer<typeof insertAgendaItemSchema>;
 export type AgendaItem = typeof agendaItems.$inferSelect;
 export type UpdateAgendaItem = z.infer<typeof updateAgendaItemSchema>;
 
+export type InsertEquipmentType = z.infer<typeof insertEquipmentTypeSchema>;
+export type EquipmentType = typeof equipmentTypes.$inferSelect;
+export type UpdateEquipmentType = z.infer<typeof updateEquipmentTypeSchema>;
+
+export type InsertEquipmentAssignment = z.infer<typeof insertEquipmentAssignmentSchema>;
+export type EquipmentAssignment = typeof equipmentAssignments.$inferSelect;
+export type UpdateEquipmentAssignment = z.infer<typeof updateEquipmentAssignmentSchema>;
+export type ConfirmEquipment = z.infer<typeof confirmEquipmentSchema>;
+
 // Status enum
 export const StatusEnum = z.enum(["In attesa", "Approvato"]);
 export type Status = z.infer<typeof StatusEnum>;
@@ -625,3 +709,11 @@ export type EventType = z.infer<typeof EventTypeEnum>;
 // Recurrence enum (Agenda)
 export const RecurrenceEnum = z.enum(["daily", "weekly", "monthly", "yearly"]);
 export type Recurrence = z.infer<typeof RecurrenceEnum>;
+
+// Equipment category enum
+export const EquipmentCategoryEnum = z.enum(["DPI", "Attrezzatura", "Altro"]);
+export type EquipmentCategory = z.infer<typeof EquipmentCategoryEnum>;
+
+// Equipment confirmation status enum
+export const EquipmentConfirmationStatusEnum = z.enum(["pending", "confirmed", "not_received"]);
+export type EquipmentConfirmationStatus = z.infer<typeof EquipmentConfirmationStatusEnum>;

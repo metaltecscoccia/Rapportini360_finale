@@ -67,6 +67,13 @@ import {
   type AgendaItem,
   type InsertAgendaItem,
   type UpdateAgendaItem,
+  equipmentTypes,
+  equipmentAssignments,
+  type EquipmentType,
+  type InsertEquipmentType,
+  type EquipmentAssignment,
+  type InsertEquipmentAssignment,
+  type UpdateEquipmentAssignment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, inArray, ne, sql } from "drizzle-orm";
@@ -435,6 +442,22 @@ export interface IStorage {
   createAgendaItem(item: InsertAgendaItem, organizationId: string, createdBy: string): Promise<AgendaItem>;
   updateAgendaItem(id: string, updates: UpdateAgendaItem, organizationId: string): Promise<AgendaItem | undefined>;
   deleteAgendaItem(id: string, organizationId: string): Promise<boolean>;
+
+  // Equipment Types (DPI/Attrezzature - catalogo)
+  getAllEquipmentTypes(organizationId: string): Promise<EquipmentType[]>;
+  getEquipmentType(id: string, organizationId: string): Promise<EquipmentType | undefined>;
+  createEquipmentType(equipmentType: InsertEquipmentType, organizationId: string): Promise<EquipmentType>;
+  updateEquipmentType(id: string, updates: Partial<InsertEquipmentType>, organizationId: string): Promise<EquipmentType>;
+  deleteEquipmentType(id: string, organizationId: string): Promise<boolean>;
+
+  // Equipment Assignments (Consegne DPI/Attrezzature)
+  getAllEquipmentAssignments(organizationId: string): Promise<EquipmentAssignment[]>;
+  getEquipmentAssignmentsByEmployee(employeeId: string, organizationId: string): Promise<EquipmentAssignment[]>;
+  getPendingEquipmentAssignments(employeeId: string, organizationId: string): Promise<EquipmentAssignment[]>;
+  createEquipmentAssignment(assignment: InsertEquipmentAssignment, organizationId: string, assignedById: string): Promise<EquipmentAssignment>;
+  updateEquipmentAssignment(id: string, updates: Partial<UpdateEquipmentAssignment>, organizationId: string): Promise<EquipmentAssignment>;
+  confirmEquipmentAssignments(assignmentIds: string[], status: string, employeeNote: string | undefined, organizationId: string): Promise<boolean>;
+  deleteEquipmentAssignment(id: string, organizationId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2890,6 +2913,156 @@ export class DatabaseStorage implements IStorage {
         eq(agendaItems.organizationId, organizationId)
       )
     );
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // ============================================
+  // Equipment Types (DPI/Attrezzature - catalogo)
+  // ============================================
+
+  async getAllEquipmentTypes(organizationId: string): Promise<EquipmentType[]> {
+    await this.ensureInitialized();
+    return await db.select().from(equipmentTypes)
+      .where(eq(equipmentTypes.organizationId, organizationId));
+  }
+
+  async getEquipmentType(id: string, organizationId: string): Promise<EquipmentType | undefined> {
+    await this.ensureInitialized();
+    const [equipmentType] = await db.select().from(equipmentTypes)
+      .where(and(
+        eq(equipmentTypes.id, id),
+        eq(equipmentTypes.organizationId, organizationId)
+      ));
+    return equipmentType || undefined;
+  }
+
+  async createEquipmentType(insertEquipmentType: InsertEquipmentType, organizationId: string): Promise<EquipmentType> {
+    await this.ensureInitialized();
+    const [equipmentType] = await db.insert(equipmentTypes).values({
+      ...insertEquipmentType,
+      organizationId
+    }).returning();
+    return equipmentType;
+  }
+
+  async updateEquipmentType(id: string, updates: Partial<InsertEquipmentType>, organizationId: string): Promise<EquipmentType> {
+    await this.ensureInitialized();
+    const [updated] = await db.update(equipmentTypes)
+      .set(updates)
+      .where(and(
+        eq(equipmentTypes.id, id),
+        eq(equipmentTypes.organizationId, organizationId)
+      ))
+      .returning();
+    if (!updated) {
+      throw new Error("Tipo attrezzatura non trovato");
+    }
+    return updated;
+  }
+
+  async deleteEquipmentType(id: string, organizationId: string): Promise<boolean> {
+    await this.ensureInitialized();
+    const result = await db.delete(equipmentTypes).where(and(
+      eq(equipmentTypes.id, id),
+      eq(equipmentTypes.organizationId, organizationId)
+    ));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // ============================================
+  // Equipment Assignments (Consegne DPI/Attrezzature)
+  // ============================================
+
+  async getAllEquipmentAssignments(organizationId: string): Promise<EquipmentAssignment[]> {
+    await this.ensureInitialized();
+    return await db.select()
+      .from(equipmentAssignments)
+      .where(eq(equipmentAssignments.organizationId, organizationId))
+      .orderBy(desc(equipmentAssignments.assignmentDate));
+  }
+
+  async getEquipmentAssignmentsByEmployee(employeeId: string, organizationId: string): Promise<EquipmentAssignment[]> {
+    await this.ensureInitialized();
+    return await db.select()
+      .from(equipmentAssignments)
+      .where(and(
+        eq(equipmentAssignments.employeeId, employeeId),
+        eq(equipmentAssignments.organizationId, organizationId)
+      ))
+      .orderBy(desc(equipmentAssignments.assignmentDate));
+  }
+
+  async getPendingEquipmentAssignments(employeeId: string, organizationId: string): Promise<EquipmentAssignment[]> {
+    await this.ensureInitialized();
+    return await db.select()
+      .from(equipmentAssignments)
+      .where(and(
+        eq(equipmentAssignments.employeeId, employeeId),
+        eq(equipmentAssignments.organizationId, organizationId),
+        eq(equipmentAssignments.confirmationStatus, "pending")
+      ))
+      .orderBy(desc(equipmentAssignments.assignmentDate));
+  }
+
+  async createEquipmentAssignment(
+    insertAssignment: InsertEquipmentAssignment,
+    organizationId: string,
+    assignedById: string
+  ): Promise<EquipmentAssignment> {
+    await this.ensureInitialized();
+    const [assignment] = await db.insert(equipmentAssignments).values({
+      ...insertAssignment as any,
+      organizationId,
+      assignedById,
+    }).returning();
+    return assignment;
+  }
+
+  async updateEquipmentAssignment(
+    id: string,
+    updates: Partial<UpdateEquipmentAssignment>,
+    organizationId: string
+  ): Promise<EquipmentAssignment> {
+    await this.ensureInitialized();
+    const [updated] = await db.update(equipmentAssignments)
+      .set(updates as any)
+      .where(and(
+        eq(equipmentAssignments.id, id),
+        eq(equipmentAssignments.organizationId, organizationId)
+      ))
+      .returning();
+    if (!updated) {
+      throw new Error("Assegnazione attrezzatura non trovata");
+    }
+    return updated;
+  }
+
+  async confirmEquipmentAssignments(
+    assignmentIds: string[],
+    status: string,
+    employeeNote: string | undefined,
+    organizationId: string
+  ): Promise<boolean> {
+    await this.ensureInitialized();
+    const result = await db.update(equipmentAssignments)
+      .set({
+        confirmationStatus: status,
+        confirmedAt: sql`now()`,
+        employeeNote: employeeNote || null,
+      })
+      .where(and(
+        inArray(equipmentAssignments.id, assignmentIds),
+        eq(equipmentAssignments.organizationId, organizationId)
+      ));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async deleteEquipmentAssignment(id: string, organizationId: string): Promise<boolean> {
+    await this.ensureInitialized();
+    const result = await db.delete(equipmentAssignments).where(and(
+      eq(equipmentAssignments.id, id),
+      eq(equipmentAssignments.organizationId, organizationId)
+    ));
     return result.rowCount !== null && result.rowCount > 0;
   }
 }
