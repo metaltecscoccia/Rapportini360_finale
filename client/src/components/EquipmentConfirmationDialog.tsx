@@ -90,7 +90,8 @@ export default function EquipmentConfirmationDialog({ open, onOpenChange }: Equi
           <div className="text-center py-8 text-muted-foreground">Caricamento...</div>
         ) : (
           <div className="space-y-4">
-            <div className="border rounded-lg overflow-x-auto">
+            {/* Desktop View: Table */}
+            <div className="hidden sm:block border rounded-lg overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -109,11 +110,15 @@ export default function EquipmentConfirmationDialog({ open, onOpenChange }: Equi
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {getEquipmentTypeCategory(assignment.equipmentTypeId)}
+                          {getEquipmentTypeCategory(
+                            assignment.equipmentTypeId,
+                          )}
                         </Badge>
                       </TableCell>
                       <TableCell>{assignment.quantity}</TableCell>
-                      <TableCell className="text-sm">{formatDate(assignment.assignmentDate)}</TableCell>
+                      <TableCell className="text-sm">
+                        {formatDate(assignment.assignmentDate)}
+                      </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {assignment.notes || "-"}
                       </TableCell>
@@ -121,6 +126,49 @@ export default function EquipmentConfirmationDialog({ open, onOpenChange }: Equi
                   ))}
                 </TableBody>
               </Table>
+            </div>
+
+            {/* Mobile View: Cards */}
+            <div className="sm:hidden space-y-3">
+              {pendingAssignments.map((assignment) => (
+                <div
+                  key={assignment.id}
+                  className="border rounded-lg p-4 space-y-2 text-sm"
+                >
+                  <div className="flex justify-between items-start">
+                    <span className="font-bold text-base">
+                      {getEquipmentTypeName(assignment.equipmentTypeId)}
+                    </span>
+                    <Badge variant="secondary">
+                      {getEquipmentTypeCategory(assignment.equipmentTypeId)}
+                    </Badge>
+                  </div>
+                  <div className="text-muted-foreground space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-foreground">
+                        Quantità:
+                      </span>
+                      <span className="font-mono text-base">
+                        {assignment.quantity}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-foreground">
+                        Data:
+                      </span>
+                      <span>{formatDate(assignment.assignmentDate)}</span>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="font-semibold text-foreground">
+                        Note:
+                      </span>
+                      <p className="text-sm bg-muted/50 p-2 rounded-md">
+                        {assignment.notes || "Nessuna nota."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="space-y-2">
