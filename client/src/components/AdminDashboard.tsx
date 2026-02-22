@@ -90,7 +90,6 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 const addEmployeeSchema = z.object({
   fullName: z.string().min(2, "Il nome deve essere di almeno 2 caratteri"),
   username: z.string().min(3, "L'username deve essere di almeno 3 caratteri"),
-  password: z.string().min(1, "Password è richiesta"),
 });
 
 // Schema per modifica dipendente (password opzionale)
@@ -500,7 +499,6 @@ export default function AdminDashboard({
       const response = await apiRequest('POST', '/api/users', {
         fullName: data.fullName,
         username: data.username,
-        password: data.password, // Will be replaced with temp password by server
         role: 'employee'
       });
       return response.json(); // Returns user + temporaryPassword
@@ -3065,24 +3063,6 @@ export default function AdminDashboard({
                                 placeholder="Username unico" 
                                 {...field} 
                                 data-testid="input-username"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="password" 
-                                placeholder="Password sicura" 
-                                {...field} 
-                                data-testid="input-password"
                               />
                             </FormControl>
                             <FormMessage />

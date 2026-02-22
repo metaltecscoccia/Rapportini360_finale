@@ -312,22 +312,17 @@ export async function sendContactFormEmail(data: {
   return false;
 }
 
-// Genera una password temporanea sicura
-export function generateTemporaryPassword(length: number = 12): string {
+// Genera una password temporanea semplice (2 lettere + 4 cifre, es. "Ak4823")
+export function generateTemporaryPassword(): string {
   const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const lowercase = 'abcdefghjkmnpqrstuvwxyz';
   const numbers = '23456789';
-  const all = uppercase + lowercase + numbers;
 
   let password = '';
-  // Assicura almeno un carattere di ogni tipo
   password += uppercase[Math.floor(Math.random() * uppercase.length)];
   password += lowercase[Math.floor(Math.random() * lowercase.length)];
-  password += numbers[Math.floor(Math.random() * numbers.length)];
-
-  // Riempi il resto
-  for (let i = password.length; i < length; i++) {
-    password += all[Math.floor(Math.random() * all.length)];
+  for (let i = 0; i < 4; i++) {
+    password += numbers[Math.floor(Math.random() * numbers.length)];
   }
 
   // Mescola la password

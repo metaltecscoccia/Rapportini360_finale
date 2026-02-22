@@ -353,8 +353,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   organizationId: true, // Will be set automatically from session
 }).extend({
-  // Password validation - no requirements
-  password: z.string().min(1, "Password è richiesta"),
+  // Password opzionale - generata dal server per nuovi dipendenti
+  password: z.string().min(1).optional(),
   username: z.string().min(3, "Username deve essere di almeno 3 caratteri"),
   fullName: z.string().min(2, "Nome e cognome devono essere di almeno 2 caratteri")
 });
