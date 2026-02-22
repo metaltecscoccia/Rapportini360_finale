@@ -4683,9 +4683,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const vfs = pdfFonts && (pdfFonts as any).pdfMake?.vfs ? (pdfFonts as any).pdfMake.vfs : undefined;
       const pdfDoc = PdfMake.default.createPdf(docDefinition as any, undefined, undefined, vfs);
 
-      const buffer = await new Promise<Buffer>((resolve, reject) => {
+      const rawBuffer = await new Promise<Uint8Array>((resolve, reject) => {
         try {
-          pdfDoc.getBuffer((buf: Buffer) => {
+          pdfDoc.getBuffer((buf: Uint8Array) => {
             resolve(buf);
           });
         } catch (err) {
@@ -4693,9 +4693,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      const pdfBuffer = Buffer.from(rawBuffer);
       res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Length", pdfBuffer.length);
       res.setHeader("Content-Disposition", `attachment; filename=verbale-consegna-dpi-${Date.now()}.pdf`);
-      res.send(buffer);
+      res.end(pdfBuffer);
     } catch (error: any) {
       console.error("Error generating equipment PDF:", error);
       res.status(500).json({ error: error.message || "Failed to generate PDF" });
