@@ -2015,20 +2015,7 @@ export default function AdminDashboard({
       ) : activeSection === "agenda" ? (
         <AgendaSection />
       ) : activeSection === "equipment" ? (
-        <div className="space-y-6">
-          <Tabs defaultValue="equipment-assignments" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="equipment-assignments">Assegnazioni</TabsTrigger>
-              <TabsTrigger value="equipment-catalog">Catalogo</TabsTrigger>
-            </TabsList>
-            <TabsContent value="equipment-assignments">
-              <EquipmentAssignmentManagement />
-            </TabsContent>
-            <TabsContent value="equipment-catalog">
-              <EquipmentCatalogManagement />
-            </TabsContent>
-          </Tabs>
-        </div>
+        <EquipmentAssignmentManagement />
       ) : (
       <>
       {/* Tabs - navigation now handled by sidebar */}
@@ -3465,6 +3452,7 @@ export default function AdminDashboard({
           <Tabs defaultValue="config-activities" className="w-full">
             <TabsList className="mb-4">
               <TabsTrigger value="config-activities">Attività e Componenti</TabsTrigger>
+              <TabsTrigger value="config-equipment">DPI/Attrezzature</TabsTrigger>
               <TabsTrigger value="config-backup">Backup</TabsTrigger>
             </TabsList>
 
@@ -3635,6 +3623,11 @@ export default function AdminDashboard({
                 </CardContent>
               </Card>
               </div>
+            </TabsContent>
+
+            {/* Sotto-tab: DPI/Attrezzature - Catalogo */}
+            <TabsContent value="config-equipment">
+              <EquipmentCatalogManagement />
             </TabsContent>
 
             {/* Sotto-tab: Backup */}
