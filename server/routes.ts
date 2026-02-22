@@ -1513,13 +1513,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Utente non trovato" });
       }
 
-      // Prevent admin from using this endpoint
-      if (user.role === "admin") {
-        return res.status(403).json({
-          error: "Gli amministratori non possono usare questo endpoint"
-        });
-      }
-
       // Update password and clear mustResetPassword flag
       await storage.updateUser(userId, {
         password: newPassword.trim(),
