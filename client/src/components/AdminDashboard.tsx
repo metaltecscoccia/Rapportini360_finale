@@ -1909,6 +1909,7 @@ export default function AdminDashboard({
       "dashboard": { mainSection: "rapportini", tab: "reports" },
       "employees": { mainSection: "rapportini", tab: "employees" },
       "teams": { mainSection: "teams", tab: "teams" },
+      "equipment": { mainSection: "equipment", tab: "equipment" },
       "clients": { mainSection: "rapportini", tab: "clients" },
       "workorders": { mainSection: "rapportini", tab: "work-orders" },
       "configuration": { mainSection: "rapportini", tab: "work-types" },
@@ -2013,6 +2014,21 @@ export default function AdminDashboard({
         <TeamsManagement />
       ) : activeSection === "agenda" ? (
         <AgendaSection />
+      ) : activeSection === "equipment" ? (
+        <div className="space-y-6">
+          <Tabs defaultValue="equipment-assignments" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="equipment-assignments">Assegnazioni</TabsTrigger>
+              <TabsTrigger value="equipment-catalog">Catalogo</TabsTrigger>
+            </TabsList>
+            <TabsContent value="equipment-assignments">
+              <EquipmentAssignmentManagement />
+            </TabsContent>
+            <TabsContent value="equipment-catalog">
+              <EquipmentCatalogManagement />
+            </TabsContent>
+          </Tabs>
+        </div>
       ) : (
       <>
       {/* Tabs - navigation now handled by sidebar */}
@@ -3449,7 +3465,6 @@ export default function AdminDashboard({
           <Tabs defaultValue="config-activities" className="w-full">
             <TabsList className="mb-4">
               <TabsTrigger value="config-activities">Attività e Componenti</TabsTrigger>
-              <TabsTrigger value="config-equipment">DPI/Attrezzature</TabsTrigger>
               <TabsTrigger value="config-backup">Backup</TabsTrigger>
             </TabsList>
 
@@ -3620,22 +3635,6 @@ export default function AdminDashboard({
                 </CardContent>
               </Card>
               </div>
-            </TabsContent>
-
-            {/* Sotto-tab: DPI/Attrezzature */}
-            <TabsContent value="config-equipment">
-              <Tabs defaultValue="equipment-catalog" className="w-full">
-                <TabsList className="mb-4">
-                  <TabsTrigger value="equipment-catalog">Catalogo</TabsTrigger>
-                  <TabsTrigger value="equipment-assignments">Assegnazioni</TabsTrigger>
-                </TabsList>
-                <TabsContent value="equipment-catalog">
-                  <EquipmentCatalogManagement />
-                </TabsContent>
-                <TabsContent value="equipment-assignments">
-                  <EquipmentAssignmentManagement />
-                </TabsContent>
-              </Tabs>
             </TabsContent>
 
             {/* Sotto-tab: Backup */}
