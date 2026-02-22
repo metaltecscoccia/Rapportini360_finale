@@ -319,6 +319,8 @@ export const equipmentAssignments = pgTable("equipment_assignments", {
   confirmationStatus: text("confirmation_status").notNull().default("pending"), // "pending" | "confirmed" | "not_received"
   confirmedAt: timestamp("confirmed_at"),
   employeeNote: text("employee_note"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 }, (table) => ({
   orgIdx: index("equipment_assignments_org_idx").on(table.organizationId),
@@ -563,6 +565,8 @@ export const insertEquipmentAssignmentSchema = createInsertSchema(equipmentAssig
   confirmationStatus: true,
   confirmedAt: true,
   employeeNote: true,
+  ipAddress: true,
+  userAgent: true,
   createdAt: true,
 }).extend({
   quantity: z.union([z.string(), z.number()]).transform(val => Number(val)),

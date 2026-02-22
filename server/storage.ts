@@ -456,7 +456,7 @@ export interface IStorage {
   getPendingEquipmentAssignments(employeeId: string, organizationId: string): Promise<EquipmentAssignment[]>;
   createEquipmentAssignment(assignment: InsertEquipmentAssignment, organizationId: string, assignedById: string): Promise<EquipmentAssignment>;
   updateEquipmentAssignment(id: string, updates: Partial<UpdateEquipmentAssignment>, organizationId: string): Promise<EquipmentAssignment>;
-  confirmEquipmentAssignments(assignmentIds: string[], status: string, employeeNote: string | undefined, organizationId: string): Promise<boolean>;
+  confirmEquipmentAssignments(assignmentIds: string[], status: string, employeeNote: string | undefined, organizationId: string, ipAddress?: string, userAgent?: string): Promise<boolean>;
   deleteEquipmentAssignment(id: string, organizationId: string): Promise<boolean>;
 }
 
@@ -3041,7 +3041,9 @@ export class DatabaseStorage implements IStorage {
     assignmentIds: string[],
     status: string,
     employeeNote: string | undefined,
-    organizationId: string
+    organizationId: string,
+    ipAddress?: string,
+    userAgent?: string
   ): Promise<boolean> {
     await this.ensureInitialized();
     const result = await db.update(equipmentAssignments)
@@ -3049,7 +3051,9 @@ export class DatabaseStorage implements IStorage {
         confirmationStatus: status,
         confirmedAt: sql`now()`,
         employeeNote: employeeNote || null,
-      })
+        ipAddress: ipAddress || null,
+        userAgent: userAgent || null,
+      } as any)
       .where(and(
         inArray(equipmentAssignments.id, assignmentIds),
         eq(equipmentAssignments.organizationId, organizationId)

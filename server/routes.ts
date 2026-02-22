@@ -4539,7 +4539,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Dati conferma non validi", details: parsed.error.issues });
       }
       const { assignmentIds, status, employeeNote } = parsed.data;
-      const confirmed = await storage.confirmEquipmentAssignments(assignmentIds, status, employeeNote, organizationId);
+      const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+      const userAgent = req.get('user-agent') || 'unknown';
+      const confirmed = await storage.confirmEquipmentAssignments(assignmentIds, status, employeeNote, organizationId, ipAddress, userAgent);
       if (!confirmed) {
         return res.status(404).json({ error: "Assegnazioni non trovate" });
       }
@@ -4550,7 +4552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export PDF verbale consegna DPI/Attrezzature
+  // Export PDF Report Storico DPI/Attrezzature
   app.post("/api/equipment-assignments/export-pdf", requireAdmin, async (req, res) => {
     try {
       const organizationId = (req.session as any).organizationId;
@@ -4565,6 +4567,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const selectedAssignments = allAssignments.filter(a => assignmentIds.includes(a.id));
       const equipmentTypesList = await storage.getAllEquipmentTypes(organizationId);
       const typesMap = new Map(equipmentTypesList.map(t => [t.id, t]));
+      const allUsers = await storage.getAllUsers(organizationId);
+      const org = await storage.getOrganization(organizationId);
+      const orgName = org?.companyName || "Azienda";
 
       // Group by employee
       const byEmployee = new Map<string, typeof selectedAssignments>();
@@ -4574,84 +4579,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
         byEmployee.set(a.employeeId, list);
       }
 
+      // Legal clause footer
+      const legalClause = "Il presente documento è un estratto certificato dei log di sistema di Rapportini360. Le conferme sono state apposte tramite Firma Elettronica Semplice (FES) previa autenticazione con credenziali riservate. I dati (IP e Timestamp) garantiscono l'imputabilità dell'azione al lavoratore titolare dell'account.";
+
       // Build PDF content
       const content: any[] = [];
       const employeeIds = Array.from(byEmployee.keys());
-      const allUsers = await storage.getAllUsers(organizationId);
 
       for (let i = 0; i < employeeIds.length; i++) {
         const employeeId = employeeIds[i];
         const assignments = byEmployee.get(employeeId)!;
 
-        // Get employee info
         const employee = allUsers.find(u => u.id === employeeId);
         if (!employee) continue;
 
+        // Sort assignments chronologically
+        assignments.sort((a, b) => {
+          const da = a.assignmentDate ? new Date(a.assignmentDate).getTime() : 0;
+          const db = b.assignmentDate ? new Date(b.assignmentDate).getTime() : 0;
+          return da - db;
+        });
+
+        // Calculate period
+        const dates = assignments.map(a => a.assignmentDate ? new Date(a.assignmentDate) : null).filter(Boolean) as Date[];
+        const minDate = dates.length > 0 ? dates[0].toLocaleDateString("it-IT") : "-";
+        const maxDate = dates.length > 0 ? dates[dates.length - 1].toLocaleDateString("it-IT") : "-";
+
+        // Header section
         content.push(
-          { text: "VERBALE DI CONSEGNA DPI/ATTREZZATURE", style: "header", alignment: "center", margin: [0, 0, 0, 10] },
-          { text: `Dipendente: ${employee.fullName}`, style: "subheader", margin: [0, 0, 0, 15] }
+          { text: "REPORT STORICO CONSEGNA DPI/ATTREZZATURE", style: "header", alignment: "center", margin: [0, 0, 0, 5] },
+          { text: orgName, style: "subheader", alignment: "center", margin: [0, 0, 0, 15] },
+          {
+            columns: [
+              { text: [{ text: "Dipendente: ", bold: true }, employee.fullName], fontSize: 10 },
+              { text: [{ text: "Periodo: ", bold: true }, `${minDate} - ${maxDate}`], fontSize: 10, alignment: "right" },
+            ],
+            margin: [0, 0, 0, 3],
+          },
+          { canvas: [{ type: "line", x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: "#333333" }], margin: [0, 5, 0, 15] }
         );
 
-        // Table
+        // Table header
         const tableBody: any[][] = [
           [
-            { text: "Data", bold: true, fontSize: 9 },
-            { text: "Attrezzatura/DPI", bold: true, fontSize: 9 },
-            { text: "Categoria", bold: true, fontSize: 9 },
-            { text: "Qtà", bold: true, fontSize: 9, alignment: "center" },
-            { text: "Note", bold: true, fontSize: 9 },
-            { text: "Scadenza", bold: true, fontSize: 9 },
-            { text: "Stato", bold: true, fontSize: 9 },
+            { text: "Data", bold: true, fontSize: 8, fillColor: "#f3f4f6" },
+            { text: "Descrizione Oggetto", bold: true, fontSize: 8, fillColor: "#f3f4f6" },
+            { text: "Qtà", bold: true, fontSize: 8, alignment: "center", fillColor: "#f3f4f6" },
+            { text: "Esito", bold: true, fontSize: 8, alignment: "center", fillColor: "#f3f4f6" },
+            { text: "Data Conferma", bold: true, fontSize: 8, fillColor: "#f3f4f6" },
+            { text: "IP", bold: true, fontSize: 8, fillColor: "#f3f4f6" },
+            { text: "Device", bold: true, fontSize: 8, fillColor: "#f3f4f6" },
           ],
         ];
 
         for (const a of assignments) {
           const eqType = typesMap.get(a.equipmentTypeId);
-          const statusText = a.confirmationStatus === "confirmed" ? "Confermato"
-            : a.confirmationStatus === "not_received" ? "Non ricevuto" : "In attesa";
+          const itemName = `${eqType?.name || "N/A"} (${eqType?.category || "N/A"})`;
           const assignDate = a.assignmentDate ? new Date(a.assignmentDate).toLocaleDateString("it-IT") : "-";
-          const expiryStr = a.expiryDate ? new Date(a.expiryDate).toLocaleDateString("it-IT") : "-";
+          const confirmDate = a.confirmedAt ? new Date(a.confirmedAt).toLocaleString("it-IT") : "-";
+
+          // Status with colors
+          let statusText = "In attesa";
+          let statusColor = "#6b7280"; // gray
+          if (a.confirmationStatus === "confirmed") {
+            statusText = "Accettato";
+            statusColor = "#16a34a"; // green
+          } else if (a.confirmationStatus === "not_received") {
+            statusText = "Rifiutato";
+            statusColor = "#dc2626"; // red
+          }
+
+          // Truncate user agent for readability
+          const deviceShort = (a as any).userAgent
+            ? String((a as any).userAgent).substring(0, 30) + (String((a as any).userAgent).length > 30 ? "..." : "")
+            : "-";
 
           tableBody.push([
-            { text: assignDate, fontSize: 8 },
-            { text: eqType?.name || "N/A", fontSize: 8 },
-            { text: eqType?.category || "N/A", fontSize: 8 },
-            { text: String(a.quantity), fontSize: 8, alignment: "center" },
-            { text: a.notes || "-", fontSize: 8 },
-            { text: expiryStr, fontSize: 8 },
-            { text: statusText, fontSize: 8 },
+            { text: assignDate, fontSize: 7 },
+            { text: itemName + (a.notes ? `\n${a.notes}` : ""), fontSize: 7 },
+            { text: String(a.quantity), fontSize: 7, alignment: "center" },
+            { text: statusText, fontSize: 7, bold: true, color: statusColor, alignment: "center" },
+            { text: confirmDate, fontSize: 7 },
+            { text: (a as any).ipAddress || "-", fontSize: 6 },
+            { text: deviceShort, fontSize: 6 },
           ]);
         }
 
         content.push({
-          table: { headerRows: 1, widths: ["auto", "*", "auto", "auto", "*", "auto", "auto"], body: tableBody },
+          table: {
+            headerRows: 1,
+            widths: ["auto", "*", 25, "auto", "auto", 55, 80],
+            body: tableBody,
+          },
           layout: "lightHorizontalLines",
-          margin: [0, 0, 0, 20],
+          margin: [0, 0, 0, 15],
         });
 
-        // Confirmation info
-        const confirmedAssignments = assignments.filter(a => a.confirmedAt);
-        if (confirmedAssignments.length > 0) {
-          const confirmDate = new Date(confirmedAssignments[0].confirmedAt!).toLocaleString("it-IT");
-          content.push({
-            text: `Conferma registrata il: ${confirmDate}`,
-            fontSize: 9, italics: true, color: "#666666", margin: [0, 0, 0, 5],
-          });
-          if (confirmedAssignments[0].employeeNote) {
+        // Employee notes section
+        const notesAssignments = assignments.filter(a => a.employeeNote);
+        if (notesAssignments.length > 0) {
+          content.push(
+            { text: "Note del dipendente:", bold: true, fontSize: 9, margin: [0, 0, 0, 3] }
+          );
+          for (const a of notesAssignments) {
+            const eqType = typesMap.get(a.equipmentTypeId);
             content.push({
-              text: `Note dipendente: ${confirmedAssignments[0].employeeNote}`,
-              fontSize: 9, italics: true, color: "#666666", margin: [0, 0, 0, 10],
+              text: `• ${eqType?.name || "N/A"}: ${a.employeeNote}`,
+              fontSize: 8, italics: true, color: "#4b5563", margin: [10, 0, 0, 2],
             });
           }
+          content.push({ text: "", margin: [0, 0, 0, 10] });
         }
+
+        // Legal clause
+        content.push({
+          canvas: [{ type: "line", x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5, lineColor: "#999999" }],
+          margin: [0, 10, 0, 8],
+        });
+        content.push({
+          text: legalClause,
+          fontSize: 7, italics: true, color: "#666666", alignment: "justify",
+          margin: [0, 0, 0, 20],
+        });
 
         // Signature space
         content.push({
           columns: [
-            { stack: [{ text: "Firma Dipendente", fontSize: 9, margin: [0, 30, 0, 5] }, { text: "_________________________" }], width: "50%" },
-            { stack: [{ text: "Firma Responsabile", fontSize: 9, margin: [0, 30, 0, 5] }, { text: "_________________________" }], width: "50%" },
+            { stack: [{ text: "Firma Dipendente", fontSize: 9, margin: [0, 20, 0, 5] }, { text: "_________________________" }], width: "50%" },
+            { stack: [{ text: "Firma Responsabile", fontSize: 9, margin: [0, 20, 0, 5] }, { text: "_________________________" }], width: "50%" },
           ],
-          margin: [0, 10, 0, 0],
+          margin: [0, 0, 0, 0],
         });
 
         // Page break if not last
@@ -4666,13 +4723,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const docDefinition = {
         pageSize: "A4" as const,
-        pageOrientation: "landscape" as const,
-        pageMargins: [40, 40, 40, 40] as [number, number, number, number],
+        pageOrientation: "portrait" as const,
+        pageMargins: [40, 40, 40, 50] as [number, number, number, number],
         content,
         styles: {
-          header: { fontSize: 16, bold: true },
-          subheader: { fontSize: 12, bold: true },
+          header: { fontSize: 14, bold: true },
+          subheader: { fontSize: 11, bold: true, color: "#374151" },
         },
+        defaultStyle: { font: "Roboto" },
       };
 
       // Generate PDF with pdfmake
@@ -4696,7 +4754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pdfBuffer = Buffer.from(rawBuffer);
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Length", pdfBuffer.length);
-      res.setHeader("Content-Disposition", `attachment; filename=verbale-consegna-dpi-${Date.now()}.pdf`);
+      res.setHeader("Content-Disposition", `attachment; filename=report-storico-dpi-${Date.now()}.pdf`);
       res.end(pdfBuffer);
     } catch (error: any) {
       console.error("Error generating equipment PDF:", error);
