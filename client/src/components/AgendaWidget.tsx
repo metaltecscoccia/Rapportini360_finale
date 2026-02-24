@@ -12,6 +12,7 @@ type AgendaItem = {
   eventTime: string | null;
   eventType: "deadline" | "appointment" | "reminder";
   recurrence: string | null;
+  completed: boolean;
 };
 
 const eventTypeConfig = {
@@ -114,7 +115,7 @@ export default function AgendaWidget({
                       <Icon className="h-3 w-3" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.title}</p>
+                      <p className={`text-sm font-medium truncate ${item.completed ? "line-through text-muted-foreground" : ""}`}>{item.completed ? "✓ " : ""}{item.title}</p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <span>{formatDate(item.eventDate)}</span>
                         {item.eventTime && (

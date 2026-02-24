@@ -272,6 +272,7 @@ export const agendaItems = pgTable("agenda_items", {
   eventType: text("event_type").notNull(), // 'deadline', 'appointment', 'reminder'
   recurrence: text("recurrence"), // NULL, 'daily', 'weekly', 'monthly', 'yearly'
   recurrenceInterval: integer("recurrence_interval").default(1), // Ogni N giorni/settimane/mesi/anni
+  completed: boolean("completed").default(false).notNull(),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -54,6 +55,7 @@ type AgendaItem = {
   eventType: "deadline" | "appointment" | "reminder";
   recurrence: string | null;
   recurrenceInterval: number | null;
+  completed: boolean;
   createdAt: string;
 };
 
@@ -218,6 +220,18 @@ export default function AgendaSection() {
     },
     onError: () => {
       toast({ title: "Errore nell'eliminazione", variant: "destructive" });
+    },
+  });
+
+  const toggleCompletedMutation = useMutation({
+    mutationFn: async ({ id, completed }: { id: string; completed: boolean }) => {
+      const response = await apiRequest("PUT", `/api/agenda/${id}`, { completed });
+      if (!response.ok) throw new Error("Errore nell'aggiornamento");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/agenda"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/agenda/upcoming"] });
     },
   });
 
@@ -390,10 +404,10 @@ export default function AgendaSection() {
                           <div
                             key={`${item.id}-${dateStr}`}
                             onClick={() => openEditForm(item)}
-                            className={`text-xs p-1 rounded truncate cursor-pointer hover:opacity-80 ${config.color}`}
+                            className={`text-xs p-1 rounded truncate cursor-pointer hover:opacity-80 ${config.color} ${item.completed ? "opacity-50 line-through" : ""}`}
                             title={item.title}
                           >
-                            {item.title}
+                            {item.completed ? "✓ " : ""}{item.title}
                           </div>
                         );
                       })}
@@ -429,14 +443,21 @@ export default function AgendaSection() {
                 return (
                   <div
                     key={`${item.id}-${item.eventDate}`}
-                    className={`flex items-center gap-3 p-3 rounded-lg border-l-4 ${config.borderColor} bg-muted/30`}
+                    className={`flex items-center gap-3 p-3 rounded-lg border-l-4 ${config.borderColor} bg-muted/30 ${item.completed ? "opacity-60" : ""}`}
                   >
+                    <Checkbox
+                      checked={item.completed}
+                      onCheckedChange={(checked) =>
+                        toggleCompletedMutation.mutate({ id: item.id, completed: !!checked })
+                      }
+                      className="shrink-0"
+                    />
                     <div className={`p-2 rounded ${config.color}`}>
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{item.title}</span>
+                        <span className={`font-medium ${item.completed ? "line-through text-muted-foreground" : ""}`}>{item.title}</span>
                         {item.recurrence && (
                           <Badge variant="outline" className="text-xs">
                             {item.recurrenceInterval && item.recurrenceInterval > 1
