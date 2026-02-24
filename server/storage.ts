@@ -2805,23 +2805,21 @@ export class DatabaseStorage implements IStorage {
       .where(eq(agendaItems.organizationId, organizationId))
       .orderBy(agendaItems.eventDate);
 
-    // Filter by date range
-    if (startDate) {
-      items = items.filter(item => item.eventDate >= startDate);
-    }
-    if (endDate) {
-      items = items.filter(item => item.eventDate <= endDate);
-    }
-
     // Filter by event type
     if (eventType) {
       items = items.filter(item => item.eventType === eventType);
     }
 
-    // Include recurring events that fall within the date range
+    // Separate recurring from non-recurring BEFORE date filtering
+    // Recurring events need to be expanded across all months, not filtered by their original date
     if (startDate && endDate) {
       const recurringItems = items.filter(item => item.recurrence);
-      const nonRecurringItems = items.filter(item => !item.recurrence);
+      let nonRecurringItems = items.filter(item => !item.recurrence);
+
+      // Apply date range filter only to non-recurring events
+      nonRecurringItems = nonRecurringItems.filter(item =>
+        item.eventDate >= startDate && item.eventDate <= endDate
+      );
 
       const expandedRecurring: AgendaItem[] = [];
       const start = new Date(startDate);
@@ -2865,6 +2863,14 @@ export class DatabaseStorage implements IStorage {
       items = [...nonRecurringItems, ...expandedRecurring].sort((a, b) =>
         a.eventDate.localeCompare(b.eventDate)
       );
+    } else {
+      // No date range specified - filter non-recurring normally, skip recurring expansion
+      if (startDate) {
+        items = items.filter(item => item.eventDate >= startDate);
+      }
+      if (endDate) {
+        items = items.filter(item => item.eventDate <= endDate);
+      }
     }
 
     return items;
