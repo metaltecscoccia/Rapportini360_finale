@@ -2279,8 +2279,8 @@ export default function AdminDashboard({
                 </div>
 
                 {/* Agenda Widget */}
-                <div className="flex-1 h-[280px] overflow-hidden">
-                  <AgendaWidget onViewAll={() => setActiveSection("agenda")} />
+                <div className="flex-1 self-stretch">
+                  <AgendaWidget onViewAll={() => setActiveSection("agenda")} onAdd={() => setActiveSection("agenda")} />
                 </div>
               </div>
             </CardHeader>

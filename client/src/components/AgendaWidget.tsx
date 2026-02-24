@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, AlertCircle, Bell, ChevronRight } from "lucide-react";
+import { Calendar, Clock, AlertCircle, Bell, ChevronRight, Plus } from "lucide-react";
 
 type AgendaItem = {
   id: string;
@@ -17,18 +16,15 @@ type AgendaItem = {
 
 const eventTypeConfig = {
   deadline: {
-    label: "Scadenza",
-    color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    color: "bg-red-500",
     icon: AlertCircle,
   },
   appointment: {
-    label: "Appuntamento",
-    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    color: "bg-blue-500",
     icon: Calendar,
   },
   reminder: {
-    label: "Promemoria",
-    color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    color: "bg-yellow-500",
     icon: Bell,
   },
 };
@@ -55,8 +51,10 @@ function formatDate(dateStr: string): string {
 
 export default function AgendaWidget({
   onViewAll,
+  onAdd,
 }: {
   onViewAll?: () => void;
+  onAdd?: () => void;
 }) {
   const { data: items = [], isLoading } = useQuery<AgendaItem[]>({
     queryKey: ["/api/agenda/upcoming"],
@@ -64,16 +62,16 @@ export default function AgendaWidget({
 
   if (isLoading) {
     return (
-      <Card className="h-full">
-        <CardHeader className="pb-2">
+      <Card className="h-full flex flex-col">
+        <CardHeader className="py-2 px-3 shrink-0">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Prossimi Eventi
+            <Calendar className="h-3.5 w-3.5" />
+            Prossimi 7 Giorni
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+        <CardContent className="px-3 pb-2">
+          <div className="flex items-center justify-center py-2">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
           </div>
         </CardContent>
       </Card>
@@ -82,70 +80,68 @@ export default function AgendaWidget({
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="pb-2 shrink-0">
+      <CardHeader className="py-2 px-3 shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
+            <Calendar className="h-3.5 w-3.5" />
             Prossimi 7 Giorni
           </CardTitle>
-          {items.length > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {items.length}
-            </Badge>
-          )}
+          <div className="flex items-center gap-1">
+            {onAdd && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 px-1.5 text-xs"
+                onClick={onAdd}
+              >
+                <Plus className="h-3 w-3 mr-0.5" />
+                Aggiungi Evento
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-2 flex-1 overflow-y-auto min-h-0">
+      <CardContent className="px-3 pb-2 pt-0 flex-1 overflow-y-auto min-h-0">
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
+          <p className="text-xs text-muted-foreground text-center py-2">
             Nessun evento in programma
           </p>
         ) : (
-          <>
-            <div className="space-y-2">
-              {items.slice(0, 5).map((item) => {
-                const config = eventTypeConfig[item.eventType];
-                const Icon = config.icon;
-                return (
-                  <div
-                    key={`${item.id}-${item.eventDate}`}
-                    className="flex items-start gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                  >
-                    <div className={`p-1.5 rounded ${config.color}`}>
-                      <Icon className="h-3 w-3" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium truncate ${item.completed ? "line-through text-muted-foreground" : ""}`}>{item.completed ? "✓ " : ""}{item.title}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{formatDate(item.eventDate)}</span>
-                        {item.eventTime && (
-                          <>
-                            <Clock className="h-3 w-3" />
-                            <span>{item.eventTime}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {items.length > 5 && (
-              <p className="text-xs text-muted-foreground text-center">
-                +{items.length - 5} altri eventi
-              </p>
-            )}
-          </>
+          <div className="space-y-0.5">
+            {items.slice(0, 7).map((item) => {
+              const config = eventTypeConfig[item.eventType];
+              return (
+                <div
+                  key={`${item.id}-${item.eventDate}`}
+                  className={`flex items-center gap-2 py-1 px-1.5 rounded text-xs hover:bg-muted/50 transition-colors ${item.completed ? "opacity-50" : ""}`}
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${config.color}`} />
+                  <span className={`flex-1 truncate ${item.completed ? "line-through text-muted-foreground" : "font-medium"}`}>
+                    {item.title}
+                  </span>
+                  <span className="text-muted-foreground shrink-0">{formatDate(item.eventDate)}</span>
+                  {item.eventTime && (
+                    <span className="text-muted-foreground shrink-0">{item.eventTime}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {items.length > 7 && (
+          <p className="text-xs text-muted-foreground text-center mt-1">
+            +{items.length - 7} altri
+          </p>
         )}
         {onViewAll && (
           <Button
             variant="ghost"
             size="sm"
-            className="w-full mt-2"
+            className="w-full mt-1 h-6 text-xs"
             onClick={onViewAll}
           >
             Vedi Agenda
-            <ChevronRight className="h-4 w-4 ml-1" />
+            <ChevronRight className="h-3 w-3 ml-0.5" />
           </Button>
         )}
       </CardContent>
