@@ -53,6 +53,7 @@ type AgendaItem = {
   eventTime: string | null;
   eventType: "deadline" | "appointment" | "reminder";
   recurrence: string | null;
+  recurrenceInterval: number | null;
   createdAt: string;
 };
 
@@ -63,6 +64,7 @@ type FormData = {
   eventTime: string;
   eventType: "deadline" | "appointment" | "reminder";
   recurrence: string;
+  recurrenceInterval: number;
 };
 
 const eventTypeConfig = {
@@ -101,6 +103,7 @@ const initialFormData: FormData = {
   eventTime: "",
   eventType: "reminder",
   recurrence: "",
+  recurrenceInterval: 1,
 };
 
 export default function AgendaSection() {
@@ -144,13 +147,15 @@ export default function AgendaSection() {
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
+      const hasRecurrence = data.recurrence && data.recurrence !== "none";
       const payload = {
         title: data.title,
         description: data.description || null,
         eventDate: data.eventDate,
         eventTime: data.eventTime || null,
         eventType: data.eventType,
-        recurrence: data.recurrence && data.recurrence !== "none" ? data.recurrence : null,
+        recurrence: hasRecurrence ? data.recurrence : null,
+        recurrenceInterval: hasRecurrence ? (data.recurrenceInterval || 1) : null,
       };
       const response = await apiRequest("POST", "/api/agenda", payload);
       if (!response.ok) {
@@ -172,13 +177,15 @@ export default function AgendaSection() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: FormData }) => {
+      const hasRecurrence = data.recurrence && data.recurrence !== "none";
       const payload = {
         title: data.title,
         description: data.description || null,
         eventDate: data.eventDate,
         eventTime: data.eventTime || null,
         eventType: data.eventType,
-        recurrence: data.recurrence && data.recurrence !== "none" ? data.recurrence : null,
+        recurrence: hasRecurrence ? data.recurrence : null,
+        recurrenceInterval: hasRecurrence ? (data.recurrenceInterval || 1) : null,
       };
       const response = await apiRequest("PUT", `/api/agenda/${id}`, payload);
       if (!response.ok) {
@@ -229,6 +236,7 @@ export default function AgendaSection() {
       eventTime: item.eventTime || "",
       eventType: item.eventType,
       recurrence: item.recurrence || "",
+      recurrenceInterval: item.recurrenceInterval || 1,
     });
     setIsFormOpen(true);
   };
@@ -431,7 +439,15 @@ export default function AgendaSection() {
                         <span className="font-medium">{item.title}</span>
                         {item.recurrence && (
                           <Badge variant="outline" className="text-xs">
-                            {recurrenceOptions.find((r) => r.value === item.recurrence)?.label}
+                            {item.recurrenceInterval && item.recurrenceInterval > 1
+                              ? `Ogni ${item.recurrenceInterval} ${
+                                  item.recurrence === "daily" ? "giorni" :
+                                  item.recurrence === "weekly" ? "settimane" :
+                                  item.recurrence === "monthly" ? "mesi" :
+                                  "anni"
+                                }`
+                              : recurrenceOptions.find((r) => r.value === item.recurrence)?.label
+                            }
                           </Badge>
                         )}
                       </div>
@@ -546,7 +562,7 @@ export default function AgendaSection() {
                 <Label>Ricorrenza</Label>
                 <Select
                   value={formData.recurrence}
-                  onValueChange={(value) => setFormData({ ...formData, recurrence: value })}
+                  onValueChange={(value) => setFormData({ ...formData, recurrence: value, recurrenceInterval: 1 })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Nessuna" />
@@ -561,6 +577,28 @@ export default function AgendaSection() {
                 </Select>
               </div>
             </div>
+
+            {formData.recurrence && formData.recurrence !== "none" && (
+              <div className="space-y-2">
+                <Label htmlFor="recurrenceInterval">Ogni quante {
+                  formData.recurrence === "daily" ? "giorni" :
+                  formData.recurrence === "weekly" ? "settimane" :
+                  formData.recurrence === "monthly" ? "mesi" :
+                  "anni"
+                }?</Label>
+                <Input
+                  id="recurrenceInterval"
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={formData.recurrenceInterval}
+                  onChange={(e) => setFormData({ ...formData, recurrenceInterval: parseInt(e.target.value) || 1 })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Es. "3" con ricorrenza mensile = ogni 3 mesi
+                </p>
+              </div>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={closeForm}>

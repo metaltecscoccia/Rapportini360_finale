@@ -2829,6 +2829,7 @@ export class DatabaseStorage implements IStorage {
 
       for (const item of recurringItems) {
         const itemDate = new Date(item.eventDate);
+        const interval = item.recurrenceInterval || 1;
 
         // Generate occurrences within the date range
         let currentDate = new Date(itemDate);
@@ -2840,19 +2841,19 @@ export class DatabaseStorage implements IStorage {
             });
           }
 
-          // Advance to next occurrence based on recurrence type
+          // Advance to next occurrence based on recurrence type and interval
           switch (item.recurrence) {
             case 'daily':
-              currentDate.setDate(currentDate.getDate() + 1);
+              currentDate.setDate(currentDate.getDate() + interval);
               break;
             case 'weekly':
-              currentDate.setDate(currentDate.getDate() + 7);
+              currentDate.setDate(currentDate.getDate() + (7 * interval));
               break;
             case 'monthly':
-              currentDate.setMonth(currentDate.getMonth() + 1);
+              currentDate.setMonth(currentDate.getMonth() + interval);
               break;
             case 'yearly':
-              currentDate.setFullYear(currentDate.getFullYear() + 1);
+              currentDate.setFullYear(currentDate.getFullYear() + interval);
               break;
             default:
               currentDate = new Date(end.getTime() + 1); // Exit loop

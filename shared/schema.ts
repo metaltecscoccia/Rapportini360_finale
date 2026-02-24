@@ -271,6 +271,7 @@ export const agendaItems = pgTable("agenda_items", {
   eventTime: text("event_time"), // HH:MM format, NULL per eventi giornata intera
   eventType: text("event_type").notNull(), // 'deadline', 'appointment', 'reminder'
   recurrence: text("recurrence"), // NULL, 'daily', 'weekly', 'monthly', 'yearly'
+  recurrenceInterval: integer("recurrence_interval").default(1), // Ogni N giorni/settimane/mesi/anni
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
@@ -601,6 +602,7 @@ export const insertAgendaItemSchema = createInsertSchema(agendaItems).omit({
 }).extend({
   eventType: z.enum(['deadline', 'appointment', 'reminder']),
   recurrence: z.union([z.enum(['daily', 'weekly', 'monthly', 'yearly']), z.null()]).optional(),
+  recurrenceInterval: z.union([z.number().int().min(1).max(365), z.null()]).optional(),
   eventTime: z.union([z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato ora non valido (HH:MM)"), z.null()]).optional(),
   description: z.union([z.string(), z.null()]).optional(),
 });
