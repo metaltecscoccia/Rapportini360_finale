@@ -89,7 +89,7 @@ const eventTypeConfig = {
 };
 
 const recurrenceOptions = [
-  { value: "", label: "Nessuna" },
+  { value: "none", label: "Nessuna" },
   { value: "daily", label: "Giornaliera" },
   { value: "weekly", label: "Settimanale" },
   { value: "monthly", label: "Mensile" },
@@ -102,7 +102,7 @@ const initialFormData: FormData = {
   eventDate: new Date().toISOString().split("T")[0],
   eventTime: "",
   eventType: "reminder",
-  recurrence: "",
+  recurrence: "none",
   recurrenceInterval: 1,
 };
 
@@ -235,7 +235,7 @@ export default function AgendaSection() {
       eventDate: item.eventDate,
       eventTime: item.eventTime || "",
       eventType: item.eventType,
-      recurrence: item.recurrence || "",
+      recurrence: item.recurrence || "none",
       recurrenceInterval: item.recurrenceInterval || 1,
     });
     setIsFormOpen(true);
@@ -569,7 +569,7 @@ export default function AgendaSection() {
                   </SelectTrigger>
                   <SelectContent>
                     {recurrenceOptions.map((opt) => (
-                      <SelectItem key={opt.value || "none"} value={opt.value || "none"}>
+                      <SelectItem key={opt.value} value={opt.value}>
                         {opt.label}
                       </SelectItem>
                     ))}
@@ -618,13 +618,29 @@ export default function AgendaSection() {
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminare questo evento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Stai per eliminare "{deletingItem?.title}". Questa azione non puo essere annullata.
+              {deletingItem?.recurrence ? (
+                <>
+                  L'evento "{deletingItem?.title}" e' ricorrente
+                  {deletingItem?.recurrenceInterval && deletingItem.recurrenceInterval > 1
+                    ? ` (ogni ${deletingItem.recurrenceInterval} ${
+                        deletingItem.recurrence === "daily" ? "giorni" :
+                        deletingItem.recurrence === "weekly" ? "settimane" :
+                        deletingItem.recurrence === "monthly" ? "mesi" :
+                        "anni"
+                      })`
+                    : ` (${recurrenceOptions.find((r) => r.value === deletingItem.recurrence)?.label?.toLowerCase()})`
+                  }.
+                  {" "}Eliminandolo verranno rimosse tutte le occorrenze. Questa azione non puo' essere annullata.
+                </>
+              ) : (
+                <>Stai per eliminare "{deletingItem?.title}". Questa azione non puo' essere annullata.</>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
-              Elimina
+              {deletingItem?.recurrence ? "Elimina tutte le occorrenze" : "Elimina"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
