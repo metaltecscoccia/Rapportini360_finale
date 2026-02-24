@@ -81,8 +81,8 @@ export default function AgendaWidget({
   }
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-2">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-2 shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Calendar className="h-4 w-4" />
@@ -95,14 +95,14 @@ export default function AgendaWidget({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-2 flex-1 overflow-y-auto min-h-0">
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
             Nessun evento in programma
           </p>
         ) : (
           <>
-            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+            <div className="space-y-2">
               {items.slice(0, 5).map((item) => {
                 const config = eventTypeConfig[item.eventType];
                 const Icon = config.icon;

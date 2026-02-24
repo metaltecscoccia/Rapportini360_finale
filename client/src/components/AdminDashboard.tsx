@@ -2078,9 +2078,6 @@ export default function AdminDashboard({
           </CardContent>
         </Card>
 
-        {/* Agenda Widget */}
-        <AgendaWidget onViewAll={() => setActiveSection("agenda")} />
-
       </div>
 
       {/* Main Content Tabs - now handled by sidebar */}
@@ -2203,79 +2200,87 @@ export default function AdminDashboard({
                 </Button>
               </div>
 
-              {/* Filters */}
-              <div className="flex flex-col gap-4 max-w-sm">
-                <div className="w-full relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Cerca dipendente..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                    data-testid="input-search-employee"
-                  />
-                </div>
-
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full" data-testid="select-status-filter">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tutti gli stati</SelectItem>
-                    <SelectItem value="In attesa">In attesa</SelectItem>
-                    <SelectItem value="Approvato">Confermato</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <div className="flex items-center justify-between gap-2 px-3 py-2 border rounded-md bg-background">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium whitespace-nowrap">
-                      {showAllReports ? 'Tutti' : 'Ultimi 7gg'}
-                    </span>
-                  </div>
-                  <Switch
-                    checked={showAllReports}
-                    onCheckedChange={setShowAllReports}
-                    data-testid="switch-show-all-reports"
-                  />
-                </div>
-
-                <div className="flex flex-row gap-2 items-center">
-                  <div className="flex items-center gap-2 flex-1">
-                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+              {/* Filters + Agenda Widget */}
+              <div className="flex flex-col md:flex-row gap-4">
+                {/* Filters */}
+                <div className="flex flex-col gap-4 max-w-sm">
+                  <div className="w-full relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      type="date"
-                      value={fromDate}
-                      onChange={(e) => {
-                        setFromDate(e.target.value);
-                        setTimeout(() => {
-                          toDateInputRef.current?.focus();
-                        }, 0);
-                      }}
-                      placeholder="Da"
-                      className="flex-1 min-w-0"
-                      data-testid="input-from-date"
+                      placeholder="Cerca dipendente..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                      data-testid="input-search-employee"
                     />
                   </div>
-                  <span className="text-muted-foreground">-</span>
-                  <div className="flex items-center gap-2 flex-1">
-                    <Input
-                      ref={toDateInputRef}
-                      type="date"
-                      value={toDate}
-                      onChange={(e) => {
-                        setToDate(e.target.value);
-                        setTimeout(() => {
-                          toDateInputRef.current?.blur();
-                        }, 0);
-                      }}
-                      placeholder="A"
-                      className="flex-1 min-w-0"
-                      data-testid="input-to-date"
+
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full" data-testid="select-status-filter">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tutti gli stati</SelectItem>
+                      <SelectItem value="In attesa">In attesa</SelectItem>
+                      <SelectItem value="Approvato">Confermato</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <div className="flex items-center justify-between gap-2 px-3 py-2 border rounded-md bg-background">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium whitespace-nowrap">
+                        {showAllReports ? 'Tutti' : 'Ultimi 7gg'}
+                      </span>
+                    </div>
+                    <Switch
+                      checked={showAllReports}
+                      onCheckedChange={setShowAllReports}
+                      data-testid="switch-show-all-reports"
                     />
                   </div>
+
+                  <div className="flex flex-row gap-2 items-center">
+                    <div className="flex items-center gap-2 flex-1">
+                      <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <Input
+                        type="date"
+                        value={fromDate}
+                        onChange={(e) => {
+                          setFromDate(e.target.value);
+                          setTimeout(() => {
+                            toDateInputRef.current?.focus();
+                          }, 0);
+                        }}
+                        placeholder="Da"
+                        className="flex-1 min-w-0"
+                        data-testid="input-from-date"
+                      />
+                    </div>
+                    <span className="text-muted-foreground">-</span>
+                    <div className="flex items-center gap-2 flex-1">
+                      <Input
+                        ref={toDateInputRef}
+                        type="date"
+                        value={toDate}
+                        onChange={(e) => {
+                          setToDate(e.target.value);
+                          setTimeout(() => {
+                            toDateInputRef.current?.blur();
+                          }, 0);
+                        }}
+                        placeholder="A"
+                        className="flex-1 min-w-0"
+                        data-testid="input-to-date"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Agenda Widget */}
+                <div className="flex-1 h-[280px] overflow-hidden">
+                  <AgendaWidget onViewAll={() => setActiveSection("agenda")} />
                 </div>
               </div>
             </CardHeader>
