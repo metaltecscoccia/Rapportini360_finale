@@ -83,6 +83,7 @@ import AgendaSection from "./AgendaSection";
 import AgendaWidget from "./AgendaWidget";
 import EquipmentCatalogManagement from "./EquipmentCatalogManagement";
 import EquipmentAssignmentManagement from "./EquipmentAssignmentManagement";
+import ExportDropdown from "./ExportDropdown";
 import { AppSidebar, sidebarItems } from "./AppSidebar";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -2163,24 +2164,10 @@ export default function AdminDashboard({
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-2 flex-wrap">
                   <CardTitle>Rapportini Giornalieri</CardTitle>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExportFilteredReports()}
-                    data-testid="button-export-filtered"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Esporta Word
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExportFilteredReportsTxt()}
-                    data-testid="button-export-txt"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Esporta TXT
-                  </Button>
+                  <ExportDropdown formats={[
+                    { label: "Word", onClick: () => handleExportFilteredReports() },
+                    { label: "TXT", onClick: () => handleExportFilteredReportsTxt() },
+                  ]} />
                   <Button 
                     variant="outline"
                     size="sm"
@@ -2734,7 +2721,12 @@ export default function AdminDashboard({
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Gestione Commesse</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle>Gestione Commesse</CardTitle>
+                      <ExportDropdown formats={[
+                        { label: "Excel", onClick: () => window.open("/api/export/work-orders", "_blank") },
+                      ]} />
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       Seleziona una commessa per visualizzare il report dettagliato
                     </p>
@@ -2929,7 +2921,12 @@ export default function AdminDashboard({
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Gestione Clienti</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle>Gestione Clienti</CardTitle>
+                    <ExportDropdown formats={[
+                      { label: "Excel", onClick: () => window.open("/api/export/clients", "_blank") },
+                    ]} />
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Visualizza e gestisci tutti i clienti. L'eliminazione di un cliente non eliminerà le commesse associate.
                   </p>
@@ -3017,7 +3014,12 @@ export default function AdminDashboard({
         <TabsContent value="employees" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Gestione Dipendenti</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle>Gestione Dipendenti</CardTitle>
+                <ExportDropdown formats={[
+                  { label: "Excel", onClick: () => window.open("/api/export/employees", "_blank") },
+                ]} />
+              </div>
               <Dialog
                 open={dialogState.state.employee.type === 'addEmployee'}
                 onOpenChange={(open) => {
@@ -3670,6 +3672,11 @@ export default function AdminDashboard({
 
         {/* Absence Statistics Tab */}
         <TabsContent value="absence-stats" className="space-y-6">
+          <div className="flex items-center gap-2 mb-2">
+            <ExportDropdown formats={[
+              { label: "Excel", onClick: () => window.open("/api/export/absence-stats", "_blank") },
+            ]} />
+          </div>
           {(isLoadingAttendanceStats || isFetchingAttendanceStats) && !attendanceStats ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">

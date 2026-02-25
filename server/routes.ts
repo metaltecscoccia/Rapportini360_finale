@@ -2470,6 +2470,249 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // ============================================
+  // EXCEL EXPORT ENDPOINTS
+  // ============================================
+
+  app.get("/api/export/employees", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const allUsers = await storage.getAllUsers(organizationId);
+      const employees = allUsers.filter((u: any) => u.role !== "superadmin");
+
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      const ws = workbook.addWorksheet("Dipendenti");
+
+      ws.columns = [
+        { header: "Nome", key: "firstName", width: 20 },
+        { header: "Cognome", key: "lastName", width: 20 },
+        { header: "Username", key: "username", width: 20 },
+        { header: "Ruolo", key: "role", width: 15 },
+        { header: "Stato", key: "status", width: 12 },
+      ];
+
+      const headerRow = ws.getRow(1);
+      headerRow.font = { bold: true };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+
+      for (const emp of employees) {
+        const roleLabel = emp.role === "admin" ? "Amministratore" : emp.role === "teamleader" ? "Caposquadra" : "Dipendente";
+        ws.addRow({
+          firstName: emp.firstName,
+          lastName: emp.lastName,
+          username: emp.username,
+          role: roleLabel,
+          status: emp.isActive ? "Attivo" : "Inattivo",
+        });
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=Dipendenti_${new Date().toISOString().split("T")[0]}.xlsx`);
+      res.send(Buffer.from(buffer as ArrayBuffer));
+    } catch (error) {
+      console.error("Error exporting employees:", error);
+      res.status(500).json({ error: "Failed to export employees" });
+    }
+  });
+
+  app.get("/api/export/clients", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const allClients = await storage.getAllClients(organizationId);
+
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      const ws = workbook.addWorksheet("Clienti");
+
+      ws.columns = [
+        { header: "Nome Cliente", key: "name", width: 30 },
+        { header: "Data Creazione", key: "createdAt", width: 18 },
+      ];
+
+      const headerRow = ws.getRow(1);
+      headerRow.font = { bold: true };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+
+      for (const client of allClients) {
+        ws.addRow({
+          name: client.name,
+          createdAt: client.createdAt ? new Date(client.createdAt).toLocaleDateString("it-IT") : "",
+        });
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=Clienti_${new Date().toISOString().split("T")[0]}.xlsx`);
+      res.send(Buffer.from(buffer as ArrayBuffer));
+    } catch (error) {
+      console.error("Error exporting clients:", error);
+      res.status(500).json({ error: "Failed to export clients" });
+    }
+  });
+
+  app.get("/api/export/work-orders", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const allWorkOrders = await storage.getAllWorkOrders(organizationId);
+      const allClients = await storage.getAllClients(organizationId);
+      const clientMap = new Map(allClients.map((c: any) => [c.id, c.name]));
+
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      const ws = workbook.addWorksheet("Commesse");
+
+      ws.columns = [
+        { header: "Nome Commessa", key: "name", width: 30 },
+        { header: "Cliente", key: "client", width: 25 },
+        { header: "Stato", key: "status", width: 15 },
+        { header: "Data Inizio", key: "startDate", width: 15 },
+        { header: "Data Fine", key: "endDate", width: 15 },
+        { header: "Ore Stimate", key: "estimatedHours", width: 14 },
+      ];
+
+      const headerRow = ws.getRow(1);
+      headerRow.font = { bold: true };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+
+      for (const wo of allWorkOrders) {
+        ws.addRow({
+          name: wo.name,
+          client: clientMap.get(wo.clientId) || "",
+          status: wo.status === "active" ? "In Corso" : wo.status === "completed" ? "Completata" : wo.status,
+          startDate: wo.startDate || "",
+          endDate: wo.endDate || "",
+          estimatedHours: wo.estimatedHours || "",
+        });
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=Commesse_${new Date().toISOString().split("T")[0]}.xlsx`);
+      res.send(Buffer.from(buffer as ArrayBuffer));
+    } catch (error) {
+      console.error("Error exporting work orders:", error);
+      res.status(500).json({ error: "Failed to export work orders" });
+    }
+  });
+
+  app.get("/api/export/agenda", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const items = await storage.getAgendaItems(organizationId);
+
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      const ws = workbook.addWorksheet("Agenda");
+
+      ws.columns = [
+        { header: "Titolo", key: "title", width: 30 },
+        { header: "Descrizione", key: "description", width: 35 },
+        { header: "Data", key: "eventDate", width: 15 },
+        { header: "Ora", key: "eventTime", width: 10 },
+        { header: "Tipo", key: "eventType", width: 15 },
+        { header: "Ricorrenza", key: "recurrence", width: 15 },
+        { header: "Completato", key: "completed", width: 12 },
+      ];
+
+      const headerRow = ws.getRow(1);
+      headerRow.font = { bold: true };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+
+      const typeLabels: Record<string, string> = { deadline: "Scadenza", appointment: "Appuntamento", reminder: "Promemoria" };
+      const recurrenceLabels: Record<string, string> = { daily: "Giornaliera", weekly: "Settimanale", monthly: "Mensile", yearly: "Annuale" };
+
+      for (const item of items) {
+        ws.addRow({
+          title: item.title,
+          description: item.description || "",
+          eventDate: item.eventDate,
+          eventTime: item.eventTime || "",
+          eventType: typeLabels[item.eventType] || item.eventType,
+          recurrence: item.recurrence ? recurrenceLabels[item.recurrence] || item.recurrence : "Nessuna",
+          completed: item.completed ? "Sì" : "No",
+        });
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=Agenda_${new Date().toISOString().split("T")[0]}.xlsx`);
+      res.send(Buffer.from(buffer as ArrayBuffer));
+    } catch (error) {
+      console.error("Error exporting agenda:", error);
+      res.status(500).json({ error: "Failed to export agenda" });
+    }
+  });
+
+  app.get("/api/export/absence-stats", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const stats = await storage.getAttendanceStats(organizationId);
+
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+
+      // Sheet 1: Riepilogo per dipendente
+      const ws1 = workbook.addWorksheet("Assenze per Dipendente");
+      ws1.columns = [
+        { header: "Dipendente", key: "employee", width: 25 },
+        { header: "Totale Assenze", key: "total", width: 15 },
+        { header: "Ferie", key: "ferie", width: 10 },
+        { header: "Permesso", key: "permesso", width: 10 },
+        { header: "Malattia", key: "malattia", width: 10 },
+        { header: "Congedo", key: "congedo", width: 10 },
+        { header: "L104", key: "l104", width: 10 },
+      ];
+
+      const headerRow1 = ws1.getRow(1);
+      headerRow1.font = { bold: true };
+      headerRow1.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+
+      if (stats.byEmployee) {
+        for (const emp of stats.byEmployee) {
+          ws1.addRow({
+            employee: emp.fullName,
+            total: emp.totalAbsences,
+            ferie: emp.byType?.F || 0,
+            permesso: emp.byType?.P || 0,
+            malattia: emp.byType?.M || 0,
+            congedo: emp.byType?.CP || 0,
+            l104: emp.byType?.L104 || 0,
+          });
+        }
+      }
+
+      // Sheet 2: Trend mensile
+      const ws2 = workbook.addWorksheet("Trend Mensile");
+      ws2.columns = [
+        { header: "Mese", key: "month", width: 15 },
+        { header: "Assenze", key: "count", width: 12 },
+      ];
+
+      const headerRow2 = ws2.getRow(1);
+      headerRow2.font = { bold: true };
+      headerRow2.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+
+      if (stats.byMonth) {
+        for (const entry of stats.byMonth) {
+          ws2.addRow({
+            month: `${entry.month}/${entry.year}`,
+            count: entry.count,
+          });
+        }
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=Statistiche_Assenze_${new Date().toISOString().split("T")[0]}.xlsx`);
+      res.send(Buffer.from(buffer as ArrayBuffer));
+    } catch (error) {
+      console.error("Error exporting absence stats:", error);
+      res.status(500).json({ error: "Failed to export absence statistics" });
+    }
+  });
+
   app.get("/api/daily-reports/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;

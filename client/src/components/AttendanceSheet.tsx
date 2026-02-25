@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
+import ExportDropdown from "./ExportDropdown";
 import { formatDateToItalian } from "@/lib/dateUtils";
 
 // Absence type labels - AGGIUNTO "A: Assente"
@@ -312,7 +313,12 @@ export default function AttendanceSheet() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Foglio Presenze</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>Foglio Presenze</CardTitle>
+              <ExportDropdown formats={[
+                { label: "Excel", onClick: handleExportExcel },
+              ]} />
+            </div>
             <div className="flex gap-2">
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                 <SelectTrigger className="w-32" data-testid="select-month">
@@ -338,13 +344,6 @@ export default function AttendanceSheet() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button
-                onClick={handleExportExcel}
-                data-testid="button-export-excel"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Esporta Excel
-              </Button>
               <Button
                 onClick={() => setAdvanceDialogOpen(true)}
                 variant="outline"
