@@ -83,7 +83,7 @@ import AgendaSection from "./AgendaSection";
 import AgendaWidget from "./AgendaWidget";
 import EquipmentCatalogManagement from "./EquipmentCatalogManagement";
 import EquipmentAssignmentManagement from "./EquipmentAssignmentManagement";
-import ExportDropdown from "./ExportDropdown";
+import ExportDropdown, { downloadFile } from "./ExportDropdown";
 import { AppSidebar, sidebarItems } from "./AppSidebar";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -2724,7 +2724,9 @@ export default function AdminDashboard({
                     <div className="flex items-center gap-2">
                       <CardTitle>Gestione Commesse</CardTitle>
                       <ExportDropdown formats={[
-                        { label: "Excel", onClick: () => window.open("/api/export/work-orders", "_blank") },
+                        { label: "Excel", onClick: () => downloadFile("/api/export/work-orders", "Commesse.xlsx") },
+                        { label: "Word", onClick: () => downloadFile("/api/export/work-orders-word", "Commesse.docx") },
+                        { label: "TXT", onClick: () => downloadFile("/api/export/work-orders-txt", "Commesse.txt") },
                       ]} />
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -2924,7 +2926,9 @@ export default function AdminDashboard({
                   <div className="flex items-center gap-2">
                     <CardTitle>Gestione Clienti</CardTitle>
                     <ExportDropdown formats={[
-                      { label: "Excel", onClick: () => window.open("/api/export/clients", "_blank") },
+                      { label: "Excel", onClick: () => downloadFile("/api/export/clients", "Clienti.xlsx") },
+                      { label: "Word", onClick: () => downloadFile("/api/export/clients-word", "Clienti.docx") },
+                      { label: "TXT", onClick: () => downloadFile("/api/export/clients-txt", "Clienti.txt") },
                     ]} />
                   </div>
                   <p className="text-sm text-muted-foreground">
@@ -3017,7 +3021,9 @@ export default function AdminDashboard({
               <div className="flex items-center gap-2">
                 <CardTitle>Gestione Dipendenti</CardTitle>
                 <ExportDropdown formats={[
-                  { label: "Excel", onClick: () => window.open("/api/export/employees", "_blank") },
+                  { label: "Excel", onClick: () => downloadFile("/api/export/employees", "Dipendenti.xlsx") },
+                  { label: "Word", onClick: () => downloadFile("/api/export/employees-word", "Dipendenti.docx") },
+                  { label: "TXT", onClick: () => downloadFile("/api/export/employees-txt", "Dipendenti.txt") },
                 ]} />
               </div>
               <Dialog
@@ -3674,7 +3680,9 @@ export default function AdminDashboard({
         <TabsContent value="absence-stats" className="space-y-6">
           <div className="flex items-center gap-2 mb-2">
             <ExportDropdown formats={[
-              { label: "Excel", onClick: () => window.open("/api/export/absence-stats", "_blank") },
+              { label: "Excel", onClick: () => downloadFile("/api/export/absence-stats", "Statistiche_Assenze.xlsx") },
+              { label: "Word", onClick: () => downloadFile("/api/export/absence-stats-word", "Statistiche_Assenze.docx") },
+              { label: "TXT", onClick: () => downloadFile("/api/export/absence-stats-txt", "Statistiche_Assenze.txt") },
             ]} />
           </div>
           {(isLoadingAttendanceStats || isFetchingAttendanceStats) && !attendanceStats ? (

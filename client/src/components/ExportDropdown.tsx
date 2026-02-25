@@ -13,6 +13,17 @@ export type ExportFormat = {
   onClick: () => void;
 };
 
+export async function downloadFile(url: string, filename: string) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Export failed");
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 export default function ExportDropdown({ formats }: { formats: ExportFormat[] }) {
   if (formats.length === 0) return null;
 

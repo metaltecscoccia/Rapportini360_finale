@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import ExportDropdown from "./ExportDropdown";
+import ExportDropdown, { downloadFile } from "./ExportDropdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -432,7 +432,9 @@ export default function AgendaSection() {
           <div className="flex items-center gap-2">
             <CardTitle className="text-lg">Eventi del Mese</CardTitle>
             <ExportDropdown formats={[
-              { label: "Excel", onClick: () => window.open("/api/export/agenda", "_blank") },
+              { label: "Excel", onClick: () => downloadFile("/api/export/agenda", "Agenda.xlsx") },
+              { label: "Word", onClick: () => downloadFile("/api/export/agenda-word", "Agenda.docx") },
+              { label: "TXT", onClick: () => downloadFile("/api/export/agenda-txt", "Agenda.txt") },
             ]} />
           </div>
         </CardHeader>

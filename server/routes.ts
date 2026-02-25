@@ -2713,6 +2713,360 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // WORD EXPORT ENDPOINTS
+  // ============================================
+
+  app.get("/api/export/employees-word", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const allUsers = await storage.getAllUsers(organizationId);
+      const employees = allUsers.filter((u: any) => u.role !== "superadmin");
+      const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType, BorderStyle } = await import("docx");
+      const today = new Date().toLocaleDateString("it-IT");
+      const headerCells = ["Nome", "Cognome", "Username", "Ruolo", "Stato"].map(text =>
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text, bold: true })] })], width: { size: 20, type: WidthType.PERCENTAGE } })
+      );
+      const rows = employees.map((emp: any) => {
+        const roleLabel = emp.role === "admin" ? "Amministratore" : emp.role === "teamleader" ? "Caposquadra" : "Dipendente";
+        return new TableRow({ children: [emp.firstName, emp.lastName, emp.username, roleLabel, emp.isActive ? "Attivo" : "Inattivo"].map(text =>
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: text || "" })] })], width: { size: 20, type: WidthType.PERCENTAGE } })
+        )});
+      });
+      const doc = new Document({
+        sections: [{ children: [
+          new Paragraph({ children: [new TextRun({ text: "Elenco Dipendenti", bold: true, size: 32 })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: `Generato il ${today}`, italics: true, size: 20 })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: "" }),
+          new Table({ rows: [new TableRow({ children: headerCells }), ...rows], width: { size: 100, type: WidthType.PERCENTAGE } }),
+        ]}],
+      });
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename=Dipendenti_${new Date().toISOString().split("T")[0]}.docx`);
+      res.send(Buffer.from(buffer));
+    } catch (error) {
+      console.error("Error exporting employees word:", error);
+      res.status(500).json({ error: "Failed to export employees" });
+    }
+  });
+
+  app.get("/api/export/clients-word", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const allClients = await storage.getAllClients(organizationId);
+      const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType } = await import("docx");
+      const today = new Date().toLocaleDateString("it-IT");
+      const headerCells = ["Nome Cliente", "Data Creazione"].map(text =>
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text, bold: true })] })], width: { size: 50, type: WidthType.PERCENTAGE } })
+      );
+      const rows = allClients.map((c: any) => new TableRow({ children: [
+        c.name || "", c.createdAt ? new Date(c.createdAt).toLocaleDateString("it-IT") : ""
+      ].map(text => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text })] })], width: { size: 50, type: WidthType.PERCENTAGE } })) }));
+      const doc = new Document({
+        sections: [{ children: [
+          new Paragraph({ children: [new TextRun({ text: "Elenco Clienti", bold: true, size: 32 })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: `Generato il ${today}`, italics: true, size: 20 })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: "" }),
+          new Table({ rows: [new TableRow({ children: headerCells }), ...rows], width: { size: 100, type: WidthType.PERCENTAGE } }),
+        ]}],
+      });
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename=Clienti_${new Date().toISOString().split("T")[0]}.docx`);
+      res.send(Buffer.from(buffer));
+    } catch (error) {
+      console.error("Error exporting clients word:", error);
+      res.status(500).json({ error: "Failed to export clients" });
+    }
+  });
+
+  app.get("/api/export/work-orders-word", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const allWorkOrders = await storage.getAllWorkOrders(organizationId);
+      const allClients = await storage.getAllClients(organizationId);
+      const clientMap = new Map(allClients.map((c: any) => [c.id, c.name]));
+      const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType } = await import("docx");
+      const today = new Date().toLocaleDateString("it-IT");
+      const headers = ["Commessa", "Cliente", "Stato", "Data Inizio", "Data Fine", "Ore Stimate"];
+      const headerRow = new TableRow({ children: headers.map(text =>
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text, bold: true })] })] })
+      )});
+      const rows = allWorkOrders.map((wo: any) => new TableRow({ children: [
+        wo.name || "", clientMap.get(wo.clientId) || "", wo.status === "active" ? "In Corso" : wo.status === "completed" ? "Completata" : wo.status || "",
+        wo.startDate || "", wo.endDate || "", wo.estimatedHours?.toString() || ""
+      ].map(text => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text })] })] })) }));
+      const doc = new Document({
+        sections: [{ children: [
+          new Paragraph({ children: [new TextRun({ text: "Elenco Commesse", bold: true, size: 32 })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: `Generato il ${today}`, italics: true, size: 20 })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: "" }),
+          new Table({ rows: [headerRow, ...rows], width: { size: 100, type: WidthType.PERCENTAGE } }),
+        ]}],
+      });
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename=Commesse_${new Date().toISOString().split("T")[0]}.docx`);
+      res.send(Buffer.from(buffer));
+    } catch (error) {
+      console.error("Error exporting work orders word:", error);
+      res.status(500).json({ error: "Failed to export work orders" });
+    }
+  });
+
+  app.get("/api/export/agenda-word", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const items = await storage.getAgendaItems(organizationId);
+      const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType } = await import("docx");
+      const today = new Date().toLocaleDateString("it-IT");
+      const typeLabels: Record<string, string> = { deadline: "Scadenza", appointment: "Appuntamento", reminder: "Promemoria" };
+      const recLabels: Record<string, string> = { daily: "Giornaliera", weekly: "Settimanale", monthly: "Mensile", yearly: "Annuale" };
+      const headers = ["Titolo", "Data", "Ora", "Tipo", "Ricorrenza", "Completato"];
+      const headerRow = new TableRow({ children: headers.map(text =>
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text, bold: true })] })] })
+      )});
+      const rows = items.map((item: any) => new TableRow({ children: [
+        item.title || "", item.eventDate || "", item.eventTime || "",
+        typeLabels[item.eventType] || item.eventType || "",
+        item.recurrence ? (recLabels[item.recurrence] || item.recurrence) : "Nessuna",
+        item.completed ? "Si" : "No"
+      ].map(text => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text })] })] })) }));
+      const doc = new Document({
+        sections: [{ children: [
+          new Paragraph({ children: [new TextRun({ text: "Agenda Eventi", bold: true, size: 32 })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: `Generato il ${today}`, italics: true, size: 20 })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: "" }),
+          new Table({ rows: [headerRow, ...rows], width: { size: 100, type: WidthType.PERCENTAGE } }),
+        ]}],
+      });
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename=Agenda_${new Date().toISOString().split("T")[0]}.docx`);
+      res.send(Buffer.from(buffer));
+    } catch (error) {
+      console.error("Error exporting agenda word:", error);
+      res.status(500).json({ error: "Failed to export agenda" });
+    }
+  });
+
+  app.get("/api/export/absence-stats-word", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const stats = await storage.getAttendanceStats(organizationId);
+      const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType } = await import("docx");
+      const today = new Date().toLocaleDateString("it-IT");
+      const headers = ["Dipendente", "Totale", "Ferie", "Permesso", "Malattia", "Congedo", "L104"];
+      const headerRow = new TableRow({ children: headers.map(text =>
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text, bold: true })] })] })
+      )});
+      const rows = (stats.byEmployee || []).map((emp: any) => new TableRow({ children: [
+        emp.fullName || "", emp.totalAbsences?.toString() || "0",
+        (emp.byType?.F || 0).toString(), (emp.byType?.P || 0).toString(),
+        (emp.byType?.M || 0).toString(), (emp.byType?.CP || 0).toString(),
+        (emp.byType?.L104 || 0).toString()
+      ].map(text => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text })] })] })) }));
+      const doc = new Document({
+        sections: [{ children: [
+          new Paragraph({ children: [new TextRun({ text: "Statistiche Assenze", bold: true, size: 32 })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: `Generato il ${today} - Ultimi 90 giorni`, italics: true, size: 20 })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: "" }),
+          new Table({ rows: [headerRow, ...rows], width: { size: 100, type: WidthType.PERCENTAGE } }),
+        ]}],
+      });
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename=Statistiche_Assenze_${new Date().toISOString().split("T")[0]}.docx`);
+      res.send(Buffer.from(buffer));
+    } catch (error) {
+      console.error("Error exporting absence stats word:", error);
+      res.status(500).json({ error: "Failed to export absence statistics" });
+    }
+  });
+
+  app.get("/api/export/attendance-word", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const year = req.query.year as string || new Date().getFullYear().toString();
+      const month = req.query.month as string || (new Date().getMonth() + 1).toString().padStart(2, "0");
+      const entries = await storage.getMonthlyAttendance(organizationId, year, month);
+      const allUsers = await storage.getAllUsers(organizationId);
+      const activeUsers = allUsers.filter((u: any) => u.role !== "superadmin" && u.isActive);
+      const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType } = await import("docx");
+      const today = new Date().toLocaleDateString("it-IT");
+      const absenceLabels: Record<string, string> = { F: "Ferie", P: "Permesso", M: "Malattia", CP: "Congedo", L104: "L104", A: "Assente" };
+      const headers = ["Dipendente", "Data", "Tipo Assenza", "Ore", "Note"];
+      const headerRow = new TableRow({ children: headers.map(text =>
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text, bold: true })] })] })
+      )});
+      const rows = (entries as any[]).map((entry: any) => {
+        const user = activeUsers.find((u: any) => u.id === entry.userId);
+        return new TableRow({ children: [
+          user ? `${user.firstName} ${user.lastName}` : entry.userId,
+          entry.date || "", absenceLabels[entry.absenceType] || entry.absenceType || "",
+          entry.hours?.toString() || "8", entry.notes || ""
+        ].map(text => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text })] })] })) });
+      });
+      const monthNames = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+      const doc = new Document({
+        sections: [{ children: [
+          new Paragraph({ children: [new TextRun({ text: `Foglio Presenze - ${monthNames[parseInt(month)-1]} ${year}`, bold: true, size: 32 })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ children: [new TextRun({ text: `Generato il ${today}`, italics: true, size: 20 })], alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: "" }),
+          new Table({ rows: [headerRow, ...rows], width: { size: 100, type: WidthType.PERCENTAGE } }),
+        ]}],
+      });
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename=Presenze_${month}_${year}.docx`);
+      res.send(Buffer.from(buffer));
+    } catch (error) {
+      console.error("Error exporting attendance word:", error);
+      res.status(500).json({ error: "Failed to export attendance" });
+    }
+  });
+
+  // ============================================
+  // TXT EXPORT ENDPOINTS
+  // ============================================
+
+  app.get("/api/export/employees-txt", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const allUsers = await storage.getAllUsers(organizationId);
+      const employees = allUsers.filter((u: any) => u.role !== "superadmin");
+      const today = new Date().toLocaleDateString("it-IT");
+      let txt = `ELENCO DIPENDENTI\nGenerato il ${today}\n${"=".repeat(60)}\n\n`;
+      for (const emp of employees) {
+        const roleLabel = emp.role === "admin" ? "Amministratore" : emp.role === "teamleader" ? "Caposquadra" : "Dipendente";
+        txt += `Nome: ${emp.firstName} ${emp.lastName}\nUsername: ${emp.username}\nRuolo: ${roleLabel}\nStato: ${emp.isActive ? "Attivo" : "Inattivo"}\n${"-".repeat(40)}\n`;
+      }
+      txt += `\nTotale: ${employees.length} dipendenti`;
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename=Dipendenti_${new Date().toISOString().split("T")[0]}.txt`);
+      res.send(txt);
+    } catch (error) {
+      console.error("Error exporting employees txt:", error);
+      res.status(500).json({ error: "Failed to export employees" });
+    }
+  });
+
+  app.get("/api/export/clients-txt", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const allClients = await storage.getAllClients(organizationId);
+      const today = new Date().toLocaleDateString("it-IT");
+      let txt = `ELENCO CLIENTI\nGenerato il ${today}\n${"=".repeat(60)}\n\n`;
+      for (const client of allClients) {
+        txt += `Cliente: ${client.name}\nData Creazione: ${client.createdAt ? new Date(client.createdAt).toLocaleDateString("it-IT") : "N/A"}\n${"-".repeat(40)}\n`;
+      }
+      txt += `\nTotale: ${allClients.length} clienti`;
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename=Clienti_${new Date().toISOString().split("T")[0]}.txt`);
+      res.send(txt);
+    } catch (error) {
+      console.error("Error exporting clients txt:", error);
+      res.status(500).json({ error: "Failed to export clients" });
+    }
+  });
+
+  app.get("/api/export/work-orders-txt", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const allWorkOrders = await storage.getAllWorkOrders(organizationId);
+      const allClients = await storage.getAllClients(organizationId);
+      const clientMap = new Map(allClients.map((c: any) => [c.id, c.name]));
+      const today = new Date().toLocaleDateString("it-IT");
+      let txt = `ELENCO COMMESSE\nGenerato il ${today}\n${"=".repeat(60)}\n\n`;
+      for (const wo of allWorkOrders) {
+        const statusLabel = wo.status === "active" ? "In Corso" : wo.status === "completed" ? "Completata" : wo.status;
+        txt += `Commessa: ${wo.name}\nCliente: ${clientMap.get(wo.clientId) || "N/A"}\nStato: ${statusLabel}\nData Inizio: ${wo.startDate || "N/A"}\nData Fine: ${wo.endDate || "N/A"}\nOre Stimate: ${wo.estimatedHours || "N/A"}\n${"-".repeat(40)}\n`;
+      }
+      txt += `\nTotale: ${allWorkOrders.length} commesse`;
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename=Commesse_${new Date().toISOString().split("T")[0]}.txt`);
+      res.send(txt);
+    } catch (error) {
+      console.error("Error exporting work orders txt:", error);
+      res.status(500).json({ error: "Failed to export work orders" });
+    }
+  });
+
+  app.get("/api/export/agenda-txt", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const items = await storage.getAgendaItems(organizationId);
+      const today = new Date().toLocaleDateString("it-IT");
+      const typeLabels: Record<string, string> = { deadline: "Scadenza", appointment: "Appuntamento", reminder: "Promemoria" };
+      const recLabels: Record<string, string> = { daily: "Giornaliera", weekly: "Settimanale", monthly: "Mensile", yearly: "Annuale" };
+      let txt = `AGENDA EVENTI\nGenerato il ${today}\n${"=".repeat(60)}\n\n`;
+      for (const item of items) {
+        txt += `Titolo: ${item.title}\nData: ${item.eventDate}\nOra: ${item.eventTime || "N/A"}\nTipo: ${typeLabels[item.eventType] || item.eventType}\nRicorrenza: ${item.recurrence ? (recLabels[item.recurrence] || item.recurrence) : "Nessuna"}\nCompletato: ${item.completed ? "Si" : "No"}\n`;
+        if (item.description) txt += `Descrizione: ${item.description}\n`;
+        txt += `${"-".repeat(40)}\n`;
+      }
+      txt += `\nTotale: ${items.length} eventi`;
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename=Agenda_${new Date().toISOString().split("T")[0]}.txt`);
+      res.send(txt);
+    } catch (error) {
+      console.error("Error exporting agenda txt:", error);
+      res.status(500).json({ error: "Failed to export agenda" });
+    }
+  });
+
+  app.get("/api/export/absence-stats-txt", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const stats = await storage.getAttendanceStats(organizationId);
+      const today = new Date().toLocaleDateString("it-IT");
+      let txt = `STATISTICHE ASSENZE (ULTIMI 90 GIORNI)\nGenerato il ${today}\n${"=".repeat(60)}\n\n`;
+      txt += `Totale Assenze: ${stats.totalAbsences}\nAssenze Strategiche: ${stats.totalStrategicAbsences}\n\n`;
+      txt += `--- PER DIPENDENTE ---\n\n`;
+      for (const emp of stats.byEmployee || []) {
+        txt += `${emp.fullName}\n  Totale: ${emp.totalAbsences} | Ferie: ${emp.byType?.F || 0} | Permesso: ${emp.byType?.P || 0} | Malattia: ${emp.byType?.M || 0} | Congedo: ${emp.byType?.CP || 0} | L104: ${emp.byType?.L104 || 0}\n${"-".repeat(40)}\n`;
+      }
+      if (stats.byMonth?.length) {
+        txt += `\n--- TREND MENSILE ---\n\n`;
+        for (const entry of stats.byMonth) {
+          txt += `${entry.month}/${entry.year}: ${entry.count} assenze\n`;
+        }
+      }
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename=Statistiche_Assenze_${new Date().toISOString().split("T")[0]}.txt`);
+      res.send(txt);
+    } catch (error) {
+      console.error("Error exporting absence stats txt:", error);
+      res.status(500).json({ error: "Failed to export absence statistics" });
+    }
+  });
+
+  app.get("/api/export/attendance-txt", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req as any).session.organizationId;
+      const year = req.query.year as string || new Date().getFullYear().toString();
+      const month = req.query.month as string || (new Date().getMonth() + 1).toString().padStart(2, "0");
+      const entries = await storage.getMonthlyAttendance(organizationId, year, month);
+      const allUsers = await storage.getAllUsers(organizationId);
+      const userMap = new Map(allUsers.map((u: any) => [u.id, `${u.firstName} ${u.lastName}`]));
+      const today = new Date().toLocaleDateString("it-IT");
+      const monthNames = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+      const absenceLabels: Record<string, string> = { F: "Ferie", P: "Permesso", M: "Malattia", CP: "Congedo", L104: "L104", A: "Assente" };
+      let txt = `FOGLIO PRESENZE - ${monthNames[parseInt(month)-1]} ${year}\nGenerato il ${today}\n${"=".repeat(60)}\n\n`;
+      for (const entry of entries as any[]) {
+        txt += `${userMap.get(entry.userId) || entry.userId} | ${entry.date} | ${absenceLabels[entry.absenceType] || entry.absenceType} | Ore: ${entry.hours || 8}${entry.notes ? ` | Note: ${entry.notes}` : ""}\n`;
+      }
+      txt += `\nTotale registrazioni: ${(entries as any[]).length}`;
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename=Presenze_${month}_${year}.txt`);
+      res.send(txt);
+    } catch (error) {
+      console.error("Error exporting attendance txt:", error);
+      res.status(500).json({ error: "Failed to export attendance" });
+    }
+  });
+
   app.get("/api/daily-reports/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;

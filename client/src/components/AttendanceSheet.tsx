@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, X } from "lucide-react";
-import ExportDropdown from "./ExportDropdown";
+import ExportDropdown, { downloadFile } from "./ExportDropdown";
 import { formatDateToItalian } from "@/lib/dateUtils";
 
 // Absence type labels - AGGIUNTO "A: Assente"
@@ -289,10 +289,13 @@ export default function AttendanceSheet() {
   };
 
   const handleExportExcel = () => {
-    window.open(
-      `/api/attendance/export-excel?year=${selectedYear}&month=${selectedMonth}`,
-      "_blank"
-    );
+    downloadFile(`/api/attendance/export-excel?year=${selectedYear}&month=${selectedMonth}`, `Presenze_${selectedMonth}_${selectedYear}.xlsx`);
+  };
+  const handleExportWord = () => {
+    downloadFile(`/api/export/attendance-word?year=${selectedYear}&month=${selectedMonth}`, `Presenze_${selectedMonth}_${selectedYear}.docx`);
+  };
+  const handleExportTxt = () => {
+    downloadFile(`/api/export/attendance-txt?year=${selectedYear}&month=${selectedMonth}`, `Presenze_${selectedMonth}_${selectedYear}.txt`);
   };
 
   const getMonthName = (month: string) => {
@@ -317,6 +320,8 @@ export default function AttendanceSheet() {
               <CardTitle>Foglio Presenze</CardTitle>
               <ExportDropdown formats={[
                 { label: "Excel", onClick: handleExportExcel },
+                { label: "Word", onClick: handleExportWord },
+                { label: "TXT", onClick: handleExportTxt },
               ]} />
             </div>
             <div className="flex gap-2">
