@@ -393,6 +393,7 @@ export const insertWorkOrderSchema = createInsertSchema(workOrders).omit({
 export const insertExpenseSchema = createInsertSchema(workOrderExpenses).omit({
   id: true,
   organizationId: true, // Will be set automatically from session
+  workOrderId: true, // Passed via URL params
   createdBy: true,
   createdAt: true,
 }).extend({
