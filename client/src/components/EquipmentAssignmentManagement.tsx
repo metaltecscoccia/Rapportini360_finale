@@ -62,9 +62,10 @@ export default function EquipmentAssignmentManagement({ autoOpenAdd, onAutoOpenH
     queryKey: ["/api/equipment-types"],
   });
 
-  const { data: employees = [] } = useQuery<User[]>({
+  const { data: allUsers = [] } = useQuery<User[]>({
     queryKey: ["/api/users/active"],
   });
+  const employees = allUsers.filter(u => u.role === "employee" || u.role === "teamleader");
 
   const createMutation = useMutation({
     mutationFn: async (data: AssignmentForm) => {
