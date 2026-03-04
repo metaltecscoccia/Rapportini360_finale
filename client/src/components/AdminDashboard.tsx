@@ -2968,7 +2968,7 @@ export default function AdminDashboard({
                           <SelectValue placeholder="Seleziona dipendente" />
                         </SelectTrigger>
                         <SelectContent>
-                          {activeEmployees.map((u: any) => (
+                          {activeEmployees.filter((u: any) => u.role === "employee" || u.role === "teamleader").map((u: any) => (
                             <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
                           ))}
                         </SelectContent>
