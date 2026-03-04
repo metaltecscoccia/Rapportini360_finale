@@ -95,6 +95,27 @@ export const workOrderExpenses = pgTable("work_order_expenses", {
   orgIdx: index("expenses_org_idx").on(table.organizationId),
 }));
 
+// Service orders (Ordini di Servizio) - micro-commesse assegnate a dipendenti
+export const serviceOrders = pgTable("service_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  workOrderId: varchar("work_order_id").notNull().references(() => workOrders.id),
+  assignedToId: varchar("assigned_to_id").notNull().references(() => users.id),
+  createdById: varchar("created_by_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("assegnato"), // "assegnato" | "iniziato" | "completato"
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  notes: text("notes"), // Commento libero del dipendente al completamento
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+}, (table) => ({
+  orgIdx: index("service_orders_org_idx").on(table.organizationId),
+  assignedToIdx: index("service_orders_assigned_idx").on(table.assignedToId),
+}));
+
 // Daily reports table
 export const dailyReports = pgTable("daily_reports", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -527,6 +548,17 @@ export const updateWorkOrderSchema = insertWorkOrderSchema.partial().extend({
   id: z.string().optional()
 });
 
+export const insertServiceOrderSchema = createInsertSchema(serviceOrders).omit({
+  id: true,
+  organizationId: true,
+  createdAt: true,
+  updatedAt: true,
+  startedAt: true,
+  completedAt: true,
+  notes: true,
+  status: true,
+});
+
 export const updateAttendanceEntrySchema = insertAttendanceEntrySchema.partial().extend({
   id: z.string().optional(),
   absenceType: z.enum(["A", "F", "P", "M", "CP", "L104"]).optional()
@@ -633,6 +665,9 @@ export type Material = typeof materials.$inferSelect;
 export type InsertWorkOrder = z.infer<typeof insertWorkOrderSchema>;
 export type WorkOrder = typeof workOrders.$inferSelect;
 export type UpdateWorkOrder = z.infer<typeof updateWorkOrderSchema>;
+
+export type InsertServiceOrder = z.infer<typeof insertServiceOrderSchema>;
+export type ServiceOrder = typeof serviceOrders.$inferSelect;
 
 export type InsertWorkOrderExpense = z.infer<typeof insertExpenseSchema>;
 export type WorkOrderExpense = typeof workOrderExpenses.$inferSelect;

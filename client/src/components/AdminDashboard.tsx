@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -247,6 +248,11 @@ export default function AdminDashboard({
   // State for quick add equipment assignment
   const [autoOpenEquipmentAdd, setAutoOpenEquipmentAdd] = useState(false);
 
+  // State for service orders
+  const [workOrdersSubTab, setWorkOrdersSubTab] = useState<"commesse" | "ordini-servizio">("commesse");
+  const [addServiceOrderDialogOpen, setAddServiceOrderDialogOpen] = useState(false);
+  const [newServiceOrder, setNewServiceOrder] = useState({ name: "", description: "", clientId: "", workOrderId: "", assignedToId: "" });
+
   // State for quick add expense dialog
   const [quickAddExpenseDialogOpen, setQuickAddExpenseDialogOpen] = useState(false);
   const [selectedWorkOrderForExpense, setSelectedWorkOrderForExpense] = useState<string>("");
@@ -394,6 +400,11 @@ export default function AdminDashboard({
   // Query per recuperare tutte le commesse
   const { data: workOrders = [], isLoading: isLoadingWorkOrders } = useQuery<any[]>({
     queryKey: ['/api/work-orders'],
+  });
+
+  // Query per recuperare gli ordini di servizio
+  const { data: serviceOrdersList = [], refetch: refetchServiceOrders } = useQuery<any[]>({
+    queryKey: ['/api/service-orders'],
   });
 
   // Query per recuperare le statistiche delle commesse
@@ -679,6 +690,37 @@ export default function AdminDashboard({
         description: error.message || "Errore durante l'eliminazione della commessa.",
         variant: "destructive",
       });
+    },
+  });
+
+  // Mutation per creare ordine di servizio
+  const createServiceOrderMutation = useMutation({
+    mutationFn: async (data: typeof newServiceOrder) => {
+      const res = await apiRequest('POST', '/api/service-orders', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/service-orders'] });
+      toast({ title: "Ordine creato", description: "L'ordine di servizio è stato assegnato con successo." });
+      setAddServiceOrderDialogOpen(false);
+      setNewServiceOrder({ name: "", description: "", clientId: "", workOrderId: "", assignedToId: "" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message || "Errore durante la creazione dell'ordine.", variant: "destructive" });
+    },
+  });
+
+  // Mutation per eliminare ordine di servizio
+  const deleteServiceOrderMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest('DELETE', `/api/service-orders/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/service-orders'] });
+      toast({ title: "Ordine eliminato", description: "L'ordine di servizio è stato eliminato." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message || "Impossibile eliminare l'ordine.", variant: "destructive" });
     },
   });
 
@@ -2117,7 +2159,7 @@ export default function AdminDashboard({
         {/* Reports Tab */}
         <TabsContent value="reports" className="space-y-4">
           {/* Quick Actions Grid */}
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-5">
             <QuickActionCard
               title="Nuova Commessa"
               description="Crea una nuova commessa di lavoro"
@@ -2156,6 +2198,19 @@ export default function AdminDashboard({
               gradientTo="hsl(280, 65%, 65%)"
               onClick={() => setRegisterAbsenceDialogOpen(true)}
               delay={0.3}
+            />
+            <QuickActionCard
+              title="Ordine Servizio"
+              description="Assegna micro-commessa"
+              icon={ClipboardList}
+              gradientFrom="hsl(0, 72%, 45%)"
+              gradientTo="hsl(0, 72%, 60%)"
+              onClick={() => {
+                setActiveSection("workorders");
+                setWorkOrdersSubTab("ordini-servizio");
+                setAddServiceOrderDialogOpen(true);
+              }}
+              delay={0.4}
             />
           </div>
 
@@ -2708,7 +2763,196 @@ export default function AdminDashboard({
 
         {/* Work Orders Tab - LAYOUT SISTEMATO */}
         <TabsContent value="work-orders" className="space-y-4">
-          {selectedWorkOrder ? (
+          {/* Sub-tab switcher */}
+          <div className="flex gap-2 border-b pb-2">
+            <Button
+              variant={workOrdersSubTab === "commesse" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setWorkOrdersSubTab("commesse")}
+            >
+              <Wrench className="h-4 w-4 mr-2" />
+              Commesse
+            </Button>
+            <Button
+              variant={workOrdersSubTab === "ordini-servizio" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setWorkOrdersSubTab("ordini-servizio")}
+            >
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Ordini di Servizio
+              {serviceOrdersList.filter(o => o.status !== "completato").length > 0 && (
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  {serviceOrdersList.filter(o => o.status !== "completato").length}
+                </Badge>
+              )}
+            </Button>
+          </div>
+
+          {workOrdersSubTab === "ordini-servizio" ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Ordini di Servizio</CardTitle>
+                      <p className="text-sm text-muted-foreground">Micro-commesse assegnate ai dipendenti</p>
+                    </div>
+                    <Button onClick={() => setAddServiceOrderDialogOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nuovo Ordine
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {serviceOrdersList.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">Nessun ordine di servizio presente.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-2 px-3 font-medium">Nome</th>
+                            <th className="text-left py-2 px-3 font-medium">Descrizione</th>
+                            <th className="text-left py-2 px-3 font-medium">Cliente</th>
+                            <th className="text-left py-2 px-3 font-medium">Commessa</th>
+                            <th className="text-left py-2 px-3 font-medium">Assegnato a</th>
+                            <th className="text-left py-2 px-3 font-medium">Stato</th>
+                            <th className="text-left py-2 px-3 font-medium">Data</th>
+                            <th className="text-right py-2 px-3 font-medium">Azioni</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {serviceOrdersList.map((order: any) => (
+                            <tr key={order.id} className="border-b hover:bg-muted/30">
+                              <td className="py-2 px-3 font-medium">{order.name}</td>
+                              <td className="py-2 px-3 text-muted-foreground max-w-[150px] truncate">{order.description || "—"}</td>
+                              <td className="py-2 px-3">{order.clientName}</td>
+                              <td className="py-2 px-3">{order.workOrderName}</td>
+                              <td className="py-2 px-3">{order.assignedToName}</td>
+                              <td className="py-2 px-3">
+                                <Badge
+                                  variant={order.status === "completato" ? "default" : order.status === "iniziato" ? "secondary" : "outline"}
+                                  className={
+                                    order.status === "completato"
+                                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                      : order.status === "iniziato"
+                                      ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                                      : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                                  }
+                                >
+                                  {order.status === "assegnato" ? "Assegnato" : order.status === "iniziato" ? "In corso" : "Completato"}
+                                </Badge>
+                              </td>
+                              <td className="py-2 px-3 text-muted-foreground">{new Date(order.createdAt).toLocaleDateString("it-IT")}</td>
+                              <td className="py-2 px-3 text-right">
+                                {order.status !== "completato" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={() => deleteServiceOrderMutation.mutate(order.id)}
+                                    disabled={deleteServiceOrderMutation.isPending}
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Dialog: Crea Ordine di Servizio */}
+              <Dialog open={addServiceOrderDialogOpen} onOpenChange={setAddServiceOrderDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Nuovo Ordine di Servizio</DialogTitle>
+                    <DialogDescription>Assegna una micro-commessa a un dipendente.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="so-name">Nome ordine *</Label>
+                      <Input
+                        id="so-name"
+                        placeholder="Es. Installazione pannelli"
+                        value={newServiceOrder.name}
+                        onChange={e => setNewServiceOrder(s => ({ ...s, name: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="so-desc">Descrizione</Label>
+                      <Textarea
+                        id="so-desc"
+                        placeholder="Dettagli aggiuntivi..."
+                        value={newServiceOrder.description}
+                        onChange={e => setNewServiceOrder(s => ({ ...s, description: e.target.value }))}
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="so-client">Cliente *</Label>
+                      <Select value={newServiceOrder.clientId} onValueChange={v => setNewServiceOrder(s => ({ ...s, clientId: v, workOrderId: "" }))}>
+                        <SelectTrigger id="so-client">
+                          <SelectValue placeholder="Seleziona cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {clients.map((c: any) => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="so-workorder">Commessa *</Label>
+                      <Select
+                        value={newServiceOrder.workOrderId}
+                        onValueChange={v => setNewServiceOrder(s => ({ ...s, workOrderId: v }))}
+                        disabled={!newServiceOrder.clientId}
+                      >
+                        <SelectTrigger id="so-workorder">
+                          <SelectValue placeholder={newServiceOrder.clientId ? "Seleziona commessa" : "Prima seleziona cliente"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workOrders.filter((w: any) => w.clientId === newServiceOrder.clientId).map((w: any) => (
+                            <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="so-employee">Dipendente *</Label>
+                      <Select value={newServiceOrder.assignedToId} onValueChange={v => setNewServiceOrder(s => ({ ...s, assignedToId: v }))}>
+                        <SelectTrigger id="so-employee">
+                          <SelectValue placeholder="Seleziona dipendente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeEmployees.map((u: any) => (
+                            <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        className="flex-1"
+                        onClick={() => createServiceOrderMutation.mutate(newServiceOrder)}
+                        disabled={!newServiceOrder.name || !newServiceOrder.clientId || !newServiceOrder.workOrderId || !newServiceOrder.assignedToId || createServiceOrderMutation.isPending}
+                      >
+                        {createServiceOrderMutation.isPending ? "Creazione..." : "Crea Ordine"}
+                      </Button>
+                      <Button variant="outline" onClick={() => setAddServiceOrderDialogOpen(false)}>
+                        Annulla
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
+          ) : selectedWorkOrder ? (
             <WorkOrderReport
               workOrderId={selectedWorkOrder.id}
               workOrderNumber={selectedWorkOrder.number}

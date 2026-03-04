@@ -45,7 +45,16 @@ import {
   insertEquipmentAssignmentSchema,
   updateEquipmentAssignmentSchema,
   confirmEquipmentSchema,
+  insertServiceOrderSchema,
+  serviceOrders,
+  clients,
+  workOrders,
+  dailyReports,
+  operations,
+  users,
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
 import { validatePassword, verifyPassword, hashPassword } from "./auth";
 
 // ============================================
@@ -5364,6 +5373,229 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting equipment assignment:", error);
       res.status(500).json({ error: "Failed to delete equipment assignment" });
+    }
+  });
+
+  // ============================================
+  // SERVICE ORDERS (Ordini di Servizio)
+  // ============================================
+
+  // GET /api/service-orders/pending — dipendente: ordini assegnati o iniziati
+  app.get("/api/service-orders/pending", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const organizationId = (req.session as any).organizationId;
+
+      const rows = await db
+        .select({
+          id: serviceOrders.id,
+          name: serviceOrders.name,
+          description: serviceOrders.description,
+          status: serviceOrders.status,
+          startedAt: serviceOrders.startedAt,
+          clientId: serviceOrders.clientId,
+          workOrderId: serviceOrders.workOrderId,
+          clientName: clients.name,
+          workOrderName: workOrders.name,
+        })
+        .from(serviceOrders)
+        .leftJoin(clients, eq(serviceOrders.clientId, clients.id))
+        .leftJoin(workOrders, eq(serviceOrders.workOrderId, workOrders.id))
+        .where(
+          and(
+            eq(serviceOrders.organizationId, organizationId),
+            eq(serviceOrders.assignedToId, userId),
+          )
+        );
+
+      const pending = rows.filter(r => r.status === "assegnato" || r.status === "iniziato");
+      res.json(pending);
+    } catch (error) {
+      console.error("Error fetching pending service orders:", error);
+      res.status(500).json({ error: "Failed to fetch service orders" });
+    }
+  });
+
+  // GET /api/service-orders — admin: tutti gli ordini dell'organizzazione
+  app.get("/api/service-orders", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+
+      const rows = await db
+        .select({
+          id: serviceOrders.id,
+          name: serviceOrders.name,
+          description: serviceOrders.description,
+          status: serviceOrders.status,
+          startedAt: serviceOrders.startedAt,
+          completedAt: serviceOrders.completedAt,
+          notes: serviceOrders.notes,
+          createdAt: serviceOrders.createdAt,
+          clientId: serviceOrders.clientId,
+          workOrderId: serviceOrders.workOrderId,
+          assignedToId: serviceOrders.assignedToId,
+          clientName: clients.name,
+          workOrderName: workOrders.name,
+          assignedToName: users.fullName,
+        })
+        .from(serviceOrders)
+        .leftJoin(clients, eq(serviceOrders.clientId, clients.id))
+        .leftJoin(workOrders, eq(serviceOrders.workOrderId, workOrders.id))
+        .leftJoin(users, eq(serviceOrders.assignedToId, users.id))
+        .where(eq(serviceOrders.organizationId, organizationId))
+        .orderBy(serviceOrders.createdAt);
+
+      res.json(rows);
+    } catch (error) {
+      console.error("Error fetching service orders:", error);
+      res.status(500).json({ error: "Failed to fetch service orders" });
+    }
+  });
+
+  // POST /api/service-orders — admin: crea nuovo ordine di servizio
+  app.post("/api/service-orders", requireAdmin, async (req, res) => {
+    try {
+      const organizationId = (req.session as any).organizationId;
+      const createdById = (req.session as any).userId;
+
+      const parsed = insertServiceOrderSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Dati non validi", issues: parsed.error.issues });
+      }
+
+      const [newOrder] = await db
+        .insert(serviceOrders)
+        .values({
+          ...parsed.data,
+          organizationId,
+          createdById,
+          status: "assegnato",
+        })
+        .returning();
+
+      res.status(201).json(newOrder);
+    } catch (error) {
+      console.error("Error creating service order:", error);
+      res.status(500).json({ error: "Failed to create service order" });
+    }
+  });
+
+  // PUT /api/service-orders/:id/start — dipendente: inizia ordine
+  app.put("/api/service-orders/:id/start", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = (req.session as any).userId;
+      const organizationId = (req.session as any).organizationId;
+
+      const [order] = await db
+        .select()
+        .from(serviceOrders)
+        .where(and(eq(serviceOrders.id, id), eq(serviceOrders.organizationId, organizationId)));
+
+      if (!order) return res.status(404).json({ error: "Ordine non trovato" });
+      if (order.assignedToId !== userId) return res.status(403).json({ error: "Non autorizzato" });
+      if (order.status === "completato") return res.status(400).json({ error: "Ordine già completato" });
+
+      const updateValues: any = { status: "iniziato", updatedAt: new Date() };
+      // Non resettare startedAt se già impostato (idempotente)
+      if (!order.startedAt) {
+        updateValues.startedAt = new Date();
+      }
+
+      const [updated] = await db
+        .update(serviceOrders)
+        .set(updateValues)
+        .where(eq(serviceOrders.id, id))
+        .returning();
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error starting service order:", error);
+      res.status(500).json({ error: "Failed to start service order" });
+    }
+  });
+
+  // PUT /api/service-orders/:id/complete — dipendente: termina ordine
+  app.put("/api/service-orders/:id/complete", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = (req.session as any).userId;
+      const organizationId = (req.session as any).organizationId;
+      const { notes } = req.body;
+
+      const [order] = await db
+        .select()
+        .from(serviceOrders)
+        .where(and(eq(serviceOrders.id, id), eq(serviceOrders.organizationId, organizationId)));
+
+      if (!order) return res.status(404).json({ error: "Ordine non trovato" });
+      if (order.assignedToId !== userId) return res.status(403).json({ error: "Non autorizzato" });
+      if (order.status !== "iniziato") return res.status(400).json({ error: "Ordine non ancora iniziato" });
+
+      const completedAt = new Date();
+      const startedAt = order.startedAt || completedAt;
+      const hoursElapsed = (completedAt.getTime() - new Date(startedAt).getTime()) / 3600000;
+      const hoursRounded = String(Math.max(0.25, Math.round(hoursElapsed * 4) / 4));
+
+      // Trova o crea rapportino di oggi per il dipendente
+      const today = getTodayISO();
+      let report = await storage.getDailyReportByEmployeeAndDate(userId, today, organizationId);
+
+      if (!report) {
+        report = await storage.createDailyReport(
+          { employeeId: userId, date: today, status: "In attesa", createdBy: "utente" },
+          organizationId
+        );
+      }
+
+      // Aggiunge operazione al rapportino
+      await storage.createOperation(
+        {
+          dailyReportId: report.id,
+          clientId: order.clientId,
+          workOrderId: order.workOrderId,
+          workTypes: [],
+          materials: [],
+          hours: hoursRounded,
+          notes: notes || null,
+          photos: [],
+        },
+        organizationId
+      );
+
+      // Aggiorna stato ordine
+      const [updated] = await db
+        .update(serviceOrders)
+        .set({ status: "completato", completedAt, notes: notes || null, updatedAt: new Date() })
+        .where(eq(serviceOrders.id, id))
+        .returning();
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error completing service order:", error);
+      res.status(500).json({ error: "Failed to complete service order" });
+    }
+  });
+
+  // DELETE /api/service-orders/:id — admin: elimina ordine (solo se non completato)
+  app.delete("/api/service-orders/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = (req.session as any).organizationId;
+
+      const [order] = await db
+        .select()
+        .from(serviceOrders)
+        .where(and(eq(serviceOrders.id, id), eq(serviceOrders.organizationId, organizationId)));
+
+      if (!order) return res.status(404).json({ error: "Ordine non trovato" });
+      if (order.status === "completato") return res.status(400).json({ error: "Impossibile eliminare un ordine completato" });
+
+      await db.delete(serviceOrders).where(eq(serviceOrders.id, id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting service order:", error);
+      res.status(500).json({ error: "Failed to delete service order" });
     }
   });
 

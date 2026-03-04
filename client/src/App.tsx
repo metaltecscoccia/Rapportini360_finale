@@ -23,6 +23,7 @@ import AdminDashboard from "@/components/AdminDashboard";
 import SuperAdminDashboard from "@/components/SuperAdminDashboard";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
 import EquipmentConfirmationDialog from "@/components/EquipmentConfirmationDialog";
+import ServiceOrderDialog from "@/components/ServiceOrderDialog";
 import ThemeToggle from "@/components/ThemeToggle";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -113,6 +114,20 @@ function AuthenticatedApp({
       setEquipmentDialogOpen(true);
     }
   }, [pendingEquipment]);
+
+  // Check for pending service orders (for employees and teamleaders)
+  const [serviceOrderDialogOpen, setServiceOrderDialogOpen] = useState(false);
+  const { data: pendingServiceOrders = [] } = useQuery<any[]>({
+    queryKey: ["/api/service-orders/pending"],
+    enabled: currentUser.role === "employee" || currentUser.role === "teamleader",
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (pendingServiceOrders.length > 0) {
+      setServiceOrderDialogOpen(true);
+    }
+  }, [pendingServiceOrders]);
 
   // Mutation to create new daily report
   const createReportMutation = useMutation({
@@ -215,6 +230,15 @@ function AuthenticatedApp({
         <EquipmentConfirmationDialog
           open={equipmentDialogOpen}
           onOpenChange={setEquipmentDialogOpen}
+        />
+      )}
+
+      {/* Service Order Dialog for employees */}
+      {(currentUser.role === "employee" || currentUser.role === "teamleader") && (
+        <ServiceOrderDialog
+          open={serviceOrderDialogOpen}
+          onOpenChange={setServiceOrderDialogOpen}
+          serviceOrders={pendingServiceOrders}
         />
       )}
     <motion.div
