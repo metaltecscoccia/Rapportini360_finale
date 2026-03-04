@@ -705,9 +705,8 @@ export default function AdminDashboard({
         finalClientId = newClient.id;
       }
       // Step 2: crea sempre una nuova commessa
-      const woRes = await apiRequest('POST', '/api/work-orders', {
+      const woRes = await apiRequest('POST', `/api/clients/${finalClientId}/work-orders`, {
         name: data.workOrderName,
-        clientId: finalClientId,
         isActive: true,
         availableWorkTypes: [],
         availableMaterials: [],
