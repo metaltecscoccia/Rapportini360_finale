@@ -5480,6 +5480,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PUT /api/service-orders/:id — admin: aggiorna nome, descrizione, ore
+  app.put("/api/service-orders/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = (req.session as any).organizationId;
+      const { name, description, hours } = req.body;
+
+      const [order] = await db
+        .select()
+        .from(serviceOrders)
+        .where(and(eq(serviceOrders.id, id), eq(serviceOrders.organizationId, organizationId)));
+
+      if (!order) return res.status(404).json({ error: "Ordine non trovato" });
+
+      const updateData: any = { updatedAt: new Date() };
+      if (name !== undefined) updateData.name = name;
+      if (description !== undefined) updateData.description = description || null;
+      if (hours !== undefined) updateData.hours = hours ? String(hours) : null;
+
+      const [updated] = await db
+        .update(serviceOrders)
+        .set(updateData)
+        .where(eq(serviceOrders.id, id))
+        .returning();
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating service order:", error);
+      res.status(500).json({ error: "Failed to update service order" });
+    }
+  });
+
+  // PUT /api/service-orders/:id/cancel — admin: annulla ordine
+  app.put("/api/service-orders/:id/cancel", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const organizationId = (req.session as any).organizationId;
+
+      const [order] = await db
+        .select()
+        .from(serviceOrders)
+        .where(and(eq(serviceOrders.id, id), eq(serviceOrders.organizationId, organizationId)));
+
+      if (!order) return res.status(404).json({ error: "Ordine non trovato" });
+      if (order.status === "completato") return res.status(400).json({ error: "Impossibile annullare un ordine completato" });
+
+      const [updated] = await db
+        .update(serviceOrders)
+        .set({ status: "annullato", updatedAt: new Date() })
+        .where(eq(serviceOrders.id, id))
+        .returning();
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error cancelling service order:", error);
+      res.status(500).json({ error: "Failed to cancel service order" });
+    }
+  });
+
   // PUT /api/service-orders/:id/start — dipendente: inizia ordine
   app.put("/api/service-orders/:id/start", requireAuth, async (req, res) => {
     try {

@@ -109,6 +109,7 @@ export const serviceOrders = pgTable("service_orders", {
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
   notes: text("notes"), // Commento libero del dipendente al completamento
+  hours: numeric("hours"), // Ore impiegate (modificabile da admin, non tocca rapportino)
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 }, (table) => ({

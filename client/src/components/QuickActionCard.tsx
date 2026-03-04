@@ -32,7 +32,7 @@ export default function QuickActionCard({
       <button
         onClick={onClick}
         className={cn(
-          "w-full text-left relative overflow-hidden rounded-xl p-3",
+          "w-full text-left relative overflow-hidden rounded-xl p-3 min-h-[80px]",
           "transition-all duration-300 ease-out",
           "hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
           "group"

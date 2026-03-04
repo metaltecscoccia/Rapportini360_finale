@@ -64,7 +64,8 @@ import {
   Menu,
   Wallet,
   History,
-  HardHat
+  HardHat,
+  Ban
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
@@ -253,6 +254,9 @@ export default function AdminDashboard({
   const [addServiceOrderDialogOpen, setAddServiceOrderDialogOpen] = useState(false);
   const [soNewClientMode, setSoNewClientMode] = useState(false);
   const [newServiceOrder, setNewServiceOrder] = useState({ name: "", description: "", clientId: "", newClientName: "", workOrderName: "", assignedToId: "" });
+  const [detailServiceOrder, setDetailServiceOrder] = useState<any>(null);
+  const [editServiceOrderData, setEditServiceOrderData] = useState({ name: "", description: "", hours: "" });
+  const [deleteServiceOrderConfirmId, setDeleteServiceOrderConfirmId] = useState<string | null>(null);
 
   // State for quick add expense dialog
   const [quickAddExpenseDialogOpen, setQuickAddExpenseDialogOpen] = useState(false);
@@ -747,6 +751,37 @@ export default function AdminDashboard({
     },
     onError: (error: any) => {
       toast({ title: "Errore", description: error.message || "Impossibile eliminare l'ordine.", variant: "destructive" });
+    },
+  });
+
+  // Mutation per annullare ordine di servizio
+  const cancelServiceOrderMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest('PUT', `/api/service-orders/${id}/cancel`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/service-orders'] });
+      toast({ title: "Ordine annullato", description: "L'ordine è stato annullato." });
+      setDetailServiceOrder(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message || "Impossibile annullare l'ordine.", variant: "destructive" });
+    },
+  });
+
+  // Mutation per modificare ordine di servizio
+  const updateServiceOrderMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { name: string; description: string; hours: string } }) => {
+      const res = await apiRequest('PUT', `/api/service-orders/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/service-orders'] });
+      toast({ title: "Ordine aggiornato", description: "Le modifiche sono state salvate." });
+      setDetailServiceOrder(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message || "Impossibile aggiornare l'ordine.", variant: "destructive" });
     },
   });
 
@@ -2849,31 +2884,55 @@ export default function AdminDashboard({
                               <td className="py-2 px-3">{order.assignedToName}</td>
                               <td className="py-2 px-3">
                                 <Badge
-                                  variant={order.status === "completato" ? "default" : order.status === "iniziato" ? "secondary" : "outline"}
+                                  variant="outline"
                                   className={
                                     order.status === "completato"
                                       ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                                       : order.status === "iniziato"
                                       ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                                      : order.status === "annullato"
+                                      ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                                       : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                                   }
                                 >
-                                  {order.status === "assegnato" ? "Assegnato" : order.status === "iniziato" ? "In corso" : "Completato"}
+                                  {order.status === "assegnato" ? "Assegnato" : order.status === "iniziato" ? "In corso" : order.status === "annullato" ? "Annullato" : "Completato"}
                                 </Badge>
                               </td>
                               <td className="py-2 px-3 text-muted-foreground">{new Date(order.createdAt).toLocaleDateString("it-IT")}</td>
                               <td className="py-2 px-3 text-right">
-                                {order.status !== "completato" && (
+                                <div className="flex justify-end gap-1">
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-destructive hover:text-destructive"
-                                    onClick={() => deleteServiceOrderMutation.mutate(order.id)}
-                                    disabled={deleteServiceOrderMutation.isPending}
+                                    onClick={() => {
+                                      setDetailServiceOrder(order);
+                                      setEditServiceOrderData({ name: order.name, description: order.description || "", hours: order.hours || "" });
+                                    }}
                                   >
-                                    <Trash className="h-4 w-4" />
+                                    <Eye className="h-4 w-4" />
                                   </Button>
-                                )}
+                                  {order.status !== "completato" && order.status !== "annullato" && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-amber-600 hover:text-amber-700"
+                                      onClick={() => cancelServiceOrderMutation.mutate(order.id)}
+                                      disabled={cancelServiceOrderMutation.isPending}
+                                    >
+                                      <Ban className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  {order.status !== "completato" && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-destructive hover:text-destructive"
+                                      onClick={() => setDeleteServiceOrderConfirmId(order.id)}
+                                    >
+                                      <Trash className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -2883,6 +2942,142 @@ export default function AdminDashboard({
                   )}
                 </CardContent>
               </Card>
+
+              {/* Dialog: Dettaglio / Modifica Ordine di Servizio */}
+              <Dialog open={!!detailServiceOrder} onOpenChange={(open) => { if (!open) setDetailServiceOrder(null); }}>
+                <DialogContent className="sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Dettaglio Ordine di Servizio</DialogTitle>
+                    <DialogDescription>Visualizza e modifica i dettagli dell'ordine.</DialogDescription>
+                  </DialogHeader>
+                  {detailServiceOrder && (
+                    <div className="space-y-4">
+                      {/* Campi modificabili */}
+                      <div>
+                        <Label>Nome ordine</Label>
+                        <Input
+                          value={editServiceOrderData.name}
+                          onChange={e => setEditServiceOrderData(s => ({ ...s, name: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Descrizione</Label>
+                        <Textarea
+                          value={editServiceOrderData.description}
+                          onChange={e => setEditServiceOrderData(s => ({ ...s, description: e.target.value }))}
+                          rows={4}
+                        />
+                      </div>
+                      <div>
+                        <Label>Ore impiegate (override admin)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          placeholder="Lascia vuoto per usare il calcolo automatico"
+                          value={editServiceOrderData.hours}
+                          onChange={e => setEditServiceOrderData(s => ({ ...s, hours: e.target.value }))}
+                        />
+                      </div>
+
+                      {/* Info read-only */}
+                      <div className="rounded-lg border bg-muted/30 p-3 space-y-1 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground w-24">Stato:</span>
+                          <Badge variant="outline" className={
+                            detailServiceOrder.status === "completato"
+                              ? "bg-green-100 text-green-800"
+                              : detailServiceOrder.status === "iniziato"
+                              ? "bg-amber-100 text-amber-800"
+                              : detailServiceOrder.status === "annullato"
+                              ? "bg-gray-100 text-gray-600"
+                              : "bg-blue-100 text-blue-800"
+                          }>
+                            {detailServiceOrder.status === "assegnato" ? "Assegnato" : detailServiceOrder.status === "iniziato" ? "In corso" : detailServiceOrder.status === "annullato" ? "Annullato" : "Completato"}
+                          </Badge>
+                        </div>
+                        {detailServiceOrder.clientName && (
+                          <div className="flex gap-2"><span className="text-muted-foreground w-24">Cliente:</span><span>{detailServiceOrder.clientName}</span></div>
+                        )}
+                        {detailServiceOrder.workOrderName && (
+                          <div className="flex gap-2"><span className="text-muted-foreground w-24">Commessa:</span><span>{detailServiceOrder.workOrderName}</span></div>
+                        )}
+                        {detailServiceOrder.assignedToName && (
+                          <div className="flex gap-2"><span className="text-muted-foreground w-24">Assegnato a:</span><span>{detailServiceOrder.assignedToName}</span></div>
+                        )}
+                        <div className="flex gap-2"><span className="text-muted-foreground w-24">Creato il:</span><span>{new Date(detailServiceOrder.createdAt).toLocaleDateString("it-IT")}</span></div>
+                        {detailServiceOrder.completedAt && (
+                          <div className="flex gap-2"><span className="text-muted-foreground w-24">Completato:</span><span>{new Date(detailServiceOrder.completedAt).toLocaleDateString("it-IT")}</span></div>
+                        )}
+                      </div>
+
+                      {/* Note del dipendente (read-only) */}
+                      {detailServiceOrder.status === "completato" && detailServiceOrder.notes && (
+                        <div>
+                          <Label>Note dipendente</Label>
+                          <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground whitespace-pre-wrap">
+                            {detailServiceOrder.notes}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pulsanti */}
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <Button
+                          className="flex-1"
+                          onClick={() => updateServiceOrderMutation.mutate({ id: detailServiceOrder.id, data: editServiceOrderData })}
+                          disabled={updateServiceOrderMutation.isPending || !editServiceOrderData.name}
+                        >
+                          {updateServiceOrderMutation.isPending ? "Salvataggio..." : "Salva modifiche"}
+                        </Button>
+                        {detailServiceOrder.status !== "completato" && detailServiceOrder.status !== "annullato" && (
+                          <Button
+                            variant="outline"
+                            className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                            onClick={() => cancelServiceOrderMutation.mutate(detailServiceOrder.id)}
+                            disabled={cancelServiceOrderMutation.isPending}
+                          >
+                            <Ban className="h-4 w-4 mr-1" />
+                            Annulla ordine
+                          </Button>
+                        )}
+                        {detailServiceOrder.status !== "completato" && (
+                          <Button
+                            variant="outline"
+                            className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                            onClick={() => { setDeleteServiceOrderConfirmId(detailServiceOrder.id); setDetailServiceOrder(null); }}
+                          >
+                            <Trash className="h-4 w-4 mr-1" />
+                            Elimina
+                          </Button>
+                        )}
+                        <Button variant="ghost" onClick={() => setDetailServiceOrder(null)} className="flex-1">
+                          Chiudi
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
+
+              {/* AlertDialog: Conferma eliminazione ordine di servizio */}
+              <AlertDialog open={!!deleteServiceOrderConfirmId} onOpenChange={(open) => { if (!open) setDeleteServiceOrderConfirmId(null); }}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Elimina ordine di servizio</AlertDialogTitle>
+                    <AlertDialogDescription>Sei sicuro di voler eliminare questo ordine? L'operazione non può essere annullata.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annulla</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => { if (deleteServiceOrderConfirmId) deleteServiceOrderMutation.mutate(deleteServiceOrderConfirmId); setDeleteServiceOrderConfirmId(null); }}
+                    >
+                      Elimina
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               {/* Dialog: Crea Ordine di Servizio */}
               <Dialog open={addServiceOrderDialogOpen} onOpenChange={(open) => { setAddServiceOrderDialogOpen(open); if (!open) { setSoNewClientMode(false); setNewServiceOrder({ name: "", description: "", clientId: "", newClientName: "", workOrderName: "", assignedToId: "" }); } }}>
