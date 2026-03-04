@@ -551,6 +551,7 @@ export const updateWorkOrderSchema = insertWorkOrderSchema.partial().extend({
 export const insertServiceOrderSchema = createInsertSchema(serviceOrders).omit({
   id: true,
   organizationId: true,
+  createdById: true,
   createdAt: true,
   updatedAt: true,
   startedAt: true,
