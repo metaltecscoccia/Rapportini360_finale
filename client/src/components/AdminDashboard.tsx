@@ -454,7 +454,7 @@ export default function AdminDashboard({
       console.log('[DEBUG] Attendance stats received:', JSON.stringify(data));
       return data;
     },
-    enabled: selectedTab === 'absence-stats',
+    enabled: selectedTab === 'attendance',
   });
 
   // Query per statistiche assenze singolo dipendente
@@ -2020,10 +2020,8 @@ export default function AdminDashboard({
       "workorders": { mainSection: "rapportini", tab: "work-orders" },
       "configuration": { mainSection: "rapportini", tab: "work-types" },
       "attendance": { mainSection: "rapportini", tab: "attendance" },
-      "absence-stats": { mainSection: "rapportini", tab: "absence-stats" },
       "agenda": { mainSection: "agenda", tab: "agenda" },
       "fuel": { mainSection: "rifornimenti", tab: "refills" },
-      "billing": { mainSection: "billing", tab: "billing" },
     };
     return sectionMap[activeSection] || { mainSection: "rapportini", tab: "reports" };
   };
@@ -2113,10 +2111,8 @@ export default function AdminDashboard({
         {/* Content Area */}
         <div className="p-6 space-y-6">
 
-      {/* Billing Section - rendered separately from Tabs */}
-      {activeSection === "billing" ? (
-        <BillingDashboard />
-      ) : activeSection === "teams" ? (
+      {/* Special Sections */}
+      {activeSection === "teams" ? (
         <TeamsManagement />
       ) : activeSection === "agenda" ? (
         <AgendaSection />
@@ -2210,10 +2206,6 @@ export default function AdminDashboard({
           <TabsTrigger value="attendance" data-testid="tab-attendance">
             <ClipboardList className="h-4 w-4 mr-2" />
             Presenze
-          </TabsTrigger>
-          <TabsTrigger value="absence-stats" data-testid="tab-absence-stats">
-            <BarChart2 className="h-4 w-4 mr-2" />
-            Statistiche Assenze
           </TabsTrigger>
         </TabsList>
 
@@ -3944,6 +3936,7 @@ export default function AdminDashboard({
               <TabsTrigger value="config-activities">Attività e Componenti</TabsTrigger>
               <TabsTrigger value="config-equipment">DPI/Attrezzature</TabsTrigger>
               <TabsTrigger value="config-backup">Backup</TabsTrigger>
+              <TabsTrigger value="config-billing">Abbonamento</TabsTrigger>
             </TabsList>
 
             {/* Sotto-tab: Attività e Componenti */}
@@ -4145,26 +4138,37 @@ export default function AdminDashboard({
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Sotto-tab: Abbonamento */}
+            <TabsContent value="config-billing">
+              <BillingDashboard />
+            </TabsContent>
           </Tabs>
         </TabsContent>
 
-        {/* Attendance Tab */}
+        {/* Attendance Tab con sotto-tab */}
         <TabsContent value="attendance">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Foglio Presenze</h2>
-            <Button 
-              onClick={() => setRegisterAbsenceDialogOpen(true)}
-              data-testid="button-register-absence"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Registra Assenze
-            </Button>
-          </div>
-          <AttendanceSheet />
-        </TabsContent>
+          <Tabs defaultValue="presenze-foglio" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="presenze-foglio">Foglio Presenze</TabsTrigger>
+              <TabsTrigger value="presenze-stats">Statistiche</TabsTrigger>
+            </TabsList>
 
-        {/* Absence Statistics Tab */}
-        <TabsContent value="absence-stats" className="space-y-6">
+            <TabsContent value="presenze-foglio">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">Foglio Presenze</h2>
+                <Button
+                  onClick={() => setRegisterAbsenceDialogOpen(true)}
+                  data-testid="button-register-absence"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Registra Assenze
+                </Button>
+              </div>
+              <AttendanceSheet />
+            </TabsContent>
+
+            <TabsContent value="presenze-stats" className="space-y-6">
           <div className="flex items-center gap-2 mb-2">
             <ExportDropdown formats={[
               { label: "Excel", onClick: () => downloadFile("/api/export/absence-stats", "Statistiche_Assenze.xlsx") },
@@ -4516,6 +4520,8 @@ export default function AdminDashboard({
               Nessun dato disponibile per le statistiche assenze.
             </div>
           )}
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
       </TabsContent>
