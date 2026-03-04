@@ -251,7 +251,8 @@ export default function AdminDashboard({
   // State for service orders
   const [workOrdersSubTab, setWorkOrdersSubTab] = useState<"commesse" | "ordini-servizio">("commesse");
   const [addServiceOrderDialogOpen, setAddServiceOrderDialogOpen] = useState(false);
-  const [newServiceOrder, setNewServiceOrder] = useState({ name: "", description: "", clientId: "", workOrderId: "", assignedToId: "" });
+  const [soNewClientMode, setSoNewClientMode] = useState(false);
+  const [newServiceOrder, setNewServiceOrder] = useState({ name: "", description: "", clientId: "", newClientName: "", workOrderName: "", assignedToId: "" });
 
   // State for quick add expense dialog
   const [quickAddExpenseDialogOpen, setQuickAddExpenseDialogOpen] = useState(false);
@@ -693,17 +694,43 @@ export default function AdminDashboard({
     },
   });
 
-  // Mutation per creare ordine di servizio
+  // Mutation per creare ordine di servizio (multi-step: cliente → commessa → ordine)
   const createServiceOrderMutation = useMutation({
     mutationFn: async (data: typeof newServiceOrder) => {
-      const res = await apiRequest('POST', '/api/service-orders', data);
-      return res.json();
+      // Step 1: crea nuovo cliente se necessario
+      let finalClientId = data.clientId;
+      if (soNewClientMode && data.newClientName) {
+        const clientRes = await apiRequest('POST', '/api/clients', { name: data.newClientName });
+        const newClient = await clientRes.json();
+        finalClientId = newClient.id;
+      }
+      // Step 2: crea sempre una nuova commessa
+      const woRes = await apiRequest('POST', '/api/work-orders', {
+        name: data.workOrderName,
+        clientId: finalClientId,
+        isActive: true,
+        availableWorkTypes: [],
+        availableMaterials: [],
+      });
+      const newWo = await woRes.json();
+      // Step 3: crea l'ordine di servizio
+      const soRes = await apiRequest('POST', '/api/service-orders', {
+        name: data.name,
+        description: data.description || undefined,
+        clientId: finalClientId,
+        workOrderId: newWo.id,
+        assignedToId: data.assignedToId,
+      });
+      return soRes.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/service-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
       toast({ title: "Ordine creato", description: "L'ordine di servizio è stato assegnato con successo." });
       setAddServiceOrderDialogOpen(false);
-      setNewServiceOrder({ name: "", description: "", clientId: "", workOrderId: "", assignedToId: "" });
+      setSoNewClientMode(false);
+      setNewServiceOrder({ name: "", description: "", clientId: "", newClientName: "", workOrderName: "", assignedToId: "" });
     },
     onError: (error: any) => {
       toast({ title: "Errore", description: error.message || "Errore durante la creazione dell'ordine.", variant: "destructive" });
@@ -2763,32 +2790,24 @@ export default function AdminDashboard({
 
         {/* Work Orders Tab - LAYOUT SISTEMATO */}
         <TabsContent value="work-orders" className="space-y-4">
-          {/* Sub-tab switcher */}
-          <div className="flex gap-2 border-b pb-2">
-            <Button
-              variant={workOrdersSubTab === "commesse" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setWorkOrdersSubTab("commesse")}
-            >
-              <Wrench className="h-4 w-4 mr-2" />
-              Commesse
-            </Button>
-            <Button
-              variant={workOrdersSubTab === "ordini-servizio" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setWorkOrdersSubTab("ordini-servizio")}
-            >
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Ordini di Servizio
-              {serviceOrdersList.filter(o => o.status !== "completato").length > 0 && (
-                <Badge variant="secondary" className="ml-2 text-xs">
-                  {serviceOrdersList.filter(o => o.status !== "completato").length}
-                </Badge>
-              )}
-            </Button>
-          </div>
+          <Tabs value={workOrdersSubTab} onValueChange={(v) => setWorkOrdersSubTab(v as any)}>
+            <TabsList className="grid w-full grid-cols-2 mb-2">
+              <TabsTrigger value="commesse" className="gap-2">
+                <Wrench className="h-4 w-4" />
+                Commesse
+              </TabsTrigger>
+              <TabsTrigger value="ordini-servizio" className="gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Ordini di Servizio
+                {serviceOrdersList.filter((o: any) => o.status !== "completato").length > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {serviceOrdersList.filter((o: any) => o.status !== "completato").length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-          {workOrdersSubTab === "ordini-servizio" ? (
+            <TabsContent value="ordini-servizio">
             <>
               <Card>
                 <CardHeader>
@@ -2867,7 +2886,7 @@ export default function AdminDashboard({
               </Card>
 
               {/* Dialog: Crea Ordine di Servizio */}
-              <Dialog open={addServiceOrderDialogOpen} onOpenChange={setAddServiceOrderDialogOpen}>
+              <Dialog open={addServiceOrderDialogOpen} onOpenChange={(open) => { setAddServiceOrderDialogOpen(open); if (!open) { setSoNewClientMode(false); setNewServiceOrder({ name: "", description: "", clientId: "", newClientName: "", workOrderName: "", assignedToId: "" }); } }}>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>Nuovo Ordine di Servizio</DialogTitle>
@@ -2895,33 +2914,52 @@ export default function AdminDashboard({
                     </div>
                     <div>
                       <Label htmlFor="so-client">Cliente *</Label>
-                      <Select value={newServiceOrder.clientId} onValueChange={v => setNewServiceOrder(s => ({ ...s, clientId: v, workOrderId: "" }))}>
-                        <SelectTrigger id="so-client">
-                          <SelectValue placeholder="Seleziona cliente" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {clients.map((c: any) => (
-                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {soNewClientMode ? (
+                        <>
+                          <Input
+                            id="so-client"
+                            placeholder="Nome nuovo cliente"
+                            value={newServiceOrder.newClientName}
+                            onChange={e => setNewServiceOrder(s => ({ ...s, newClientName: e.target.value }))}
+                          />
+                          <button
+                            type="button"
+                            className="text-xs text-primary underline mt-1 block"
+                            onClick={() => { setSoNewClientMode(false); setNewServiceOrder(s => ({ ...s, newClientName: "" })); }}
+                          >
+                            ← Scegli cliente esistente
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <Select value={newServiceOrder.clientId} onValueChange={v => setNewServiceOrder(s => ({ ...s, clientId: v }))}>
+                            <SelectTrigger id="so-client">
+                              <SelectValue placeholder="Seleziona cliente" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {clients.map((c: any) => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <button
+                            type="button"
+                            className="text-xs text-primary underline mt-1 block"
+                            onClick={() => { setSoNewClientMode(true); setNewServiceOrder(s => ({ ...s, clientId: "" })); }}
+                          >
+                            + Nuovo cliente
+                          </button>
+                        </>
+                      )}
                     </div>
                     <div>
-                      <Label htmlFor="so-workorder">Commessa *</Label>
-                      <Select
-                        value={newServiceOrder.workOrderId}
-                        onValueChange={v => setNewServiceOrder(s => ({ ...s, workOrderId: v }))}
-                        disabled={!newServiceOrder.clientId}
-                      >
-                        <SelectTrigger id="so-workorder">
-                          <SelectValue placeholder={newServiceOrder.clientId ? "Seleziona commessa" : "Prima seleziona cliente"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {workOrders.filter((w: any) => w.clientId === newServiceOrder.clientId).map((w: any) => (
-                            <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="so-workorder">Nome commessa *</Label>
+                      <Input
+                        id="so-workorder"
+                        placeholder="Es. Lavori via Roma"
+                        value={newServiceOrder.workOrderName}
+                        onChange={e => setNewServiceOrder(s => ({ ...s, workOrderName: e.target.value }))}
+                      />
                     </div>
                     <div>
                       <Label htmlFor="so-employee">Dipendente *</Label>
@@ -2940,7 +2978,13 @@ export default function AdminDashboard({
                       <Button
                         className="flex-1"
                         onClick={() => createServiceOrderMutation.mutate(newServiceOrder)}
-                        disabled={!newServiceOrder.name || !newServiceOrder.clientId || !newServiceOrder.workOrderId || !newServiceOrder.assignedToId || createServiceOrderMutation.isPending}
+                        disabled={
+                          !newServiceOrder.name ||
+                          (soNewClientMode ? !newServiceOrder.newClientName : !newServiceOrder.clientId) ||
+                          !newServiceOrder.workOrderName ||
+                          !newServiceOrder.assignedToId ||
+                          createServiceOrderMutation.isPending
+                        }
                       >
                         {createServiceOrderMutation.isPending ? "Creazione..." : "Crea Ordine"}
                       </Button>
@@ -2952,15 +2996,18 @@ export default function AdminDashboard({
                 </DialogContent>
               </Dialog>
             </>
-          ) : selectedWorkOrder ? (
-            <WorkOrderReport
-              workOrderId={selectedWorkOrder.id}
-              workOrderNumber={selectedWorkOrder.number}
-              workOrderDescription={selectedWorkOrder.description}
-              clientName={selectedWorkOrder.clientName}
-              onBack={handleBackToWorkOrders}
-            />
-          ) : (
+            </TabsContent>
+
+            <TabsContent value="commesse">
+            {selectedWorkOrder ? (
+              <WorkOrderReport
+                workOrderId={selectedWorkOrder.id}
+                workOrderNumber={selectedWorkOrder.number}
+                workOrderDescription={selectedWorkOrder.description}
+                clientName={selectedWorkOrder.clientName}
+                onBack={handleBackToWorkOrders}
+              />
+            ) : (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -3159,6 +3206,8 @@ export default function AdminDashboard({
               </CardContent>
             </Card>
           )}
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* Clients Tab */}
