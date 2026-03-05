@@ -5720,7 +5720,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(and(eq(serviceOrders.id, id), eq(serviceOrders.organizationId, organizationId)));
 
       if (!order) return res.status(404).json({ error: "Ordine non trovato" });
-      if (order.status === "completato") return res.status(400).json({ error: "Impossibile eliminare un ordine completato" });
 
       await db.delete(serviceOrders).where(eq(serviceOrders.id, id));
       res.json({ success: true });

@@ -2987,16 +2987,14 @@ export default function AdminDashboard({
                                       <Ban className="h-4 w-4" />
                                     </Button>
                                   )}
-                                  {order.status !== "completato" && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-destructive hover:text-destructive"
-                                      onClick={() => setDeleteServiceOrderConfirmId(order.id)}
-                                    >
-                                      <Trash className="h-4 w-4" />
-                                    </Button>
-                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={() => setDeleteServiceOrderConfirmId(order.id)}
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               </td>
                             </tr>
@@ -3182,7 +3180,6 @@ export default function AdminDashboard({
                             Annulla ordine
                           </Button>
                         )}
-                        {detailServiceOrder.status !== "completato" && (
                           <Button
                             variant="outline"
                             className="text-destructive border-destructive/30 hover:bg-destructive/10"
@@ -3191,7 +3188,6 @@ export default function AdminDashboard({
                             <Trash className="h-4 w-4 mr-1" />
                             Elimina
                           </Button>
-                        )}
                         <Button variant="ghost" onClick={() => { setDetailServiceOrder(null); setShowAdminCompleteNotes(false); setAdminCompleteNotes(""); }} className="flex-1">
                           Chiudi
                         </Button>
