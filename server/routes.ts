@@ -5393,6 +5393,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: serviceOrders.description,
           status: serviceOrders.status,
           startedAt: serviceOrders.startedAt,
+          pausedAt: serviceOrders.pausedAt,
+          pausedDuration: serviceOrders.pausedDuration,
           clientId: serviceOrders.clientId,
           workOrderId: serviceOrders.workOrderId,
           clientName: clients.name,
@@ -5408,7 +5410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         );
 
-      const pending = rows.filter(r => r.status === "assegnato" || r.status === "iniziato");
+      const pending = rows.filter(r => r.status === "assegnato" || r.status === "iniziato" || r.status === "in_pausa");
       res.json(pending);
     } catch (error) {
       console.error("Error fetching pending service orders:", error);
@@ -5551,9 +5553,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(serviceOrders)
         .where(and(eq(serviceOrders.id, id), eq(serviceOrders.organizationId, organizationId)));
 
+      const userRole = (req.session as any).role;
       if (!order) return res.status(404).json({ error: "Ordine non trovato" });
-      if (order.assignedToId !== userId) return res.status(403).json({ error: "Non autorizzato" });
-      if (order.status === "completato") return res.status(400).json({ error: "Ordine già completato" });
+      if (userRole !== "admin" && userRole !== "superadmin" && order.assignedToId !== userId) return res.status(403).json({ error: "Non autorizzato" });
+      if (order.status === "completato" || order.status === "annullato") return res.status(400).json({ error: "Ordine non avviabile" });
 
       const updateValues: any = { status: "iniziato", updatedAt: new Date() };
       // Non resettare startedAt se già impostato (idempotente)
@@ -5587,22 +5590,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(serviceOrders)
         .where(and(eq(serviceOrders.id, id), eq(serviceOrders.organizationId, organizationId)));
 
+      const userRole = (req.session as any).role;
       if (!order) return res.status(404).json({ error: "Ordine non trovato" });
-      if (order.assignedToId !== userId) return res.status(403).json({ error: "Non autorizzato" });
-      if (order.status !== "iniziato") return res.status(400).json({ error: "Ordine non ancora iniziato" });
+      if (userRole !== "admin" && userRole !== "superadmin" && order.assignedToId !== userId) return res.status(403).json({ error: "Non autorizzato" });
+      if (order.status !== "iniziato" && order.status !== "in_pausa") return res.status(400).json({ error: "Ordine non avviato" });
 
       const completedAt = new Date();
       const startedAt = order.startedAt || completedAt;
-      const hoursElapsed = (completedAt.getTime() - new Date(startedAt).getTime()) / 3600000;
-      const hoursRounded = String(Math.max(0.25, Math.round(hoursElapsed * 4) / 4));
+      const pausedMs = (order.pausedDuration || 0) * 1000;
+      const hoursElapsed = (completedAt.getTime() - new Date(startedAt).getTime() - pausedMs) / 3600000;
+      const hoursRounded = String(Math.max(0.25, Math.round(Math.max(0, hoursElapsed) * 4) / 4));
 
-      // Trova o crea rapportino di oggi per il dipendente
+      // Usa il dipendente assegnato (non l'admin) per il rapportino
+      const reportUserId = order.assignedToId;
       const today = getTodayISO();
-      let report = await storage.getDailyReportByEmployeeAndDate(userId, today, organizationId);
+      let report = await storage.getDailyReportByEmployeeAndDate(reportUserId, today, organizationId);
 
       if (!report) {
         report = await storage.createDailyReport(
-          { employeeId: userId, date: today, status: "In attesa", createdBy: "utente" },
+          { employeeId: reportUserId, date: today, status: "In attesa", createdBy: "utente" },
           organizationId
         );
       }
@@ -5633,6 +5639,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error completing service order:", error);
       res.status(500).json({ error: "Failed to complete service order" });
+    }
+  });
+
+  // PUT /api/service-orders/:id/pause — mette in pausa un ordine in corso
+  app.put("/api/service-orders/:id/pause", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = (req.session as any).userId;
+      const userRole = (req.session as any).role;
+      const organizationId = (req.session as any).organizationId;
+
+      const [order] = await db
+        .select()
+        .from(serviceOrders)
+        .where(and(eq(serviceOrders.id, id), eq(serviceOrders.organizationId, organizationId)));
+
+      if (!order) return res.status(404).json({ error: "Ordine non trovato" });
+      if (userRole !== "admin" && userRole !== "superadmin" && order.assignedToId !== userId) return res.status(403).json({ error: "Non autorizzato" });
+      if (order.status !== "iniziato") return res.status(400).json({ error: "L'ordine non è in corso" });
+
+      const [updated] = await db
+        .update(serviceOrders)
+        .set({ status: "in_pausa", pausedAt: new Date(), updatedAt: new Date() })
+        .where(eq(serviceOrders.id, id))
+        .returning();
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error pausing service order:", error);
+      res.status(500).json({ error: "Failed to pause service order" });
+    }
+  });
+
+  // PUT /api/service-orders/:id/resume — riprende un ordine in pausa
+  app.put("/api/service-orders/:id/resume", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = (req.session as any).userId;
+      const userRole = (req.session as any).role;
+      const organizationId = (req.session as any).organizationId;
+
+      const [order] = await db
+        .select()
+        .from(serviceOrders)
+        .where(and(eq(serviceOrders.id, id), eq(serviceOrders.organizationId, organizationId)));
+
+      if (!order) return res.status(404).json({ error: "Ordine non trovato" });
+      if (userRole !== "admin" && userRole !== "superadmin" && order.assignedToId !== userId) return res.status(403).json({ error: "Non autorizzato" });
+      if (order.status !== "in_pausa") return res.status(400).json({ error: "L'ordine non è in pausa" });
+
+      const now = new Date();
+      const pausedSeconds = order.pausedAt
+        ? Math.floor((now.getTime() - new Date(order.pausedAt).getTime()) / 1000)
+        : 0;
+      const newPausedDuration = (order.pausedDuration || 0) + pausedSeconds;
+
+      const [updated] = await db
+        .update(serviceOrders)
+        .set({ status: "iniziato", pausedAt: null, pausedDuration: newPausedDuration, updatedAt: now })
+        .where(eq(serviceOrders.id, id))
+        .returning();
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error resuming service order:", error);
+      res.status(500).json({ error: "Failed to resume service order" });
     }
   });
 

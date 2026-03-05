@@ -105,8 +105,10 @@ export const serviceOrders = pgTable("service_orders", {
   workOrderId: varchar("work_order_id").notNull().references(() => workOrders.id),
   assignedToId: varchar("assigned_to_id").notNull().references(() => users.id),
   createdById: varchar("created_by_id").notNull().references(() => users.id),
-  status: text("status").notNull().default("assegnato"), // "assegnato" | "iniziato" | "completato"
+  status: text("status").notNull().default("assegnato"), // "assegnato" | "iniziato" | "in_pausa" | "completato" | "annullato"
   startedAt: timestamp("started_at"),
+  pausedAt: timestamp("paused_at"),
+  pausedDuration: integer("paused_duration").default(0), // Secondi totali di pausa accumulati
   completedAt: timestamp("completed_at"),
   notes: text("notes"), // Commento libero del dipendente al completamento
   hours: numeric("hours"), // Ore impiegate (modificabile da admin, non tocca rapportino)

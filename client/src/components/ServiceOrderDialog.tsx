@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ClipboardList, Play, Clock, CheckCircle, ChevronRight } from "lucide-react";
+import { ClipboardList, Play, Clock, CheckCircle, ChevronRight, Pause, RotateCcw } from "lucide-react";
 
 interface PendingServiceOrder {
   id: string;
@@ -20,6 +20,8 @@ interface PendingServiceOrder {
   description?: string | null;
   status: string;
   startedAt?: string | null;
+  pausedAt?: string | null;
+  pausedDuration?: number | null;
   clientName?: string | null;
   workOrderName?: string | null;
 }
@@ -30,11 +32,19 @@ interface ServiceOrderDialogProps {
   serviceOrders: PendingServiceOrder[];
 }
 
-function formatElapsedTime(startedAt: string | null | undefined): string {
+function formatElapsedTime(
+  startedAt: string | null | undefined,
+  pausedDuration = 0,
+  isPaused = false,
+  pausedAt?: string | null
+): string {
   if (!startedAt) return "";
-  const diff = Date.now() - new Date(startedAt).getTime();
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
+  const now = Date.now();
+  const currentPauseMs = isPaused && pausedAt ? now - new Date(pausedAt).getTime() : 0;
+  const diff = now - new Date(startedAt).getTime() - pausedDuration * 1000 - currentPauseMs;
+  const totalSec = Math.max(0, Math.floor(diff / 1000));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
   if (h > 0) return `${h}h ${m}m`;
   return `${m} minuti`;
 }
@@ -54,10 +64,38 @@ export default function ServiceOrderDialog({ open, onOpenChange, serviceOrders }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/service-orders/pending"] });
-      toast({ title: "Ordine iniziato", description: "Il tempo di esecuzione è stato avviato." });
+      toast({ title: "Ordine avviato", description: "Il tempo di esecuzione è stato avviato." });
     },
     onError: () => {
       toast({ title: "Errore", description: "Impossibile avviare l'ordine.", variant: "destructive" });
+    },
+  });
+
+  const pauseMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("PUT", `/api/service-orders/${id}/pause`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/service-orders/pending"] });
+      toast({ title: "Ordine in pausa" });
+    },
+    onError: () => {
+      toast({ title: "Errore", description: "Impossibile mettere in pausa.", variant: "destructive" });
+    },
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("PUT", `/api/service-orders/${id}/resume`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/service-orders/pending"] });
+      toast({ title: "Ordine ripreso" });
+    },
+    onError: () => {
+      toast({ title: "Errore", description: "Impossibile riprendere l'ordine.", variant: "destructive" });
     },
   });
 
@@ -91,15 +129,6 @@ export default function ServiceOrderDialog({ open, onOpenChange, serviceOrders }
     }
   };
 
-  const handleIniziaClick = () => {
-    if (!current) return;
-    startMutation.mutate(current.id);
-  };
-
-  const handleTerminaClick = () => {
-    setShowNotes(true);
-  };
-
   const handleConfermaCompletamento = () => {
     if (!current) return;
     completeMutation.mutate({ id: current.id, notes });
@@ -108,6 +137,7 @@ export default function ServiceOrderDialog({ open, onOpenChange, serviceOrders }
   if (!current) return null;
 
   const isIniziated = current.status === "iniziato";
+  const isPaused = current.status === "in_pausa";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -123,7 +153,11 @@ export default function ServiceOrderDialog({ open, onOpenChange, serviceOrders }
             )}
           </div>
           <DialogDescription>
-            {isIniziated ? "Ordine in corso — puoi completarlo o rimandarlo." : "Hai un ordine di servizio assegnato."}
+            {isPaused
+              ? "Ordine in pausa — riprendi o termina."
+              : isIniziated
+              ? "Ordine in corso — puoi metterlo in pausa o completarlo."
+              : "Hai un ordine di servizio assegnato."}
           </DialogDescription>
         </DialogHeader>
 
@@ -147,28 +181,62 @@ export default function ServiceOrderDialog({ open, onOpenChange, serviceOrders }
                   </Badge>
                 )}
               </div>
-              {isIniziated && current.startedAt && (
-                <div className="flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400 pt-1">
+              {(isIniziated || isPaused) && current.startedAt && (
+                <div className={`flex items-center gap-1 text-sm pt-1 ${isPaused ? "text-purple-600 dark:text-purple-400" : "text-amber-600 dark:text-amber-400"}`}>
                   <Clock className="h-4 w-4" />
-                  <span>In corso da: {formatElapsedTime(current.startedAt)}</span>
+                  <span>
+                    {isPaused ? "In pausa — lavoro effettivo: " : "In corso da: "}
+                    {formatElapsedTime(current.startedAt, current.pausedDuration ?? 0, isPaused, current.pausedAt)}
+                  </span>
                 </div>
               )}
             </div>
 
             {/* Azioni */}
             <div className="flex flex-col gap-2">
-              {isIniziated ? (
-                <Button
-                  onClick={handleTerminaClick}
-                  className="w-full"
-                  disabled={completeMutation.isPending}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Termina ordine
-                </Button>
+              {isPaused ? (
+                <>
+                  <Button
+                    onClick={() => resumeMutation.mutate(current.id)}
+                    className="w-full"
+                    disabled={resumeMutation.isPending}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    {resumeMutation.isPending ? "Riprendendo..." : "Riprendi"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowNotes(true)}
+                    className="w-full"
+                    disabled={completeMutation.isPending}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Termina ordine
+                  </Button>
+                </>
+              ) : isIniziated ? (
+                <>
+                  <Button
+                    onClick={() => pauseMutation.mutate(current.id)}
+                    variant="outline"
+                    className="w-full"
+                    disabled={pauseMutation.isPending}
+                  >
+                    <Pause className="h-4 w-4 mr-2" />
+                    {pauseMutation.isPending ? "Pausa..." : "Metti in pausa"}
+                  </Button>
+                  <Button
+                    onClick={() => setShowNotes(true)}
+                    className="w-full"
+                    disabled={completeMutation.isPending}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Termina ordine
+                  </Button>
+                </>
               ) : (
                 <Button
-                  onClick={handleIniziaClick}
+                  onClick={() => startMutation.mutate(current.id)}
                   className="w-full"
                   disabled={startMutation.isPending}
                 >

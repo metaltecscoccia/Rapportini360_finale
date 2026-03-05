@@ -65,7 +65,10 @@ import {
   Wallet,
   History,
   HardHat,
-  Ban
+  Ban,
+  Play,
+  Pause,
+  RotateCcw
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import logoPath from "@assets/ChatGPT_Image_20_dic_2025,_17_13_27_(1)_1766249871224.png";
@@ -257,6 +260,8 @@ export default function AdminDashboard({
   const [detailServiceOrder, setDetailServiceOrder] = useState<any>(null);
   const [editServiceOrderData, setEditServiceOrderData] = useState({ name: "", description: "", hours: "" });
   const [deleteServiceOrderConfirmId, setDeleteServiceOrderConfirmId] = useState<string | null>(null);
+  const [showAdminCompleteNotes, setShowAdminCompleteNotes] = useState(false);
+  const [adminCompleteNotes, setAdminCompleteNotes] = useState("");
 
   // State for quick add expense dialog
   const [quickAddExpenseDialogOpen, setQuickAddExpenseDialogOpen] = useState(false);
@@ -782,6 +787,72 @@ export default function AdminDashboard({
     },
     onError: (error: any) => {
       toast({ title: "Errore", description: error.message || "Impossibile aggiornare l'ordine.", variant: "destructive" });
+    },
+  });
+
+  // Mutation admin: avvia ordine di servizio
+  const startServiceOrderAdminMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest('PUT', `/api/service-orders/${id}/start`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/service-orders'] });
+      toast({ title: "Ordine avviato" });
+      setDetailServiceOrder((prev: any) => prev ? { ...prev, status: 'iniziato' } : null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message || "Impossibile avviare l'ordine.", variant: "destructive" });
+    },
+  });
+
+  // Mutation admin: metti in pausa ordine di servizio
+  const pauseServiceOrderMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest('PUT', `/api/service-orders/${id}/pause`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/service-orders'] });
+      toast({ title: "Ordine in pausa" });
+      setDetailServiceOrder((prev: any) => prev ? { ...prev, status: 'in_pausa' } : null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message || "Impossibile mettere in pausa.", variant: "destructive" });
+    },
+  });
+
+  // Mutation admin: riprendi ordine di servizio
+  const resumeServiceOrderMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest('PUT', `/api/service-orders/${id}/resume`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/service-orders'] });
+      toast({ title: "Ordine ripreso" });
+      setDetailServiceOrder((prev: any) => prev ? { ...prev, status: 'iniziato' } : null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message || "Impossibile riprendere l'ordine.", variant: "destructive" });
+    },
+  });
+
+  // Mutation admin: completa ordine di servizio
+  const completeServiceOrderAdminMutation = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
+      const res = await apiRequest('PUT', `/api/service-orders/${id}/complete`, { notes });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/service-orders'] });
+      toast({ title: "Ordine completato", description: "L'operazione è stata aggiunta al rapportino del dipendente." });
+      setDetailServiceOrder(null);
+      setShowAdminCompleteNotes(false);
+      setAdminCompleteNotes("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message || "Impossibile completare l'ordine.", variant: "destructive" });
     },
   });
 
@@ -2882,12 +2953,14 @@ export default function AdminDashboard({
                                       ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                                       : order.status === "iniziato"
                                       ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                                      : order.status === "in_pausa"
+                                      ? "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
                                       : order.status === "annullato"
                                       ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                                       : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                                   }
                                 >
-                                  {order.status === "assegnato" ? "Assegnato" : order.status === "iniziato" ? "In corso" : order.status === "annullato" ? "Annullato" : "Completato"}
+                                  {order.status === "assegnato" ? "Assegnato" : order.status === "iniziato" ? "In corso" : order.status === "in_pausa" ? "In pausa" : order.status === "annullato" ? "Annullato" : "Completato"}
                                 </Badge>
                               </td>
                               <td className="py-2 px-3 text-muted-foreground">{new Date(order.createdAt).toLocaleDateString("it-IT")}</td>
@@ -2981,11 +3054,13 @@ export default function AdminDashboard({
                               ? "bg-green-100 text-green-800"
                               : detailServiceOrder.status === "iniziato"
                               ? "bg-amber-100 text-amber-800"
+                              : detailServiceOrder.status === "in_pausa"
+                              ? "bg-purple-100 text-purple-700"
                               : detailServiceOrder.status === "annullato"
                               ? "bg-gray-100 text-gray-600"
                               : "bg-blue-100 text-blue-800"
                           }>
-                            {detailServiceOrder.status === "assegnato" ? "Assegnato" : detailServiceOrder.status === "iniziato" ? "In corso" : detailServiceOrder.status === "annullato" ? "Annullato" : "Completato"}
+                            {detailServiceOrder.status === "assegnato" ? "Assegnato" : detailServiceOrder.status === "iniziato" ? "In corso" : detailServiceOrder.status === "in_pausa" ? "In pausa" : detailServiceOrder.status === "annullato" ? "Annullato" : "Completato"}
                           </Badge>
                         </div>
                         {detailServiceOrder.clientName && (
@@ -3013,7 +3088,81 @@ export default function AdminDashboard({
                         </div>
                       )}
 
-                      {/* Pulsanti */}
+                      {/* Note completamento admin (inline) */}
+                      {showAdminCompleteNotes && (
+                        <div>
+                          <Label>Note completamento (opzionale)</Label>
+                          <Textarea
+                            placeholder="Descrivi il lavoro svolto..."
+                            value={adminCompleteNotes}
+                            onChange={e => setAdminCompleteNotes(e.target.value)}
+                            rows={3}
+                          />
+                          <div className="flex gap-2 mt-2">
+                            <Button
+                              className="flex-1"
+                              onClick={() => completeServiceOrderAdminMutation.mutate({ id: detailServiceOrder.id, notes: adminCompleteNotes })}
+                              disabled={completeServiceOrderAdminMutation.isPending}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              {completeServiceOrderAdminMutation.isPending ? "Completamento..." : "Conferma completamento"}
+                            </Button>
+                            <Button variant="outline" onClick={() => { setShowAdminCompleteNotes(false); setAdminCompleteNotes(""); }}>
+                              Annulla
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Controlli ciclo di vita */}
+                      {!showAdminCompleteNotes && detailServiceOrder.status !== "completato" && detailServiceOrder.status !== "annullato" && (
+                        <div className="flex flex-wrap gap-2 rounded-lg border bg-muted/20 p-3">
+                          <p className="text-xs text-muted-foreground w-full mb-1">Gestione ciclo ordine</p>
+                          {detailServiceOrder.status === "assegnato" && (
+                            <Button
+                              size="sm"
+                              onClick={() => startServiceOrderAdminMutation.mutate(detailServiceOrder.id)}
+                              disabled={startServiceOrderAdminMutation.isPending}
+                            >
+                              <Play className="h-3.5 w-3.5 mr-1" />
+                              Avvia ordine
+                            </Button>
+                          )}
+                          {detailServiceOrder.status === "iniziato" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => pauseServiceOrderMutation.mutate(detailServiceOrder.id)}
+                              disabled={pauseServiceOrderMutation.isPending}
+                            >
+                              <Pause className="h-3.5 w-3.5 mr-1" />
+                              Metti in pausa
+                            </Button>
+                          )}
+                          {detailServiceOrder.status === "in_pausa" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => resumeServiceOrderMutation.mutate(detailServiceOrder.id)}
+                              disabled={resumeServiceOrderMutation.isPending}
+                            >
+                              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                              Riprendi
+                            </Button>
+                          )}
+                          {(detailServiceOrder.status === "iniziato" || detailServiceOrder.status === "in_pausa") && (
+                            <Button
+                              size="sm"
+                              onClick={() => { setShowAdminCompleteNotes(true); setAdminCompleteNotes(""); }}
+                            >
+                              <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                              Completa
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Pulsanti principali */}
                       <div className="flex flex-wrap gap-2 pt-1">
                         <Button
                           className="flex-1"
@@ -3043,7 +3192,7 @@ export default function AdminDashboard({
                             Elimina
                           </Button>
                         )}
-                        <Button variant="ghost" onClick={() => setDetailServiceOrder(null)} className="flex-1">
+                        <Button variant="ghost" onClick={() => { setDetailServiceOrder(null); setShowAdminCompleteNotes(false); setAdminCompleteNotes(""); }} className="flex-1">
                           Chiudi
                         </Button>
                       </div>
@@ -4169,7 +4318,8 @@ export default function AdminDashboard({
             </TabsContent>
 
             <TabsContent value="presenze-stats" className="space-y-6">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold">Statistiche Assenze</h2>
             <ExportDropdown formats={[
               { label: "Excel", onClick: () => downloadFile("/api/export/absence-stats", "Statistiche_Assenze.xlsx") },
               { label: "Word", onClick: () => downloadFile("/api/export/absence-stats-word", "Statistiche_Assenze.docx") },
