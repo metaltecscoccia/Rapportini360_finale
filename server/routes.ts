@@ -5083,7 +5083,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { employeeId } = req.params;
       const organizationId = (req.session as any).organizationId;
       const userId = (req.session as any).userId;
-      const userRole = (req.session as any).role;
+      const userRole = (req.session as any).userRole;
 
       // Solo l'utente stesso o un admin può vedere le assegnazioni
       if (userId !== employeeId && userRole !== "admin" && userRole !== "superadmin") {
@@ -5553,7 +5553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(serviceOrders)
         .where(and(eq(serviceOrders.id, id), eq(serviceOrders.organizationId, organizationId)));
 
-      const userRole = (req.session as any).role;
+      const userRole = (req.session as any).userRole;
       if (!order) return res.status(404).json({ error: "Ordine non trovato" });
       if (userRole !== "admin" && userRole !== "superadmin" && order.assignedToId !== userId) return res.status(403).json({ error: "Non autorizzato" });
       if (order.status === "completato" || order.status === "annullato") return res.status(400).json({ error: "Ordine non avviabile" });
@@ -5590,7 +5590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(serviceOrders)
         .where(and(eq(serviceOrders.id, id), eq(serviceOrders.organizationId, organizationId)));
 
-      const userRole = (req.session as any).role;
+      const userRole = (req.session as any).userRole;
       if (!order) return res.status(404).json({ error: "Ordine non trovato" });
       if (userRole !== "admin" && userRole !== "superadmin" && order.assignedToId !== userId) return res.status(403).json({ error: "Non autorizzato" });
       if (order.status !== "iniziato" && order.status !== "in_pausa") return res.status(400).json({ error: "Ordine non avviato" });
@@ -5647,7 +5647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const userId = (req.session as any).userId;
-      const userRole = (req.session as any).role;
+      const userRole = (req.session as any).userRole;
       const organizationId = (req.session as any).organizationId;
 
       const [order] = await db
@@ -5677,7 +5677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const userId = (req.session as any).userId;
-      const userRole = (req.session as any).role;
+      const userRole = (req.session as any).userRole;
       const organizationId = (req.session as any).organizationId;
 
       const [order] = await db
