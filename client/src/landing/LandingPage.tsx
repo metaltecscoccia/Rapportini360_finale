@@ -2,6 +2,7 @@ import Navbar from "./components/Navbar";
 import HeroSection from "./components/HeroSection";
 import DemoSection from "./components/DemoSection";
 import FeaturesSection from "./components/FeaturesSection";
+import WhySection from "./components/WhySection";
 import PricingSection from "./components/PricingSection";
 import FAQSection from "./components/FAQSection";
 import CTASection from "./components/CTASection";
@@ -18,6 +19,7 @@ export default function LandingPage() {
           <HeroSection />
           <DemoSection />
           <FeaturesSection />
+          <WhySection />
           <PricingSection />
           <FAQSection />
           <ContactFormSection />
