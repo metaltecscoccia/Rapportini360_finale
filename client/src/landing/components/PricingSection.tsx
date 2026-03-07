@@ -72,7 +72,7 @@ export default function PricingSection() {
         </div>
 
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/50">
+          <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/80">
             Piani per ogni dimensione
           </h2>
           
@@ -108,7 +108,7 @@ export default function PricingSection() {
                 )}
               >
                 Fatturazione Annuale
-                <span className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-green-500/20 text-green-400 text-[10px] border border-green-500/30">
+                <span className="inline-flex px-2 py-0.5 rounded-md bg-green-500/20 text-green-400 text-xs font-bold border border-green-500/30">
                   -17%
                 </span>
               </button>
