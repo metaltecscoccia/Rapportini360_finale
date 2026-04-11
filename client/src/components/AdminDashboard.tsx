@@ -2933,6 +2933,7 @@ export default function AdminDashboard({
                             <th className="text-left py-2 px-3 font-medium">Commessa</th>
                             <th className="text-left py-2 px-3 font-medium">Assegnato a</th>
                             <th className="text-left py-2 px-3 font-medium">Stato</th>
+                            <th className="text-left py-2 px-3 font-medium">Ore</th>
                             <th className="text-left py-2 px-3 font-medium">Data</th>
                             <th className="text-right py-2 px-3 font-medium">Azioni</th>
                           </tr>
@@ -2962,6 +2963,9 @@ export default function AdminDashboard({
                                 >
                                   {order.status === "assegnato" ? "Assegnato" : order.status === "iniziato" ? "In corso" : order.status === "in_pausa" ? "In pausa" : order.status === "annullato" ? "Annullato" : "Completato"}
                                 </Badge>
+                              </td>
+                              <td className="py-2 px-3 text-muted-foreground">
+                                {order.status === "completato" && order.hours ? `${Number(order.hours)}h` : "—"}
                               </td>
                               <td className="py-2 px-3 text-muted-foreground">{new Date(order.createdAt).toLocaleDateString("it-IT")}</td>
                               <td className="py-2 px-3 text-right">

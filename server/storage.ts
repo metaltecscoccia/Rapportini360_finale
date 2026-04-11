@@ -1350,12 +1350,12 @@ export class DatabaseStorage implements IStorage {
     const allOperations = await db.select().from(operations);
     const allReports = await db.select().from(dailyReports).where(eq(dailyReports.organizationId, organizationId));
     
-    const approvedReportIds = new Set(
-      allReports.filter(r => r.status === "Approvato").map(r => r.id)
+    const visibleReportIds = new Set(
+      allReports.filter(r => r.status === "Approvato" || r.status === "In attesa").map(r => r.id)
     );
-    
-    const approvedOperations = allOperations.filter(op => 
-      approvedReportIds.has(op.dailyReportId)
+
+    const approvedOperations = allOperations.filter(op =>
+      visibleReportIds.has(op.dailyReportId)
     );
     
     const statsMap = new Map<string, {

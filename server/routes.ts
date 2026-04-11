@@ -3501,11 +3501,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }),
         );
 
-        const approvedOperations = enrichedOperations.filter(
-          (op) => op.reportStatus === "Approvato",
+        const visibleOperations = enrichedOperations.filter(
+          (op) => op.reportStatus === "Approvato" || op.reportStatus === "In attesa",
         );
 
-        res.json(approvedOperations);
+        res.json(visibleOperations);
       } catch (error) {
         console.error("Error fetching work order operations:", error);
         res
@@ -5432,6 +5432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           startedAt: serviceOrders.startedAt,
           completedAt: serviceOrders.completedAt,
           notes: serviceOrders.notes,
+          hours: serviceOrders.hours,
           createdAt: serviceOrders.createdAt,
           clientId: serviceOrders.clientId,
           workOrderId: serviceOrders.workOrderId,
@@ -5631,7 +5632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Aggiorna stato ordine
       const [updated] = await db
         .update(serviceOrders)
-        .set({ status: "completato", completedAt, notes: notes || null, updatedAt: new Date() })
+        .set({ status: "completato", completedAt, hours: hoursRounded, notes: notes || null, updatedAt: new Date() })
         .where(eq(serviceOrders.id, id))
         .returning();
 
