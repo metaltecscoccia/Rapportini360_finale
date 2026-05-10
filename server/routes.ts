@@ -5431,6 +5431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: serviceOrders.status,
           startedAt: serviceOrders.startedAt,
           completedAt: serviceOrders.completedAt,
+          pausedDuration: serviceOrders.pausedDuration,
           notes: serviceOrders.notes,
           hours: serviceOrders.hours,
           createdAt: serviceOrders.createdAt,
@@ -5448,7 +5449,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(serviceOrders.organizationId, organizationId))
         .orderBy(serviceOrders.createdAt);
 
-      res.json(rows);
+      // Per ordini completati senza hours salvato (pre-fix), calcola ore dai timestamp
+      const enrichedRows = rows.map((order) => {
+        if (order.status === "completato" && !order.hours && order.completedAt && order.startedAt) {
+          const pausedMs = (order.pausedDuration || 0) * 1000;
+          const hoursElapsed = (new Date(order.completedAt).getTime() - new Date(order.startedAt).getTime() - pausedMs) / 3600000;
+          const hoursRounded = String(Math.max(0.25, Math.round(Math.max(0, hoursElapsed) * 4) / 4));
+          return { ...order, hours: hoursRounded };
+        }
+        return order;
+      });
+
+      res.json(enrichedRows);
     } catch (error) {
       console.error("Error fetching service orders:", error);
       res.status(500).json({ error: "Failed to fetch service orders" });
