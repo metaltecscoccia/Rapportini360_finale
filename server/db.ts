@@ -15,12 +15,14 @@ if (!connectionString) {
 }
 
 // Neon database requires SSL
-export const pool = new Pool({ 
+export const pool = new Pool({
   connectionString,
   max: 10,
-  idleTimeoutMillis: 30000,
+  idleTimeoutMillis: 20000,
   connectionTimeoutMillis: 10000,
   ssl: { rejectUnauthorized: false },
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
 });
 
 pool.on('error', (err) => {
