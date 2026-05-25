@@ -18,7 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Users, Briefcase, CheckCircle2, AlertCircle, UserX, Crown } from "lucide-react";
+import { Loader2, Users, Briefcase, CheckCircle2, AlertCircle, UserX, Crown, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type Client = {
   id: string;
@@ -373,10 +374,13 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
+            <Tooltip><TooltipTrigger asChild>
             <TabsTrigger value="lavorazione" className="flex items-center gap-2">
               <Briefcase className="h-4 w-4" />
               Lavorazione
             </TabsTrigger>
+            </TooltipTrigger><TooltipContent>Inserisci i dati del lavoro svolto dalla squadra oggi</TooltipContent></Tooltip>
+            <Tooltip><TooltipTrigger asChild>
             <TabsTrigger value="presenze" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Presenze
@@ -386,6 +390,7 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
                 </Badge>
               )}
             </TabsTrigger>
+            </TooltipTrigger><TooltipContent>Seleziona i membri presenti oggi — verrà creato un rapportino per ognuno</TooltipContent></Tooltip>
           </TabsList>
 
           {/* Tab Lavorazione */}
@@ -503,7 +508,7 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
 
             {/* Ore */}
             <div className="space-y-2">
-              <Label htmlFor="hours">Ore Lavorate</Label>
+              <div className="flex items-center gap-1"><Label htmlFor="hours">Ore Lavorate</Label><Tooltip><TooltipTrigger asChild><Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Ore lavorate da ciascun membro presente oggi</TooltipContent></Tooltip></div>
               <Input
                 id="hours"
                 type="number"
@@ -608,6 +613,8 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
 
         {/* Submit Button */}
         <div className="mt-6">
+          <Tooltip>
+            <TooltipTrigger asChild>
           <Button
             onClick={handleSubmit}
             disabled={createReportMutation.isPending || !selectedClientId || !selectedWorkOrderId || selectedMemberIds.length === 0 || (availableWorkTypes.length > 0 && selectedWorkTypes.length === 0)}
@@ -626,6 +633,9 @@ export default function TeamReportForm({ teamLeaderId, teamLeaderName }: TeamRep
               </>
             )}
           </Button>
+            </TooltipTrigger>
+            <TooltipContent>Crea automaticamente un rapportino per ogni dipendente selezionato come presente</TooltipContent>
+          </Tooltip>
         </div>
       </CardContent>
     </Card>

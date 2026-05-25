@@ -11,7 +11,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, HelpCircle } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import LoginForm from "@/components/LoginForm";
 import SignupForm from "@/landing/SignupForm";
@@ -24,6 +24,9 @@ import SuperAdminDashboard from "@/components/SuperAdminDashboard";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
 import EquipmentConfirmationDialog from "@/components/EquipmentConfirmationDialog";
 import ServiceOrderDialog from "@/components/ServiceOrderDialog";
+import GuidaPage from "@/components/GuidaPage";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import ThemeToggle from "@/components/ThemeToggle";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -99,6 +102,8 @@ function AuthenticatedApp({
   // The queryClient throws errors in format "404: error message"
   const isReportNotFound = hasReportError && (reportError as Error)?.message?.startsWith('404');
   const hasServerError = hasReportError && !isReportNotFound;
+
+  const [guidaDialogOpen, setGuidaDialogOpen] = useState(false);
 
   // Check for pending equipment assignments (for employees and teamleaders)
   const [equipmentDialogOpen, setEquipmentDialogOpen] = useState(false);
@@ -241,6 +246,22 @@ function AuthenticatedApp({
           serviceOrders={pendingServiceOrders}
         />
       )}
+
+      {/* Guida Dialog per dipendenti e caposquadra */}
+      <Dialog open={guidaDialogOpen} onOpenChange={setGuidaDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5 text-primary" />
+              Guida e Manuale Utente
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[70vh] pr-4">
+            <GuidaPage />
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
     <motion.div
       className="min-h-screen bg-background"
       initial={{ opacity: 0 }}
@@ -290,6 +311,16 @@ function AuthenticatedApp({
               transition={{ duration: 0.3, delay: 0.2 }}
             >
               <ThemeToggle />
+              {(currentUser.role === "employee" || currentUser.role === "teamleader") && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setGuidaDialogOpen(true)}
+                  title="Guida"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                </Button>
+              )}
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}

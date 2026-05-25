@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Building, ClipboardList, Settings, Calendar, Fuel, Menu, UsersRound, CalendarDays, HardHat } from "lucide-react";
+import { LayoutDashboard, Users, Building, ClipboardList, Settings, Calendar, Fuel, Menu, UsersRound, CalendarDays, HardHat, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ const sidebarItems: SidebarItem[] = [
   { id: "agenda", icon: CalendarDays, label: "Agenda" },
   { id: "fuel", icon: Fuel, label: "Rifornimenti" },
   { id: "configuration", icon: Settings, label: "Configurazione" },
+  { id: "guide", icon: HelpCircle, label: "Guida" },
 ];
 
 interface AppSidebarProps {

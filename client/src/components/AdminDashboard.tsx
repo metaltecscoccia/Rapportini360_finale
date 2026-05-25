@@ -91,6 +91,7 @@ import EquipmentAssignmentManagement from "./EquipmentAssignmentManagement";
 import ExportDropdown, { downloadFile } from "./ExportDropdown";
 import { AppSidebar, sidebarItems } from "./AppSidebar";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import GuidaPage from "./GuidaPage";
 
 // Schema per form aggiunta dipendente
 const addEmployeeSchema = z.object({
@@ -2277,6 +2278,9 @@ export default function AdminDashboard({
           <TabsTrigger value="attendance" data-testid="tab-attendance">
             <ClipboardList className="h-4 w-4 mr-2" />
             Presenze
+          </TabsTrigger>
+          <TabsTrigger value="guide" data-testid="tab-guide">
+            Guida
           </TabsTrigger>
         </TabsList>
 
@@ -4671,6 +4675,11 @@ export default function AdminDashboard({
             </div>
           )}
             </TabsContent>
+
+        <TabsContent value="guide" className="space-y-4">
+          <GuidaPage />
+        </TabsContent>
+
           </Tabs>
         </TabsContent>
       </Tabs>

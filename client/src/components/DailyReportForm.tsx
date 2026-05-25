@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Send, Camera, X, Loader2, Check } from "lucide-react";
+import { Plus, Trash2, Send, Camera, X, Loader2, Check, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Client, WorkOrder } from "@shared/schema";
 import StatusBadge from "./StatusBadge";
 import { useQuery } from "@tanstack/react-query";
@@ -139,12 +140,15 @@ function OperationCard({
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label className="font-semibold text-foreground">Cliente</Label>
+          <div className="flex items-center gap-1">
+            <Label className="font-semibold text-foreground">Cliente</Label>
+            <Tooltip><TooltipTrigger asChild><Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Seleziona il cliente per cui hai lavorato</TooltipContent></Tooltip>
+          </div>
           <Select
             value={operation.clientId}
             onValueChange={(value) => {
-              setOperations(prevOps => prevOps.map(op => 
-                op.id === operation.id 
+              setOperations(prevOps => prevOps.map(op =>
+                op.id === operation.id
                   ? { ...op, clientId: value, workOrderId: "", workTypes: [], materials: [] }
                   : op
               ));
@@ -168,7 +172,7 @@ function OperationCard({
         </div>
         
         <div className="space-y-2">
-          <Label className="font-semibold text-foreground">Commessa</Label>
+          <div className="flex items-center gap-1"><Label className="font-semibold text-foreground">Commessa</Label><Tooltip><TooltipTrigger asChild><Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Seleziona la commessa/progetto associato al cliente</TooltipContent></Tooltip></div>
           <Select
             value={operation.workOrderId}
             onValueChange={(value) => {
@@ -198,7 +202,7 @@ function OperationCard({
         </div>
         
         <div className="space-y-2">
-          <Label className="font-semibold text-foreground">Attività</Label>
+          <div className="flex items-center gap-1"><Label className="font-semibold text-foreground">Attività</Label><Tooltip><TooltipTrigger asChild><Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Seleziona uno o più tipi di lavorazione eseguiti</TooltipContent></Tooltip></div>
           {!operation.workOrderId ? (
             <div className="p-3 border rounded-md text-sm text-muted-foreground" data-testid={`worktype-empty-${operation.id}`}>
               Seleziona prima una commessa
@@ -232,7 +236,7 @@ function OperationCard({
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <div className="space-y-2">
-          <Label className="font-semibold text-foreground">Componenti (opzionale)</Label>
+          <div className="flex items-center gap-1"><Label className="font-semibold text-foreground">Componenti (opzionale)</Label><Tooltip><TooltipTrigger asChild><Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Seleziona i materiali o componenti utilizzati (opzionale)</TooltipContent></Tooltip></div>
           {!operation.workOrderId ? (
             <div className="p-3 border rounded-md text-sm text-muted-foreground" data-testid={`material-empty-${operation.id}`}>
               Seleziona prima una commessa
@@ -264,7 +268,7 @@ function OperationCard({
         </div>
         
         <div className="space-y-2">
-          <Label className="font-semibold text-foreground">Ore lavorate</Label>
+          <div className="flex items-center gap-1"><Label className="font-semibold text-foreground">Ore lavorate</Label><Tooltip><TooltipTrigger asChild><Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Inserisci le ore effettive lavorate (es. 2.5 = 2 ore e 30 min)</TooltipContent></Tooltip></div>
           <Input
             type="number"
             step="0.5"
@@ -303,7 +307,7 @@ function OperationCard({
       </div>
       
       <div className="mt-4 space-y-2">
-        <Label className="font-semibold text-foreground">Foto (max 5)</Label>
+        <div className="flex items-center gap-1"><Label className="font-semibold text-foreground">Foto (max 5)</Label><Tooltip><TooltipTrigger asChild><Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Aggiungi fino a 5 foto come documentazione del lavoro svolto</TooltipContent></Tooltip></div>
         <div className="flex flex-wrap gap-2">
           {operation.photos && operation.photos.map((photoPath, idx) => (
             <div key={idx} className="relative">
@@ -634,25 +638,32 @@ export default function DailyReportForm({
                   whileTap={{ scale: 0.98 }}
                   className="w-full sm:w-auto"
                 >
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addOperation}
-                    data-testid="button-add-operation"
-                    className="w-full"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Aggiungi Operazione
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={addOperation}
+                        data-testid="button-add-operation"
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Aggiungi Operazione
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Aggiungi un'altra riga se hai lavorato su più clienti o commesse nella stessa giornata</TooltipContent>
+                  </Tooltip>
                 </motion.div>
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="w-full sm:w-auto"
                 >
-                  <Button 
-                    type="submit" 
-                    data-testid="button-submit-report" 
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                  <Button
+                    type="submit"
+                    data-testid="button-submit-report"
                     className="w-full"
                     disabled={isSubmitting}
                     aria-live="polite"
@@ -669,6 +680,9 @@ export default function DailyReportForm({
                       </>
                     )}
                   </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Invia il rapportino all'ufficio per l'approvazione</TooltipContent>
+                  </Tooltip>
                 </motion.div>
               </div>
             </motion.div>
