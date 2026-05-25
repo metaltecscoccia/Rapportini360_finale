@@ -2194,6 +2194,8 @@ export default function AdminDashboard({
           autoOpenAdd={autoOpenEquipmentAdd}
           onAutoOpenHandled={() => setAutoOpenEquipmentAdd(false)}
         />
+      ) : activeSection === "guide" ? (
+        <GuidaPage />
       ) : (
       <>
       {/* Tabs - navigation now handled by sidebar */}
@@ -2279,9 +2281,6 @@ export default function AdminDashboard({
           <TabsTrigger value="attendance" data-testid="tab-attendance">
             <ClipboardList className="h-4 w-4 mr-2" />
             Presenze
-          </TabsTrigger>
-          <TabsTrigger value="guide" data-testid="tab-guide">
-            Guida
           </TabsTrigger>
         </TabsList>
 
@@ -4677,12 +4676,10 @@ export default function AdminDashboard({
           )}
             </TabsContent>
 
-        <TabsContent value="guide" className="space-y-4">
-          <GuidaPage />
-        </TabsContent>
-
           </Tabs>
         </TabsContent>
+
+
       </Tabs>
       </TabsContent>
 
