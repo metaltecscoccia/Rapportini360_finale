@@ -2094,6 +2094,7 @@ export default function AdminDashboard({
       "attendance": { mainSection: "rapportini", tab: "attendance" },
       "agenda": { mainSection: "agenda", tab: "agenda" },
       "fuel": { mainSection: "rifornimenti", tab: "refills" },
+      "guide": { mainSection: "rapportini", tab: "guide" },
     };
     return sectionMap[activeSection] || { mainSection: "rapportini", tab: "reports" };
   };
